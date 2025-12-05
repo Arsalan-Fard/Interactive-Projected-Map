@@ -7,8 +7,9 @@ export function addDrawControls(map) {
             trash: true
         }
     });
-    
+
     map.addControl(draw, 'top-right');
-    
-    return draw; 
+
+    return draw;
 }
+

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Live Traffic - Palaiseau</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        #legend {
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-family: sans-serif;
+            font-size: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .legend-color {
+            width: 20px;
+            height: 4px;
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="legend">
+        <strong>Traffic Conditions</strong>
+        <div class="legend-item"><div class="legend-color" style="background: #4CAF50;"></div> Low</div>
+        <div class="legend-item"><div class="legend-color" style="background: #FFEB3B;"></div> Moderate</div>
+        <div class="legend-item"><div class="legend-color" style="background: #FF9800;"></div> Heavy</div>
+        <div class="legend-item"><div class="legend-color" style="background: #F44336;"></div> Severe</div>
+    </div>
+
+    <script>
+        // Replace with your Mapbox access token
+        mapboxgl.accessToken = 'pk.eyJ1IjoiYXJzYWxhbjc3eCIsImEiOiJjbWk0cGMwOGEwNm9hMm1zZGE3em5jdG5oIn0.YqcXhom4SK5OtovP0wHgXA';
+
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v12',
+            center: [2.2498, 48.7146], // Palaiseau coordinates
+            zoom: 13
+        });
+
+        map.on('load', () => {
+            // Add traffic source
+            map.addSource('traffic', {
+                type: 'vector',
+                url: 'mapbox://mapbox.mapbox-traffic-v1'
+            });
+
+            // Add traffic layer
+            map.addLayer({
+                id: 'traffic-layer',
+                type: 'line',
+                source: 'traffic',
+                'source-layer': 'traffic',
+                paint: {
+                    'line-width': 2,
+                    'line-color': [
+                        'match',
+                        ['get', 'congestion'],
+                        'low', '#4CAF50',
+                        'moderate', '#FFEB3B',
+                        'heavy', '#FF9800',
+                        'severe', '#F44336',
+                        '#888888'
+                    ]
+                }
+            });
+        });
+
+        map.addControl(new mapboxgl.NavigationControl());
+    </script>
+</body>
+</html>

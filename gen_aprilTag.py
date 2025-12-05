@@ -10,10 +10,6 @@ INNER_SIZE_PX = 1000          # size of the tag itself (without margin)
 MARGIN_RATIO = 0.25           # margin around the tag (25% of tag size)
 
 def upscale_tag(tag_binary, inner_size_px):
-    """
-    Upscale the small binary AprilTag image to a large square image
-    using nearest-neighbor so edges stay sharp.
-    """
     if tag_binary.max() <= 1:
         tag_binary = (tag_binary * 255).astype(np.uint8)
     else:
@@ -23,9 +19,7 @@ def upscale_tag(tag_binary, inner_size_px):
     assert h == w, "Tag image should be square"
 
     scale = inner_size_px // h
-    if scale < 1:
-        raise ValueError("INNER_SIZE_PX is too small for this tag resolution")
-
+   
     upscaled = np.kron(tag_binary, np.ones((scale, scale), dtype=np.uint8))
     upscaled = upscaled[:inner_size_px, :inner_size_px]
 
