@@ -97,4 +97,4 @@ async function checkPosition() {
 }
 
 setInterval(checkPosition, 100);
-initDraggableItems();
+initDraggableItems(map);

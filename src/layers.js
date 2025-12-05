@@ -29,7 +29,11 @@ export function addPalaiseauRoads(map) {
         'id': 'palaiseau-roads-layer',
         'type': 'line',
         'source': 'palaiseau-roads',
-        'layout': { 'line-join': 'round', 'line-cap': 'round' },
+        'layout': { 
+            'line-join': 'round', 
+            'line-cap': 'round',
+            'visibility': 'none'
+        },
         'paint': {
             'line-color': '#ff8800',
             'line-width': 3
@@ -53,7 +57,8 @@ export function addWalkingNetwork(map) {
         'source': 'walking-network',
         'layout': {
             'line-join': 'round',
-            'line-cap': 'round'
+            'line-cap': 'round',
+            'visibility': 'none'
         },
         'paint': {
             'line-color': '#4a90e2', 
@@ -79,7 +84,8 @@ export function addMobilityInfrastructure(map) {
         'source': 'mobility-infrastructure',
         'layout': {
             'line-join': 'round',
-            'line-cap': 'round'
+            'line-cap': 'round',
+            'visibility': 'none'
         },
         'paint': {
             'line-color': '#50c878', 
@@ -105,7 +111,8 @@ export function addBusLanes(map) {
         'source': 'bus-lanes',
         'layout': {
             'line-join': 'round',
-            'line-cap': 'round'
+            'line-cap': 'round',
+            'visibility': 'none'
         },
         'paint': {
             'line-color': '#BA55D3', // MediumOrchid
