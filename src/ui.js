@@ -1,3 +1,70 @@
+import { CONFIG } from './config.js';
+
+let pointA = null;
+let pointB = null;
+
+async function getRoute(map) {
+    if (!pointA || !pointB) {
+        if (map.getSource('route')) {
+            map.getSource('route').setData({
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: []
+                }
+            });
+        }
+        return;
+    }
+
+    try {
+        const query = await fetch('http://localhost:5001/api/route', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                start: [pointA.lng, pointA.lat],
+                end: [pointB.lng, pointB.lat]
+            })
+        });
+
+        if (!query.ok) {
+            console.error("Route request failed");
+            return;
+        }
+        
+        const geojson = await query.json();
+        
+        if (map.getSource('route')) {
+            map.getSource('route').setData(geojson);
+        } else {
+            map.addSource('route', {
+                type: 'geojson',
+                data: geojson
+            });
+            
+            map.addLayer({
+                id: 'route',
+                type: 'line',
+                source: 'route',
+                layout: {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                paint: {
+                    'line-color': '#3887be',
+                    'line-width': 5,
+                    'line-opacity': 0.75
+                }
+            });
+        }
+    } catch (error) {
+        console.error("Error fetching route:", error);
+    }
+}
+
 export function initDraggableItems(map) {
     const sources = document.querySelectorAll('.draggable-source');
     const placeholders = new WeakMap();
@@ -69,6 +136,22 @@ export function initDraggableItems(map) {
                 isDragging = false;
                 document.removeEventListener('mousemove', moveHandler);
                 document.removeEventListener('mouseup', upHandler);
+                
+                // Check for A/B Points
+                if (btn.textContent === 'A' || btn.textContent === 'B') {
+                    const rect = btn.getBoundingClientRect();
+                    // We use the center of the button as the point
+                    const center = [rect.left + rect.width / 2, rect.top + rect.height / 2];
+                    // Unproject to map coordinates
+                    const coords = map.unproject(center);
+                    
+                    if (btn.textContent === 'A') {
+                        pointA = coords;
+                    } else {
+                        pointB = coords;
+                    }
+                    getRoute(map);
+                }
             };
             
             document.addEventListener('mousemove', moveHandler);
@@ -90,6 +173,15 @@ export function initDraggableItems(map) {
 
                     // Deactivate layer when reset
                     setLayerVisibility(btn.textContent, false);
+                    
+                    // Reset A/B Points
+                    if (btn.textContent === 'A') {
+                        pointA = null;
+                        getRoute(map);
+                    } else if (btn.textContent === 'B') {
+                        pointB = null;
+                        getRoute(map);
+                    }
                 }
             }
         });

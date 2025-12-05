@@ -114,50 +114,40 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
                 # )
 
             # Logic for distances and relative position
-            if 0 in all_corners_dict:
-                corners0 = all_corners_dict[0]
+            # New Boundary: 0, 1, 2, 3
+            # New Tracked: 4 (and 5 reserved)
+            
+            tracked_id = 4
+            boundary_ids = [0, 1, 2, 3]
+
+            if tracked_id in all_corners_dict:
+                corners_tracked = all_corners_dict[tracked_id]
                 
-                # Store the closest corners of boundary markers (1,2,3,4) to marker 0
+                # Store the closest corners of boundary markers to the tracked marker
                 closest_boundary_corners = {}
                 
-                # Draw distances to corners 1, 2, 3, 4
+                # Draw distances to boundary corners
                 y_offset = 40
-                for corner_id in [1, 2, 3, 4]:
+                for corner_id in boundary_ids:
                     if corner_id in all_corners_dict:
                         target_corners = all_corners_dict[corner_id]
                         
-                        # Find closest corners between marker 0 and this boundary marker
-                        p0_best, pt_best, min_dist = find_closest_corner(corners0, target_corners)
+                        # Find closest corners between tracked marker and this boundary marker
+                        p_tracked_best, pt_best, min_dist = find_closest_corner(corners_tracked, target_corners)
                         
-                        # Store the closest corner of the boundary marker to marker 0
+                        # Store the closest corner of the boundary marker to the tracked marker
                         closest_boundary_corners[corner_id] = pt_best
                         
-                        # # Draw line between closest points
-                        # if p0_best is not None and pt_best is not None:
-                        #     p0_int = (int(p0_best[0]), int(p0_best[1]))
-                        #     pt_int = (int(pt_best[0]), int(pt_best[1]))
-                        #     cv2.line(frame, p0_int, pt_int, (255, 255, 0), 1)
-                        
-                        # cv2.putText(
-                        #     frame,
-                        #     f"Dist 0->{corner_id}: {min_dist:.1f}px",
-                        #     (20, y_offset),
-                        #     cv2.FONT_HERSHEY_SIMPLEX,
-                        #     0.6,
-                        #     (255, 255, 0),
-                        #     2,
-                        # )
-                        # y_offset += 25
 
                 # Calculate Perspective Transform if all boundary markers are present
-                if all(cid in closest_boundary_corners for cid in [1, 2, 3, 4]):
-                    # Source points: closest corners of boundary markers to marker 0
-                    # Assumed Order: TL, TR, BR, BL (IDs 1, 2, 3, 4)
+                if all(cid in closest_boundary_corners for cid in boundary_ids):
+                    # Source points: closest corners of boundary markers to tracked marker
+                    # Assumed Order: TL, TR, BR, BL (IDs 0, 1, 2, 3)
                     src_pts = np.array([
+                        closest_boundary_corners[0],
                         closest_boundary_corners[1],
                         closest_boundary_corners[2],
-                        closest_boundary_corners[3],
-                        closest_boundary_corners[4]
+                        closest_boundary_corners[3]
                     ], dtype="float32")
 
                     # Destination points: Unit square
@@ -170,21 +160,21 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
 
                     M = cv2.getPerspectiveTransform(src_pts, dst_pts)
 
-                    # Find the closest corner of marker 0 to ANY of the boundary markers
+                    # Find the closest corner of tracked marker to ANY of the boundary markers
                     # This is the point we transform
                     min_overall_dist = float('inf')
-                    closest_corner_of_0 = None
+                    closest_corner_of_tracked = None
                     
-                    for corner_id in [1, 2, 3, 4]:
+                    for corner_id in boundary_ids:
                         target_corners = all_corners_dict[corner_id]
-                        p0_best, _, dist = find_closest_corner(corners0, target_corners)
+                        p_tracked_best, _, dist = find_closest_corner(corners_tracked, target_corners)
                         if dist < min_overall_dist:
                             min_overall_dist = dist
-                            closest_corner_of_0 = p0_best
+                            closest_corner_of_tracked = p_tracked_best
                     
-                    # Transform the closest corner of marker 0
-                    if closest_corner_of_0 is not None:
-                        pts = np.array([[closest_corner_of_0]], dtype="float32")
+                    # Transform the closest corner of tracked marker
+                    if closest_corner_of_tracked is not None:
+                        pts = np.array([[closest_corner_of_tracked]], dtype="float32")
                         pts_transformed = cv2.perspectiveTransform(pts, M)
                         
                         px = pts_transformed[0][0][0]
@@ -194,18 +184,9 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
                         
                         # Draw a circle on the corner being tracked
                         # cv2.circle(frame, 
-                        #            (int(closest_corner_of_0[0]), int(closest_corner_of_0[1])), 
+                        #            (int(closest_corner_of_tracked[0]), int(closest_corner_of_tracked[1])), 
                         #            8, (0, 0, 255), -1)
                         
-                        # cv2.putText(
-                        #     frame,
-                        #     f"Rel Pos: x={px:.3f}, y={py:.3f}",
-                        #     (20, y_offset + 10),
-                        #     cv2.FONT_HERSHEY_SIMPLEX,
-                        #     0.8,
-                        #     (0, 255, 255),
-                        #     2
-                        # )
 
         else:
             cv2.putText(
@@ -223,6 +204,7 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
             if found_position:
                 current_position["x"] = float(px)
                 current_position["y"] = float(py)
+                current_position["id"] = tracked_id
                 current_position["valid"] = True
             else:
                 current_position["valid"] = False
