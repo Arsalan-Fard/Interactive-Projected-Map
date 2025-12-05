@@ -1,6 +1,6 @@
 # Tangible Map Interaction
 
-This project implements an interactive map system where physical AprilTag markers.
+This project implements an interactive map system with physical AprilTag markers.
 
 ## TODO
 
