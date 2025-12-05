@@ -4,10 +4,8 @@ This project implements an interactive map system where physical AprilTag marker
 
 ## TODO
 
-[ ] Add AprilTag detection for each tool
-[ ] Isochrone
-[ ] Shortest Path Fix for when we have Zoom or Pan
-[ ] Incomplete OSMNX for routes
-[ ] Pan Zoom
-
-
+- [ ] Add AprilTag detection for each tool
+- [ ] Isochrone
+- [ ] Shortest Path Fix for when we have Zoom or Pan
+- [ ] Incomplete OSMNX for routes
+- [ ] Pan Zoom
