@@ -1,12 +1,12 @@
 import osmnx as ox
 import os
 
-location = (48.7133, 2.2089)  # IP Paris Coordinate
+
+location = (48.713, 2.20)  # IP Paris Coordinate
 distance = 4000  # Distance in meters
 
 os.makedirs("data", exist_ok=True)
 
-print("Fetching OpenStreetMap data...")
 
 print("1. Fetching walking network...")
 G_walk = ox.graph_from_point(location, dist=distance, network_type="walk")
@@ -48,3 +48,43 @@ try:
 except Exception as e:
     print(f"   Warning: Could not fetch amenities: {e}")
 
+
+
+print("4. Fetching Public Transport Data...")
+
+try:
+    print("   Fetching dedicated bus lanes...")
+    bus_lanes = ox.features_from_point(
+        location,
+        dist=distance,
+        tags={
+            "bus": "yes",              
+            "lanes:bus": True,         
+            "highway": "bus_guideway"  
+        }
+    )
+    
+    if not bus_lanes.empty:
+        bus_lanes.to_file("data/bus_lanes.geojson", driver="GeoJSON")
+        print(f"   [SUCCESS] Saved {len(bus_lanes)} segments of bus infrastructure.")
+
+except Exception as e:
+    print(f"   Warning: Could not fetch bus lanes: {e}")
+try:
+    print("   Fetching bus stops...")
+    bus_stops = ox.features_from_point(
+        location,
+        dist=distance,
+        tags={"highway": "bus_stop"}
+    )
+    
+    cols_stops = [c for c in ["name", "highway", "shelter", "bench", "geometry"] 
+                  if c in bus_stops.columns]
+    
+    bus_stops = bus_stops[cols_stops] if cols_stops else bus_stops
+    
+    bus_stops.to_file("data/bus_stops.geojson", driver="GeoJSON")
+    print(f"   Saved {len(bus_stops)} bus stops to data/bus_stops.geojson")
+
+except Exception as e:
+    print(f"   Warning: Could not fetch bus stops: {e}")

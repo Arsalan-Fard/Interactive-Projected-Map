@@ -90,6 +90,31 @@ export function addMobilityInfrastructure(map) {
     });
 }
 
+// Bus Lanes Layer
+export function addBusLanes(map) {
+    if (map.getSource('bus-lanes')) return;
+
+    map.addSource('bus-lanes', {
+        type: 'geojson',
+        data: './data/bus_lanes.geojson'
+    });
+
+    map.addLayer({
+        'id': 'bus-lanes-layer',
+        'type': 'line',
+        'source': 'bus-lanes',
+        'layout': {
+            'line-join': 'round',
+            'line-cap': 'round'
+        },
+        'paint': {
+            'line-color': '#BA55D3', // MediumOrchid
+            'line-width': 3,
+            'line-opacity': 0.8
+        }
+    });
+}
+
 
 // Amenities Layer (Schools, Hospitals, Libraries, Marketplaces)
 export function addAmenities(map) {

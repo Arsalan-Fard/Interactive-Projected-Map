@@ -1,6 +1,6 @@
 import { CONFIG } from './config.js';
-import { add3DBuildings, addPalaiseauRoads, addWalkingNetwork, addMobilityInfrastructure, addAmenities } from './layers.js';
-import { addDrawControls } from './tools.js';
+import { add3DBuildings, addPalaiseauRoads, addWalkingNetwork, addMobilityInfrastructure, addAmenities, addBusLanes } from './layers.js';
+import { initDraggableItems } from './ui.js';
 
 mapboxgl.accessToken = CONFIG.accessToken;
 
@@ -10,22 +10,42 @@ const map = new mapboxgl.Map({
     center: CONFIG.center,
     zoom: CONFIG.zoom,
     pitch: CONFIG.pitch,
-    bearing: CONFIG.bearing
+    bearing: CONFIG.bearing,
+    attributionControl: false
 });
 
-map.on('load', () => {
-    console.log("Map loaded!");
-
+map.on('style.load', () => {
+    console.log("Style loaded!");
+    
     add3DBuildings(map);
     addPalaiseauRoads(map);
-
     addWalkingNetwork(map);
     addMobilityInfrastructure(map);
+    addBusLanes(map);
     addAmenities(map);
 });
 
-const drawTool = addDrawControls(map);
+const styles = {
+    'btn-light': 'mapbox://styles/mapbox/light-v11',
+    'btn-dark': 'mapbox://styles/mapbox/dark-v11',
+    'btn-streets': 'mapbox://styles/mapbox/streets-v12',
+    'btn-satellite': 'mapbox://styles/mapbox/satellite-streets-v12'
+};
 
+Object.keys(styles).forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+        btn.addEventListener('click', () => {
+            Object.keys(styles).forEach(key => {
+                document.getElementById(key).classList.remove('active');
+            });
+            
+            btn.classList.add('active');
+            
+            map.setStyle(styles[id]);
+        });
+    }
+});
 
 const mapContainer = document.getElementById('map');
 const layout = {
@@ -77,3 +97,4 @@ async function checkPosition() {
 }
 
 setInterval(checkPosition, 100);
+initDraggableItems();
