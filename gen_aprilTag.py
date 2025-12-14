@@ -7,7 +7,7 @@ from PIL import Image
 TAG_FAMILY = "tag25h9"
 TAG_IDS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]     # which tags to generate
 INNER_SIZE_PX = 1000          # size of the tag itself (without margin)
-MARGIN_RATIO = 0.25           # margin around the tag (25% of tag size)
+MARGIN_RATIO = 0.2           # margin around the tag (25% of tag size)
 
 def upscale_tag(tag_binary, inner_size_px):
     if tag_binary.max() <= 1:

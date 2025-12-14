@@ -179,3 +179,29 @@ export function addAmenities(map) {
         }
     });
 }
+
+// Floorplan Layer
+export function addFloorplan(map) {
+    if (map.getSource('telecom-floorplan')) return;
+
+    map.addSource('telecom-floorplan', {
+        type: 'image',
+        url: './data/images.jpg',
+        coordinates: [
+            [2.19908, 48.71347], // Top Left (Lng, Lat)
+            [2.201649, 48.713192], // Top Right
+            [2.20142732, 48.712355], // Bottom Right
+            [2.1988528, 48.712607]  // Bottom Left
+        ]
+    });
+
+    map.addLayer({
+        'id': 'telecom-floorplan-layer',
+        'type': 'raster',
+        'source': 'telecom-floorplan',
+        'paint': {
+            'raster-opacity': 0.8,
+            'raster-fade-duration': 0
+        }
+    });
+}

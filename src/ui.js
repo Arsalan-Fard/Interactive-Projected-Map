@@ -19,7 +19,7 @@ async function getRoute(map) {
     }
 
     try {
-        const query = await fetch('http://localhost:5001/api/route', {
+        const query = await fetch('/api/route', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -63,6 +63,113 @@ async function getRoute(map) {
     } catch (error) {
         console.error("Error fetching route:", error);
     }
+}
+
+// Helper function to make a sticker draggable after it's been placed
+function makeStickerDraggable(sticker) {
+    sticker.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        let isDragging = true;
+
+        const moveHandler = (ev) => {
+            if (!isDragging) return;
+            sticker.style.left = ev.pageX + 'px';
+            sticker.style.top = ev.pageY + 'px';
+        };
+
+        const upHandler = () => {
+            isDragging = false;
+            document.removeEventListener('mousemove', moveHandler);
+            document.removeEventListener('mouseup', upHandler);
+        };
+
+        document.addEventListener('mousemove', moveHandler);
+        document.addEventListener('mouseup', upHandler);
+    });
+
+    // Add right-click to remove individual sticker
+    sticker.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        sticker.remove();
+        console.log(`Removed sticker with color: ${sticker.dataset.color}`);
+    });
+}
+
+export function initDraggableStickers(map) {
+    const stickerButtons = document.querySelectorAll('.point-btn');
+
+    stickerButtons.forEach(btn => {
+        btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+
+            // Create a clone of the sticker
+            const sticker = document.createElement('div');
+            const color = btn.dataset.color;
+
+            Object.assign(sticker.style, {
+                position: 'absolute',
+                left: e.pageX + 'px',
+                top: e.pageY + 'px',
+                width: '20px',
+                height: '20px',
+                backgroundColor: color,
+                borderRadius: '50%',
+                border: '2px solid white',
+                cursor: 'move',
+                zIndex: '1000',
+                transform: 'translate(-50%, -50%)',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
+                userSelect: 'none'
+            });
+
+            sticker.dataset.color = color;
+            sticker.dataset.typeId = btn.id;
+            sticker.classList.add('draggable-sticker');
+            document.body.appendChild(sticker);
+
+            let isDragging = true;
+
+            const moveHandler = (ev) => {
+                if (!isDragging) return;
+                sticker.style.left = ev.pageX + 'px';
+                sticker.style.top = ev.pageY + 'px';
+            };
+
+            const upHandler = () => {
+                isDragging = false;
+                document.removeEventListener('mousemove', moveHandler);
+                document.removeEventListener('mouseup', upHandler);
+
+                // Add to map at dropped position
+                const rect = sticker.getBoundingClientRect();
+                const center = [rect.left + rect.width / 2, rect.top + rect.height / 2];
+                const coords = map.unproject(center);
+
+                console.log(`Sticker placed at: [${coords.lng}, ${coords.lat}] with color: ${color}`);
+
+                // Make the placed sticker draggable
+                makeStickerDraggable(sticker);
+            };
+
+            document.addEventListener('mousemove', moveHandler);
+            document.addEventListener('mouseup', upHandler);
+        });
+
+        // Add double-click to remove stickers from map
+        btn.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            // Remove all stickers of this color from the map
+            const allStickers = document.querySelectorAll('.draggable-sticker');
+            allStickers.forEach(sticker => {
+                if (sticker.dataset.color === btn.dataset.color) {
+                    sticker.remove();
+                }
+            });
+            console.log(`Removed all stickers with color: ${btn.dataset.color}`);
+        });
+    });
 }
 
 export function initDraggableItems(map) {

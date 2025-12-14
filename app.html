@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>IP Paris Map</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+
+    <!-- Mapbox Draw -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.2/mapbox-gl-draw.js"></script>
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.2/mapbox-gl-draw.css"
+        type="text/css">
+
+
+
+
+    <link href="src/style.css" rel="stylesheet">
+</head>
+
+<body>
+    <div id="main_container">
+        <!-- Left Sidebar -->
+        <div id="left-sidebar">
+            <!-- Map Styles Section -->
+            <div class="toolbar-section">
+                <div class="section-title">Map Styles</div>
+                <div class="section-content">
+                    <button id="btn-light" class="active">Light</button>
+                    <button id="btn-dark">Dark</button>
+                    <button id="btn-streets">Streets</button>
+                    <button id="btn-satellite">Satellite</button>
+                </div>
+            </div>
+
+            <!-- Layers Section -->
+            <div class="toolbar-section">
+                <div class="section-title">Layers</div>
+                <div class="section-content">
+                    <button class="draggable-source">Bus</button>
+                    <button class="draggable-source">Bicycle</button>
+                    <button class="draggable-source">Walk</button>
+                    <button class="draggable-source">Roads</button>
+                </div>
+            </div>
+
+            <!-- Shortest Path Section -->
+            <div class="toolbar-section">
+                <div class="section-title">Shortest Path</div>
+                <div class="section-content">
+                    <button class="draggable-source">A</button>
+                    <button class="draggable-source">B</button>
+                </div>
+            </div>
+
+            <!-- Tools Section -->
+            <div class="toolbar-section">
+                <div class="section-title">15-Minute Reach</div>
+                <div class="section-content">
+                    <button id="btn-isochrone"> Walk</button>
+                    <button id=""> Cycling</button>
+                    <button id=""> Car</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="map"></div>
+
+        <!-- Question Panel -->
+        <div id="question-panel">
+            <div class="progress-dots">
+                <span class="dot active"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+            <div class="question-content">
+                <button id="prev-btn" class="nav-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <div class="question-text">
+                    How do you typically travel to campus?
+                </div>
+                <button id="next-btn" class="nav-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div id="right-sidebar">
+            <div class="toolbar-section">
+                <div class="section-title">Drawing</div>
+                <div class="section-content">
+                    <button id="btn-draw">Line</button>
+                    <button id="btn-surface">Surface</button>
+                </div>
+            </div>
+
+            <!-- Points Section -->
+            <div class="toolbar-section points-section">
+                <div class="section-title">Stickers</div>
+                <div class="section-content points-grid">
+                    <button id="sticker-btn-1" class="point-btn" data-color="#FF6B6B" style="background-color: #FF6B6B;"></button>
+                    <button id="sticker-btn-2" class="point-btn" data-color="#4ECDC4" style="background-color: #4ECDC4;"></button>
+                    <button id="sticker-btn-3" class="point-btn" data-color="#45B7D1" style="background-color: #45B7D1;"></button>
+                    <button id="sticker-btn-4" class="point-btn" data-color="#FFA07A" style="background-color: #FFA07A;"></button>
+                    <button id="sticker-btn-5" class="point-btn" data-color="#98D8C8" style="background-color: #98D8C8;"></button>
+                    <button id="sticker-btn-6" class="point-btn" data-color="#F7DC6F" style="background-color: #F7DC6F;"></button>
+                    <button id="sticker-btn-7" class="point-btn" data-color="#BB8FCE" style="background-color: #BB8FCE;"></button>
+                    <button id="sticker-btn-8" class="point-btn" data-color="#85C1E2" style="background-color: #85C1E2;"></button>
+                    <button id="sticker-btn-9" class="point-btn" data-color="#F8B739" style="background-color: #F8B739;"></button>
+                    <button id="sticker-btn-10" class="point-btn" data-color="#E74C3C" style="background-color: #E74C3C;"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+</body>
+
+</html>

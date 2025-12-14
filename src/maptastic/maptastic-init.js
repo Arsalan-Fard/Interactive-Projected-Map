@@ -1,9 +1,8 @@
 var configObject = {
-    autoSave: false,
+    autoSave: true, // Set to true if you want layout changes to persist
     autoLoad: false,
     layers: ["main_container"]
 };
 
-window.onload = function() {
-    window.maptastic = Maptastic(configObject);
-};
+// Initialize Maptastic immediately, matching the working example
+var maptastic = Maptastic(configObject);

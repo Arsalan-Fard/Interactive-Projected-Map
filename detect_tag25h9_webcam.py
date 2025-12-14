@@ -101,26 +101,32 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
 
                 centers[marker_id] = (cx, cy)
                 
-                # # Draw ID
-                # cv2.putText(
-                #     frame,
-                #     f"ID: {marker_id}",
-                #     (int(marker_corners[0][0]), int(marker_corners[0][1]) - 10),
-                #     cv2.FONT_HERSHEY_SIMPLEX,
-                #     0.9,
-                #     (0, 255, 0),
-                #     2,
-                #     cv2.LINE_AA,
-                # )
+                # Draw ID
+                cv2.putText(
+                    frame,
+                    f"ID: {marker_id}",
+                    (int(marker_corners[0][0]), int(marker_corners[0][1]) - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.9,
+                    (0, 255, 0),
+                    2,
+                    cv2.LINE_AA,
+                )
 
             # Logic for distances and relative position
             # New Boundary: 0, 1, 2, 3
             # New Tracked: 4 (and 5 reserved)
             
-            tracked_id = 4
             boundary_ids = [0, 1, 2, 3]
+            trackable_ids = [5, 4] # Prioritize 5, then 4
+            tracked_id = None
 
-            if tracked_id in all_corners_dict:
+            for tid in trackable_ids:
+                if tid in all_corners_dict:
+                    tracked_id = tid
+                    break
+
+            if tracked_id is not None:
                 corners_tracked = all_corners_dict[tracked_id]
                 
                 # Store the closest corners of boundary markers to the tracked marker
@@ -160,32 +166,27 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
 
                     M = cv2.getPerspectiveTransform(src_pts, dst_pts)
 
-                    # Find the closest corner of tracked marker to ANY of the boundary markers
-                    # This is the point we transform
-                    min_overall_dist = float('inf')
-                    closest_corner_of_tracked = None
+                    # Use the CENTER of the tracked marker
+                    tracked_center = np.array(centers[tracked_id], dtype="float32")
                     
+                    # Transform the center of tracked marker
+                    pts = np.array([[tracked_center]], dtype="float32")
+                    pts_transformed = cv2.perspectiveTransform(pts, M)
+                    
+                    px = pts_transformed[0][0][0]
+                    py = pts_transformed[0][0][1]
+                    
+                    found_position = True
+                    
+                    # Draw a circle on the center being tracked
+                    
+                    # Draw lines from the center of the tracked marker to the closest corner of each boundary marker
                     for corner_id in boundary_ids:
-                        target_corners = all_corners_dict[corner_id]
-                        p_tracked_best, _, dist = find_closest_corner(corners_tracked, target_corners)
-                        if dist < min_overall_dist:
-                            min_overall_dist = dist
-                            closest_corner_of_tracked = p_tracked_best
-                    
-                    # Transform the closest corner of tracked marker
-                    if closest_corner_of_tracked is not None:
-                        pts = np.array([[closest_corner_of_tracked]], dtype="float32")
-                        pts_transformed = cv2.perspectiveTransform(pts, M)
-                        
-                        px = pts_transformed[0][0][0]
-                        py = pts_transformed[0][0][1]
-                        
-                        found_position = True
-                        
-                        # Draw a circle on the corner being tracked
-                        # cv2.circle(frame, 
-                        #            (int(closest_corner_of_tracked[0]), int(closest_corner_of_tracked[1])), 
-                        #            8, (0, 0, 255), -1)
+                        if corner_id in closest_boundary_corners:
+                            cv2.line(frame, centers[tracked_id], 
+                                     (int(closest_boundary_corners[corner_id][0]), int(closest_boundary_corners[corner_id][1])), 
+                                     (255, 0, 0), 2)
+
                         
 
         else:

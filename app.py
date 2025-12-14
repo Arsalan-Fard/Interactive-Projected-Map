@@ -1,31 +1,36 @@
-"""Flask service for calculating isochrones using OSMnx."""
+from flask import Flask, send_from_directory, jsonify, request
+from flask_cors import CORS
 import osmnx as ox
 import networkx as nx
-from flask import Flask, jsonify, request
-from flask_cors import CORS
 import json
 import os
+import time
 
-app = Flask(__name__)
+# Initialize Flask app
+# static_folder='.' allows serving files from the current directory
+# static_url_path='' makes them available at the root URL (e.g. /src/main.js)
+app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
+
+# --- OSMnx Service Logic ---
 
 # Load graph once at startup (this is slow, ~5-10 seconds)
 print("Loading walking network graph from OSMnx...")
-G = ox.graph_from_place("Palaiseau, France", network_type="walk")
-print(f"Graph loaded! {len(G.nodes)} nodes, {len(G.edges)} edges")
+# Using a try-except block to handle potential loading errors gracefully or retry
+try:
+    G = ox.graph_from_place("Palaiseau, France", network_type="walk")
+    print(f"Graph loaded! {len(G.nodes)} nodes, {len(G.edges)} edges")
+except Exception as e:
+    print(f"Error loading graph: {e}")
+    G = None
 
 def get_isochrone(lat, lon, distance_meters):
     """
     Calculate isochrone (reachable area) from a point.
-
-    Args:
-        lat: Latitude of starting point
-        lon: Longitude of starting point
-        distance_meters: Maximum walking distance in meters
-
-    Returns:
-        GeoJSON FeatureCollection of reachable nodes
     """
+    if G is None:
+        return None
+        
     try:
         # Find nearest node in the graph
         node = ox.nearest_nodes(G, lon, lat)
@@ -48,13 +53,6 @@ def get_isochrone(lat, lon, distance_meters):
 def calculate_isochrone():
     """
     API endpoint to calculate isochrone.
-
-    Expects JSON body:
-    {
-        "lat": 48.7133,
-        "lon": 2.2089,
-        "distance": 500
-    }
     """
     try:
         data = request.json
@@ -83,6 +81,9 @@ def calculate_isochrone():
 @app.route('/api/route', methods=['POST'])
 def get_route():
     """Calculate shortest path using OSMnx."""
+    if G is None:
+        return jsonify({'error': 'Graph not loaded'}), 500
+
     try:
         data = request.json
         if not data:
@@ -137,7 +138,6 @@ def save_geojson():
             return jsonify({'error': 'Missing geojson data'}), 400
             
         if not filename:
-            import time
             filename = f"stickers_{int(time.time())}.geojson"
             
         # Ensure filename is safe (basic check)
@@ -165,11 +165,32 @@ def health_check():
     """Health check endpoint."""
     return jsonify({
         "status": "ok",
-        "graph_nodes": len(G.nodes),
-        "graph_edges": len(G.edges)
+        "graph_nodes": len(G.nodes) if G else 0,
+        "graph_edges": len(G.edges) if G else 0
     })
 
+
+# --- Static File Serving (Must come AFTER API routes) ---
+
+@app.route('/')
+def index():
+    """Serve the main entry point."""
+    return send_from_directory('.', 'index.html')
+
+@app.route('/app')
+def app_page():
+    """Serve the app.html page if needed."""
+    return send_from_directory('.', 'app.html')
+
+@app.route('/<path:path>')
+def serve_file(path):
+    """Serve any other static file."""
+    if os.path.exists(path):
+        return send_from_directory('.', path)
+    return jsonify({"error": "File not found"}), 404
+
 if __name__ == '__main__':
-    print("Starting isochrone service on http://localhost:5001")
-    print("Use POST /api/isochrone with {lat, lon, distance} to calculate isochrones")
-    app.run(host='127.0.0.1', port=5001, debug=False)
+    port = 8000
+    print(f"Server starting on http://localhost:{port}")
+    # debug=True allows auto-reload on file changes
+    app.run(host='0.0.0.0', port=port, debug=True)
