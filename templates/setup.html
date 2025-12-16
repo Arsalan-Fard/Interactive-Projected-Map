@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Setup | Tangible Map</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/setup.css') }}">
+</head>
+<body>
+    <div class="page">
+        <div class="main-layout">
+            <aside class="sidebar">
+                <section class="card">
+                    <div class="card-header">
+                        <div>
+                            <h1>Tabletop Map Setup</h1>
+                        </div>
+                    </div>
+                    <div class="hero-actions" style="margin-bottom: 12px;">
+                        <span id="save-status" class="status-dot">Unsaved</span>
+                        <button id="save-server" class="ghost-btn">Save to server</button>
+                        <button id="download-config" class="primary-btn">Download config</button>
+                    </div>
+                    <div class="card-header">
+                        <div>
+                            <h3>Projects List</h3>
+                        </div>
+                        <div class="hero-actions">
+                            <button id="new-project" class="ghost-btn">New project</button>
+                            <button id="refresh-projects" class="text-btn">Refresh list</button>
+                        </div>
+                    </div>
+                    <div id="project-list" class="vertical-list"></div>
+                </section>
+            </aside>
+
+            <div class="main-content">
+                <section class="grid">
+            <div class="vertical-list">
+                <section class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2>Project Details</h2>
+                        </div>
+                        <span class="pill" id="project-pill">Project</span>
+                    </div>
+
+                    <div class="form-grid">
+                        <label>
+                            <span>Project name</span>
+                            <input id="project-name" type="text" placeholder="e.g. Pilot with telecom students">
+                        </label>
+                        <label>
+                            <span>Location / campus</span>
+                            <input id="project-location" type="text" placeholder="e.g. Palaiseau Campus">
+                        </label>
+                        <label>
+                            <span>Project ID (used in storage)</span>
+                            <input id="project-id" type="text" placeholder="auto-generated">
+                        </label>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2>Base Maps & Views</h2>
+                        </div>
+                    </div>
+
+                    <div class="map-card-grid" id="map-list"></div>
+
+                    <div class="card-subsection">
+                        <div class="card-header tight">
+                            <div>
+                                <h3 id="selected-map-title">No map selected yet</h3>
+                            </div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <span class="pill light" id="selected-map-pill"></span>
+                                <button id="delete-map" class="text-btn" style="color:var(--danger);" title="Delete this map">Delete</button>
+                            </div>
+                        </div>
+                        <div class="form-grid" id="map-detail-form">
+                            <label>
+                                <span>Map Name</span>
+                                <input id="map-label" type="text" placeholder="e.g. Overview">
+                            </label>
+                            <label>
+                                <span>Style / source</span>
+                                <input id="map-style" type="text" placeholder="mapbox://styles/mapbox/light-v11">
+                            </label>
+                            <label>
+                                <span>Center (lng, lat)</span>
+                                <input id="map-center" type="text" placeholder="2.2, 48.714">
+                            </label>
+                            <label>
+                                <span>Zoom</span>
+                                <input id="map-zoom" type="number" step="0.1" min="0" max="22">
+                            </label>
+                            <label>
+                                <span>Pitch</span>
+                                <input id="map-pitch" type="number" step="1" min="0" max="85">
+                            </label>
+                            <label>
+                                <span>Bearing</span>
+                                <input id="map-bearing" type="number" step="1" min="-180" max="180">
+                            </label>
+                        </div>
+
+                        <div class="overlay-list">
+                            <div class="overlay-list-header">
+                                <p class="eyebrow">Layers to load</p>
+                                <button class="text-btn" id="toggle-all-overlays">Toggle all</button>
+                            </div>
+                            <div id="overlay-items"></div>
+                        </div>
+                    </div>
+
+                    <div class="card-subsection bordered">
+                        <p class="eyebrow">Add another map preset</p>
+                        <button id="add-map" class="ghost-btn full">Add New Map</button>
+                    </div>
+                </section>
+            </div>
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Organize the survey</h2>
+                        <p class="subtle">Build question groups and add questions to them.</p>
+                    </div>
+                </div>
+
+                <div class="card-subsection">
+                    <p class="eyebrow">Add Question Group</p>
+                    <div class="form-grid slim">
+                        <label>
+                            <span>Group title</span>
+                            <input id="group-title" type="text" placeholder="e.g. Mobility">
+                        </label>
+                        <button id="add-group" class="primary-btn short">Add Group</button>
+                    </div>
+                </div>
+
+                <div class="card-subsection bordered">
+                    <p class="eyebrow">Groups & Questions</p>
+                    <div id="group-list" class="group-list"></div>
+                </div>
+
+                <div class="card-subsection">
+                    <div class="card-header tight">
+                        <div>
+                            <p class="eyebrow">Selected Question</p>
+                            <h3 id="selected-question-title">No question selected</h3>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                             <button id="delete-question" class="text-btn" style="color:var(--danger);" title="Delete this question">Delete</button>
+                        </div>
+                    </div>
+                    <div class="form-grid" id="question-detail-form">
+                        <label>
+                            <span>Question text</span>
+                            <input id="question-text" type="text" placeholder="Question text">
+                        </label>
+                        <label>
+                            <span>Interaction type</span>
+                            <select id="question-type">
+                                <option value="text">Free text</option>
+                                <option value="single-choice">Single choice</option>
+                                <option value="multi-choice">Multiple choice</option>
+                                <option value="sticker">Stickers on map</option>
+                                <option value="drawing">Draw on map</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Map View (Preset)</span>
+                            <select id="question-map-preset">
+                                <option value="">(Default Project Map)</option>
+                            </select>
+                        </label>
+                    </div>
+                    <!-- Hidden options field in case we need it later, or just remove if strictly not needed -->
+                    <div id="question-options-container" style="display:none; margin-top:8px;">
+                        <label>
+                            <span>Options (one per line)</span>
+                            <textarea id="question-options" rows="3"></textarea>
+                        </label>
+                    </div>
+                </div>
+            </section>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="{{ url_for('static', filename='js/setup.js') }}"></script>
+</body>
+</html>

@@ -15,10 +15,10 @@
             display: block;
         }
     </style>
-    <script src="src/maptastic/maptastic.min.js"></script>
+    <script src="{{ url_for('static', filename='js/maptastic/maptastic.min.js') }}"></script>
 </head>
 <body>
-    <iframe id="app-frame" src="app.html" allowfullscreen></iframe>
+    <iframe id="app-frame" src="/app" allowfullscreen></iframe>
     <script>
         var configObject = {
             autoSave: false,

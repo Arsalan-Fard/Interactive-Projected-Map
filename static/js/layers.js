@@ -19,9 +19,10 @@ export function add3DBuildings(map) {
 
 // TODO: to be replaced to add all layers.
 export function addPalaiseauRoads(map) {
+    if (map.getSource('palaiseau-roads')) return;
     map.addSource('palaiseau-roads', {
         type: 'geojson',
-        data: './data/palaiseau_roads.geojson'
+        data: '/static/data/palaiseau_roads.geojson'
     });
 
     map.addLayer({
@@ -48,7 +49,7 @@ export function addWalkingNetwork(map) {
 
     map.addSource('walking-network', {
         type: 'geojson',
-        data: './data/walking_network.geojson'
+        data: '/static/data/walking_network.geojson'
     });
 
     map.addLayer({
@@ -75,7 +76,7 @@ export function addMobilityInfrastructure(map) {
 
     map.addSource('mobility-infrastructure', {
         type: 'geojson',
-        data: './data/mobility_infrastructure.geojson'
+        data: '/static/data/mobility_infrastructure.geojson'
     });
 
     map.addLayer({
@@ -102,7 +103,7 @@ export function addBusLanes(map) {
 
     map.addSource('bus-lanes', {
         type: 'geojson',
-        data: './data/bus_lanes.geojson'
+        data: '/static/data/bus_lanes.geojson'
     });
 
     map.addLayer({
@@ -129,7 +130,7 @@ export function addAmenities(map) {
 
     map.addSource('amenities', {
         type: 'geojson',
-        data: './data/amenities.geojson'
+        data: '/static/data/amenities.geojson'
     });
 
     map.addLayer({
@@ -186,7 +187,7 @@ export function addFloorplan(map) {
 
     map.addSource('telecom-floorplan', {
         type: 'image',
-        url: './data/images.jpg',
+        url: '/static/data/images.jpg',
         coordinates: [
             [2.19908, 48.71347], // Top Left (Lng, Lat)
             [2.201649, 48.713192], // Top Right
@@ -204,4 +205,105 @@ export function addFloorplan(map) {
             'raster-fade-duration': 0
         }
     });
+}
+
+// ---------------------------------------------------------
+// NEW DYNAMIC LOADER
+// ---------------------------------------------------------
+
+const specializedLoaders = {
+    'palaiseau-roads': addPalaiseauRoads,
+    'walking-network': addWalkingNetwork,
+    'mobility-infrastructure': addMobilityInfrastructure,
+    'bus-lanes': addBusLanes,
+    'amenities': addAmenities,
+    'telecom-floorplan': addFloorplan
+};
+
+// Maps config ID to the actual Mapbox layer ID(s) created by the loader
+function getLayerIds(id) {
+    const map = {
+        'palaiseau-roads': ['palaiseau-roads-layer'],
+        'walking-network': ['walking-network-layer'],
+        'mobility-infrastructure': ['mobility-infrastructure-layer'],
+        'bus-lanes': ['bus-lanes-layer'],
+        'amenities': ['amenities-circle-layer', 'amenities-label-layer'],
+        'telecom-floorplan': ['telecom-floorplan-layer']
+    };
+    return map[id] || [`${id}-layer`];
+}
+
+function getRandomColor() {
+    return '#' + Math.floor(Math.random()*16777215).toString(16);
+}
+
+export function loadAndRenderLayer(map, layerConfig, visible = true) {
+    const visibility = visible ? 'visible' : 'none';
+
+    // 1. If we have a specialized loader (legacy/custom style), use it
+    if (specializedLoaders[layerConfig.id]) {
+        specializedLoaders[layerConfig.id](map);
+        
+        // Force visibility update regardless of whether it was just added or existed
+        const ids = getLayerIds(layerConfig.id);
+        ids.forEach(id => {
+            if (map.getLayer(id)) {
+                map.setLayoutProperty(id, 'visibility', visibility);
+            }
+        });
+        return;
+    }
+
+    // 2. Generic loader for new layers
+    if (!layerConfig.file) return;
+
+    if (layerConfig.type === 'line' || layerConfig.type === 'point') {
+        const sourceId = layerConfig.id;
+        if (!map.getSource(sourceId)) {
+            map.addSource(sourceId, {
+                type: 'geojson',
+                data: layerConfig.file
+            });
+        }
+
+        const layerId = `${layerConfig.id}-layer`;
+        
+        // If layer exists, update visibility
+        if (map.getLayer(layerId)) {
+             map.setLayoutProperty(layerId, 'visibility', visibility);
+             return;
+        }
+
+        if (layerConfig.type === 'line') {
+             map.addLayer({
+                 id: layerId,
+                 type: 'line',
+                 source: sourceId,
+                 layout: { 
+                     'line-join': 'round', 
+                     'line-cap': 'round',
+                     'visibility': visibility 
+                },
+                 paint: { 
+                     'line-color': getRandomColor(), 
+                     'line-width': 3 
+                }
+             });
+        } else if (layerConfig.type === 'point') {
+             map.addLayer({
+                 id: layerId,
+                 type: 'circle',
+                 source: sourceId,
+                 layout: { 'visibility': visibility },
+                 paint: { 
+                     'circle-radius': 6, 
+                     'circle-color': getRandomColor(),
+                     'circle-stroke-width': 1,
+                     'circle-stroke-color': '#fff'
+                }
+             });
+        }
+    } else {
+        console.warn(`Layer type ${layerConfig.type} for ${layerConfig.id} not supported directly without specialized loader (needs coordinates for images).`);
+    }
 }
