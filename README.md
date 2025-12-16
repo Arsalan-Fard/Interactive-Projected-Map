@@ -5,9 +5,9 @@ This project implements an interactive map system with physical AprilTag markers
 ## TODO
 
 - [ ] Add AprilTag detection for each tool
-- [ ] Isochrone
+- [ ] 15min Isochrone
 - [ ] Shortest Path Fix for when we have Zoom or Pan -> we shouldn't allow pan or zoom when something is on the map. (save button)
-- [ ] Incomplete OSMNX for routes
+- [ ] Incomplete OSMNX layers for routes
 - [ ] Pan Zoom
 - [ ] Participation Counter
 - [x] In Setup we should have map config for each question
@@ -17,5 +17,5 @@ This project implements an interactive map system with physical AprilTag markers
 - [ ] UI react to questions
 - [ ] defaultState overlays is hardcoded for Palaiseau specifically -> it should be fixed
 - [ ] Storing answers
-
+- [ ] See others inputs
 
