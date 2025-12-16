@@ -4,7 +4,7 @@ __pycache__/
 .venv
 env/
 venv/
-js/config.js
+static/js/config.js
 data/
 1.py
 cache
