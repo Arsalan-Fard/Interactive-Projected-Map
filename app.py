@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory, jsonify, request, render_template
+from flask import Flask, send_from_directory, jsonify, request, render_template, Response
 from flask_cors import CORS
 import osmnx as ox
 import networkx as nx
@@ -236,6 +236,30 @@ def config_store():
         return jsonify({"status": "saved", "path": cfg_path})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/static/js/config.js')
+def serve_config_js():
+    # 1. Try to serve local file (Development)
+    local_path = os.path.join(app.root_path, 'static', 'js', 'config.js')
+    if os.path.exists(local_path):
+        return send_from_directory('static/js', 'config.js')
+
+    # 2. Generate from Environment Variables (Production/Render)
+    token = os.environ.get('MAPBOX_ACCESS_TOKEN')
+    if not token:
+        return "Error: MAPBOX_ACCESS_TOKEN not set", 500
+
+    js_content = f"""
+export const CONFIG = {{
+    accessToken: '{token}',
+    style: 'mapbox://styles/mapbox/light-v11',
+    center: [2.2, 48.714],
+    zoom: 15,
+    pitch: 45,
+    bearing: 40
+}};
+"""
+    return Response(js_content, mimetype='application/javascript')
 
 # Static File Serving (Must come AFTER API routes)
 @app.route('/')
