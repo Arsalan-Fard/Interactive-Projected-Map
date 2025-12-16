@@ -18,7 +18,4 @@ This project implements an interactive map system with physical AprilTag markers
 - [ ] defaultState overlays is hardcoded for Palaiseau specifically -> it should be fixed
 - [ ] Storing answers
 
-**UI on sides
-**Each question should have an ID -> Create setup page fist. -> going to next question will remove the current one but it's saved.
-**Session definition
 
