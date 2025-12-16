@@ -253,6 +253,6 @@ def setup_page():
 # Catch-all removed in favor of standard static file serving by Flask
 
 if __name__ == '__main__':
-    port = 8000
+    port = int(os.environ.get('PORT', 8000))
     print(f"Server starting on http://localhost:{port}")
     app.run(host='0.0.0.0', port=port, debug=True)
