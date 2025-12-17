@@ -139,6 +139,11 @@ a, button {
     font-size: 16px;
 }
 
+.sidebar .card h1 {
+    font-size: 24px;
+    font-weight: 700;
+}
+
 .card-header.tight {
     margin-bottom: 6px;
 }
