@@ -109,6 +109,7 @@ const els = {
     deleteProject: document.getElementById('delete-project'),
     saveServer: document.getElementById('save-server'),
     downloadConfig: document.getElementById('download-config'),
+    openProject: document.getElementById('open-project'),
     saveStatus: document.getElementById('save-status'),
     questionList: document.getElementById('question-list'),
     addQuestionBtn: document.getElementById('add-question'),
@@ -755,6 +756,11 @@ function initEvents() {
     els.deleteProject?.addEventListener('click', deleteCurrentProject);
     els.saveServer?.addEventListener('click', persistStateToServer);
     els.downloadConfig?.addEventListener('click', downloadConfig);
+    els.openProject?.addEventListener('click', () => {
+        const selected = els.projectDropdown?.value || state.project.id;
+        const url = selected ? `/app?project=${encodeURIComponent(selected)}` : '/app';
+        window.open(url, '_blank');
+    });
 
     // Project details
     els.projectName.addEventListener('input', e => {
