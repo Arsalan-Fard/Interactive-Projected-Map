@@ -16,7 +16,7 @@ const defaultState = {
     maps: [
         {
             id: 'palaiseau-outdoor',
-            label: 'Palaiseau outdoor',
+            label: 'IP Paris Campus',
             style: 'mapbox://styles/mapbox/light-v11',
             center: [2.2, 48.714],
             zoom: 15,
@@ -28,7 +28,7 @@ const defaultState = {
         {
             id: 'telecom-floorplan-view',
             label: 'Telecom indoor',
-            style: '/static/data/images.jpg',
+            style: 'mapbox://styles/mapbox/light-v11',
             center: [2.2005, 48.7138],
             zoom: 17,
             pitch: 0,
@@ -37,66 +37,55 @@ const defaultState = {
             description: 'Image overlay for indoor exercises'
         }
     ],
-    questionGroups: [
+    questions: [
         {
-            id: 'mobility',
-            title: 'Mobility & arrival',
-            description: 'Understand how people reach the campus',
-            order: 1,
-            questions: [
-                {
-                    id: 'arrival-mode',
-                    text: 'How do you typically travel to campus?',
-                    type: 'single-choice',
-                    options: ['Walk', 'Bike', 'Bus', 'Car', 'Other'],
-                    required: true,
-                    responseShape: 'scalar',
-                    targetLayer: null
-                },
-                {
-                    id: 'bike-lanes',
-                    text: 'Where should we add bike lanes?',
-                    type: 'sticker',
-                    options: [],
-                    required: false,
-                    responseShape: 'point-collection',
-                    targetLayer: 'mobility-infrastructure-layer'
-                }
-            ]
+            id: 'arrival-mode',
+            text: 'How do you typically travel to campus?',
+            type: 'single-choice',
+            options: ['Walk', 'Bike', 'Bus', 'Car', 'Other'],
+            required: true,
+            responseShape: 'scalar',
+            mapId: null,
+            order: 1
         },
         {
-            id: 'wayfinding',
-            title: 'Wayfinding & comfort',
-            description: 'Moments of friction on the map',
-            order: 2,
-            questions: [
-                {
-                    id: 'confusing-areas',
-                    text: 'Where do you get confused?',
-                    type: 'sticker',
-                    options: [],
-                    required: false,
-                    responseShape: 'point-collection',
-                    targetLayer: 'palaiseau-roads-layer'
-                },
-                {
-                    id: 'priority-corridors',
-                    text: 'Draw the corridor you use most often',
-                    type: 'drawing',
-                    options: [],
-                    required: false,
-                    responseShape: 'line-string',
-                    targetLayer: 'telecom-floorplan-layer'
-                }
-            ]
+            id: 'bike-lanes',
+            text: 'Where should we add bike lanes?',
+            type: 'sticker',
+            options: [],
+            required: false,
+            responseShape: 'point-collection',
+            mapId: null,
+            order: 2
+        },
+        {
+            id: 'confusing-areas',
+            text: 'Where do you get confused?',
+            type: 'sticker',
+            options: [],
+            required: false,
+            responseShape: 'point-collection',
+            mapId: null,
+            order: 3
+        },
+        {
+            id: 'priority-corridors',
+            text: 'Draw corridors for pedestrians.',
+            type: 'drawing',
+            options: [],
+            required: false,
+            responseShape: 'line-string',
+            mapId: null,
+            order: 4
         }
     ]
 };
 
 let state = JSON.parse(JSON.stringify(defaultState));
 let projects = [];
-let selectedQuestion = null; // { groupId, questionId }
-let isSwitching = false; // Guard to prevent data corruption during question switch
+let selectedQuestionId = null; 
+let isSwitching = false; 
+let draggedQuestionId = null; // Track dragged item
 
 const els = {
     projectName: document.getElementById('project-name'),
@@ -121,9 +110,8 @@ const els = {
     saveServer: document.getElementById('save-server'),
     downloadConfig: document.getElementById('download-config'),
     saveStatus: document.getElementById('save-status'),
-    groupList: document.getElementById('group-list'),
-    addGroup: document.getElementById('add-group'),
-    groupTitle: document.getElementById('group-title'),
+    questionList: document.getElementById('question-list'),
+    addQuestionBtn: document.getElementById('add-question'),
     
     questionDetailTitle: document.getElementById('selected-question-title'),
     questionText: document.getElementById('question-text'),
@@ -171,7 +159,15 @@ function mergeState(serverConfig) {
     state.project = { ...defaultState.project, ...(serverConfig.project || {}) };
     state.overlays = (serverConfig.overlays && serverConfig.overlays.length > 0) ? serverConfig.overlays : defaultState.overlays;
     state.maps = (serverConfig.maps && serverConfig.maps.length > 0) ? serverConfig.maps : defaultState.maps;
-    state.questionGroups = serverConfig.questionGroups || serverConfig.questionFlow || defaultState.questionGroups;
+    state.questions = serverConfig.questions || serverConfig.questionFlow || defaultState.questions;
+    // Flatten if we got groups from old config
+    if (serverConfig.questionGroups) {
+        state.questions = [];
+        serverConfig.questionGroups.forEach(g => {
+            if (g.questions) state.questions.push(...g.questions);
+        });
+    }
+
     if (!state.project.mapId && state.maps.length) {
         state.project.mapId = state.maps[0].id;
     }
@@ -201,7 +197,7 @@ async function loadProjectById(projectId) {
             renderMapCards();
             renderMapDetails();
             renderOverlayList();
-            renderGroups();
+            renderQuestions();
             
             const allRows = els.projectList.querySelectorAll('.project-row');
             allRows.forEach(row => {
@@ -243,11 +239,21 @@ function newProject() {
     if (!state.project.mapId && state.maps.length) {
         state.project.mapId = state.maps[0].id;
     }
+
+    // Assign default map to all questions if missing
+    if (state.maps.length > 0) {
+        state.questions.forEach(q => {
+            if (!q.mapId) {
+                q.mapId = state.maps[0].id;
+            }
+        });
+    }
+
     renderProject();
     renderMapCards();
     renderMapDetails();
     renderOverlayList();
-    renderGroups();
+    renderQuestions();
     
     const allRows = els.projectList.querySelectorAll('.project-row');
     allRows.forEach(row => row.classList.remove('active'));
@@ -352,14 +358,18 @@ function renderMapCards() {
 function renderQuestionMapSelect() {
     if (!els.questionMapPreset) return;
     const currentVal = els.questionMapPreset.value;
-    els.questionMapPreset.innerHTML = '<option value="">(Default Project Map)</option>';
+    els.questionMapPreset.innerHTML = '';
     state.maps.forEach(map => {
         const option = document.createElement('option');
         option.value = map.id;
         option.textContent = map.label || map.id;
         els.questionMapPreset.appendChild(option);
     });
-    if (state.maps.some(m => m.id === currentVal)) {
+    
+    // Set default if empty
+    if (!currentVal && state.maps.length > 0) {
+       els.questionMapPreset.value = state.maps[0].id;
+    } else if (state.maps.some(m => m.id === currentVal)) {
         els.questionMapPreset.value = currentVal;
     }
 }
@@ -396,12 +406,8 @@ function deleteMap() {
     const deletedId = state.project.mapId;
     state.maps = state.maps.filter(m => m.id !== deletedId);
     
-    state.questionGroups.forEach(g => {
-        if (g.questions) {
-            g.questions.forEach(q => {
-                if (q.mapId === deletedId) q.mapId = null;
-            });
-        }
+    state.questions.forEach(q => {
+        if (q.mapId === deletedId) q.mapId = null;
     });
 
     state.project.mapId = state.maps[0].id;
@@ -410,7 +416,7 @@ function deleteMap() {
     renderMapCards();
     renderMapDetails();
     renderOverlayList();
-    renderGroups(); 
+    renderQuestions(); 
 }
 
 function renderOverlayList() {
@@ -482,55 +488,100 @@ function addMapFromForm() {
     renderOverlayList();
 }
 
-function renderGroups() {
-    els.groupList.innerHTML = '';
-    state.questionGroups
-        .sort((a, b) => a.order - b.order)
-        .forEach(group => {
-            const card = document.createElement('div');
-            card.className = 'group-card';
-            card.dataset.id = group.id;
+function renderQuestions() {
+    els.questionList.innerHTML = '';
+    state.questions.forEach((q, index) => {
+        const mapObj = state.maps.find(m => m.id === q.mapId);
+        const mapLabel = mapObj ? (mapObj.label || mapObj.id) : q.mapId;
+        const isActive = selectedQuestionId === q.id;
+        
+        const card = document.createElement('div');
+        card.className = `question-chip ${isActive ? 'active' : ''}`;
+        card.dataset.id = q.id;
+        card.dataset.index = index;
+        card.draggable = true;
 
-            const questions = group.questions || [];
-            card.innerHTML = `
-                <div class="group-header">
-                    <div>
-                        <p class="group-title">${group.title}</p>
-                        <div class="group-meta">
-                            <span>#${group.order}</span>
-                        </div>
-                    </div>
-                    <button class="delete-btn" data-remove-group="${group.id}">Remove Group</button>
-                </div>
-                <div class="question-chips">
-                    ${questions.map(q => {
-                        const mapObj = state.maps.find(m => m.id === q.mapId);
-                        const mapLabel = mapObj ? (mapObj.label || mapObj.id) : q.mapId;
-                        return `
-                        <span class="question-chip ${selectedQuestion?.questionId === q.id ? 'active' : ''}" data-qid="${q.id}" data-gid="${group.id}" style="cursor:pointer; ${selectedQuestion?.questionId === q.id ? 'border-color:var(--accent); background:rgba(94, 234, 212, 0.1);' : ''}">
-                            <span class="type">${q.type}</span>
-                            <span>${q.text}</span>
-                            ${q.mapId ? `<span class="pill light tiny" style="font-size:10px; padding:2px 6px;">${mapLabel}</span>` : ''}
-                        </span>
-                    `}).join('')}
-                    <button class="ghost-btn small add-q-btn" data-group-id="${group.id}" style="font-size:12px; padding:4px 8px;">+ Add Question</button>
-                </div>
-            `;
+        if (isActive) {
+            card.style.borderColor = 'var(--accent)';
+            card.style.background = 'rgba(94, 234, 212, 0.1)';
+        }
+        card.style.cursor = 'grab';
+        card.style.display = 'block';
+        card.style.marginBottom = '8px';
+        
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; pointer-events:none;">
+                <span class="type">${q.type}</span>
+                ${q.mapId ? `<span class="pill light tiny" style="font-size:10px; padding:2px 6px;">${mapLabel}</span>` : ''}
+            </div>
+            <div style="margin-top:4px; pointer-events:none;">${q.text}</div>
+        `;
 
-            els.groupList.appendChild(card);
+        card.addEventListener('click', () => {
+            selectQuestion(q.id);
         });
+
+        // Drag and Drop Events
+        card.addEventListener('dragstart', (e) => {
+            draggedQuestionId = q.id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', index);
+            card.style.opacity = '0.4';
+        });
+
+        card.addEventListener('dragend', () => {
+            card.style.opacity = '1';
+            draggedQuestionId = null;
+            const allCards = els.questionList.querySelectorAll('.question-chip');
+            allCards.forEach(c => c.classList.remove('drag-over'));
+        });
+
+        card.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            card.classList.add('drag-over');
+        });
+
+        card.addEventListener('dragleave', () => {
+            card.classList.remove('drag-over');
+        });
+
+        card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            card.classList.remove('drag-over');
+            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+            const toIndex = index;
+
+            if (fromIndex !== toIndex) {
+                // Reorder array
+                const movedItem = state.questions[fromIndex];
+                state.questions.splice(fromIndex, 1);
+                state.questions.splice(toIndex, 0, movedItem);
+                
+                // Update order property
+                state.questions.forEach((q, idx) => {
+                    q.order = idx + 1;
+                });
+
+                markSaved('Unsaved changes');
+                renderQuestions();
+            }
+        });
+
+        els.questionList.appendChild(card);
+    });
 }
 
-function selectQuestion(groupId, questionId) {
-    isSwitching = true; // Lock updates
-    selectedQuestion = { groupId, questionId };
-    renderGroups(); 
+function selectQuestion(questionId) {
+    isSwitching = true; 
+    selectedQuestionId = questionId;
+    renderQuestions(); 
     renderQuestionDetails();
-    isSwitching = false; // Unlock updates
+    isSwitching = false; 
 }
 
 function renderQuestionDetails() {
-    if (!selectedQuestion) {
+    if (!selectedQuestionId) {
         els.questionDetailTitle.textContent = 'No question selected';
         els.questionText.value = '';
         els.questionType.value = 'text';
@@ -538,13 +589,12 @@ function renderQuestionDetails() {
         if (els.questionOptionsContainer) els.questionOptionsContainer.style.display = 'none';
         els.questionText.disabled = true;
         els.questionType.disabled = true;
-            els.questionMapPreset.disabled = true;
-            els.deleteQuestionBtn.disabled = true;
-            return;
-        }
-    const group = state.questionGroups.find(g => g.id === selectedQuestion.groupId);
-    if (!group) return;
-    const q = group.questions.find(q => q.id === selectedQuestion.questionId);
+        els.questionMapPreset.disabled = true;
+        els.deleteQuestionBtn.disabled = true;
+        return;
+    }
+
+    const q = state.questions.find(q => q.id === selectedQuestionId);
     if (!q) return;
 
     els.questionDetailTitle.textContent = 'Edit Question';
@@ -557,9 +607,19 @@ function renderQuestionDetails() {
     els.questionText.value = q.text || '';
     els.questionType.value = q.type || 'text';
     els.questionMapPreset.value = q.mapId || '';
-    // Safety check: if the assigned value is invalid (not in options), revert to default
-    if (els.questionMapPreset.value !== (q.mapId || '')) {
-        els.questionMapPreset.value = '';
+    
+    // Auto-select first map if null
+    if (!q.mapId && state.maps.length > 0) {
+        q.mapId = state.maps[0].id;
+        els.questionMapPreset.value = q.mapId;
+    } else if (els.questionMapPreset.value !== (q.mapId || '')) {
+         // Check if map still exists
+         if (state.maps.some(m => m.id === q.mapId)) {
+             els.questionMapPreset.value = q.mapId;
+         } else {
+             q.mapId = state.maps[0].id; // Fallback
+             els.questionMapPreset.value = q.mapId;
+         }
     }
 
     if (['single-choice', 'multi-choice'].includes(q.type)) {
@@ -571,11 +631,9 @@ function renderQuestionDetails() {
 }
 
 function updateSelectedQuestion() {
-    if (isSwitching) return; // Block update if we are in the middle of a switch
-    if (!selectedQuestion) return;
-    const group = state.questionGroups.find(g => g.id === selectedQuestion.groupId);
-    if (!group) return;
-    const q = group.questions.find(q => q.id === selectedQuestion.questionId);
+    if (isSwitching) return; 
+    if (!selectedQuestionId) return;
+    const q = state.questions.find(q => q.id === selectedQuestionId);
     if (!q) return;
 
     q.text = els.questionText.value;
@@ -590,84 +648,48 @@ function updateSelectedQuestion() {
     }
 
     markSaved('Unsaved changes');
-    renderGroups(); 
+    renderQuestions(); 
 }
 
-function addDefaultQuestion(groupId) {
-    const group = state.questionGroups.find(g => g.id === groupId);
-    if (!group) return;
-
+function addDefaultQuestion() {
+    const defaultMapId = state.maps.length > 0 ? state.maps[0].id : null;
     const newQ = {
         id: `q-${Date.now()}`,
         text: 'New Question',
         type: 'text',
         options: [],
         required: true,
-        mapId: null
+        mapId: defaultMapId,
+        order: state.questions.length + 1
     };
 
-    if (!group.questions) group.questions = [];
-    group.questions.push(newQ);
+    state.questions.push(newQ);
     
     markSaved('Unsaved changes');
-    selectQuestion(groupId, newQ.id);
-    renderGroups();
+    selectQuestion(newQ.id);
 }
 
 function deleteSelectedQuestion() {
-    if (!selectedQuestion) return;
+    if (!selectedQuestionId) return;
     if (!confirm('Delete this question?')) return;
     
-    const group = state.questionGroups.find(g => g.id === selectedQuestion.groupId);
-    if (group) {
-        group.questions = group.questions.filter(q => q.id !== selectedQuestion.questionId);
-    }
-    selectedQuestion = null;
+    state.questions = state.questions.filter(q => q.id !== selectedQuestionId);
+    selectedQuestionId = null;
     markSaved('Unsaved changes');
-    renderGroups();
+    renderQuestions();
     renderQuestionDetails();
-}
-
-function addGroup() {
-    const title = els.groupTitle.value.trim();
-    if (!title) return;
-    const id = slugify(title);
-    const order = state.questionGroups.length + 1;
-
-    state.questionGroups.push({
-        id,
-        title,
-        order,
-        questions: []
-    });
-
-    els.groupTitle.value = '';
-    markSaved('Unsaved changes');
-    renderGroups();
-}
-
-function removeGroup(id) {
-    state.questionGroups = state.questionGroups.filter(g => g.id !== id);
-    if (selectedQuestion?.groupId === id) {
-        selectedQuestion = null;
-        renderQuestionDetails();
-    }
-    markSaved('Unsaved changes');
-    renderGroups();
 }
 
 function buildAnswerTemplate() {
     const template = {};
-    state.questionGroups.forEach(group => {
-        (group.questions || []).forEach(q => {
-            template[q.id] = {
-                questionId: q.id,
-                type: q.type,
-                responseShape: q.responseShape,
-                required: q.required,
-                answers: []
-            };
-        });
+    state.questions.forEach(q => {
+        template[q.id] = {
+            questionId: q.id,
+            type: q.type,
+            responseShape: q.responseShape,
+            required: q.required,
+            answers: []
+        };
     });
     return template;
 }
@@ -675,31 +697,22 @@ function buildAnswerTemplate() {
 function buildPreviewConfig() {
     const selectedMap = state.maps.find(m => m.id === state.project.mapId) || state.maps[0];
     const overlayDetails = state.overlays;
-    const questionFlow = state.questionGroups
-        .sort((a, b) => a.order - b.order)
-        .map(group => ({
-            id: group.id,
-            title: group.title,
-            description: group.description,
-            order: group.order,
-            questions: (group.questions || []).map(q => ({
-                id: q.id,
-                text: q.text,
-                type: q.type,
-                options: q.options,
-                required: q.required,
-                responseShape: q.responseShape,
-                mapId: q.mapId || null,
-                targetLayer: q.targetLayer || null
-            }))
-        }));
+    const questionFlow = state.questions.map((q, index) => ({
+        id: q.id,
+        text: q.text,
+        type: q.type,
+        options: q.options,
+        required: q.required,
+        responseShape: q.responseShape,
+        mapId: q.mapId || null,
+        order: index + 1 // Ensure strict order based on array position
+    }));
 
     return {
         project: state.project,
         maps: state.maps,
         map: selectedMap,
         overlays: overlayDetails,
-        questionGroups: state.questionGroups,
         questionFlow,
         responseTemplate: buildAnswerTemplate()
     };
@@ -779,23 +792,7 @@ function initEvents() {
     els.toggleAllOverlays.addEventListener('click', toggleAllOverlays);
     els.addMapBtn.addEventListener('click', addMapFromForm);
 
-    els.addGroup.addEventListener('click', addGroup);
-
-    els.groupList.addEventListener('click', e => {
-        const removeGroupId = e.target.dataset.removeGroup;
-        const addQBtn = e.target.closest('.add-q-btn');
-        const questionChip = e.target.closest('.question-chip');
-
-        if (removeGroupId) {
-            removeGroup(removeGroupId);
-        } else if (addQBtn) {
-            addDefaultQuestion(addQBtn.dataset.groupId);
-        } else if (questionChip) {
-            const gid = questionChip.dataset.gid;
-            const qid = questionChip.dataset.qid;
-            selectQuestion(gid, qid);
-        }
-    });
+    els.addQuestionBtn.addEventListener('click', addDefaultQuestion);
     
     // Question detail listeners
     els.deleteQuestionBtn.addEventListener('click', deleteSelectedQuestion);
@@ -821,7 +818,7 @@ async function init() {
     renderMapCards();
     renderMapDetails();
     renderOverlayList();
-    renderGroups();
+    renderQuestions();
     await loadProjectsList();
     initEvents();
     markSaved(serverConfig ? 'Loaded from server' : 'Loaded defaults');

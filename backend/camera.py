@@ -19,17 +19,14 @@ CORS(app)
 
 @app.route('/api/position', methods=['GET'])
 def get_position():
-    """Return the latest calculated relative position."""
     with position_lock:
         return jsonify(current_position)
 
 def run_flask_server():
-    """Run the Flask server in a separate thread."""
     print("Starting Flask API on http://localhost:5000/api/position")
     app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False)
 
 def build_detector():
-    """Create an ArUco/AprilTag detector."""
     dictionary = aruco.getPredefinedDictionary(aruco.DICT_APRILTAG_25h9)
 
     if hasattr(aruco, "ArucoDetector"):
@@ -41,10 +38,6 @@ def build_detector():
 
 
 def find_closest_corner(corners_a, corners_b):
-    """
-    Find the closest corner of marker A to any corner of marker B.
-    Returns (closest_corner_of_a, closest_corner_of_b, distance).
-    """
     min_dist = float('inf')
     best_a = None
     best_b = None
@@ -113,9 +106,7 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
                     cv2.LINE_AA,
                 )
 
-            # Logic for distances and relative position
-            # New Boundary: 0, 1, 2, 3
-            # New Tracked: 4 (and 5 reserved)
+
             
             boundary_ids = [0, 1, 2, 3]
             trackable_ids = [5, 4] # Prioritize 5, then 4
@@ -147,8 +138,6 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
 
                 # Calculate Perspective Transform if all boundary markers are present
                 if all(cid in closest_boundary_corners for cid in boundary_ids):
-                    # Source points: closest corners of boundary markers to tracked marker
-                    # Assumed Order: TL, TR, BR, BL (IDs 0, 1, 2, 3)
                     src_pts = np.array([
                         closest_boundary_corners[0],
                         closest_boundary_corners[1],
@@ -156,7 +145,6 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
                         closest_boundary_corners[3]
                     ], dtype="float32")
 
-                    # Destination points: Unit square
                     dst_pts = np.array([
                         [0, 0],
                         [1, 0],
@@ -166,10 +154,8 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
 
                     M = cv2.getPerspectiveTransform(src_pts, dst_pts)
 
-                    # Use the CENTER of the tracked marker
                     tracked_center = np.array(centers[tracked_id], dtype="float32")
                     
-                    # Transform the center of tracked marker
                     pts = np.array([[tracked_center]], dtype="float32")
                     pts_transformed = cv2.perspectiveTransform(pts, M)
                     
@@ -177,10 +163,7 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
                     py = pts_transformed[0][0][1]
                     
                     found_position = True
-                    
-                    # Draw a circle on the center being tracked
-                    
-                    # Draw lines from the center of the tracked marker to the closest corner of each boundary marker
+                                        
                     for corner_id in boundary_ids:
                         if corner_id in closest_boundary_corners:
                             cv2.line(frame, centers[tracked_id], 

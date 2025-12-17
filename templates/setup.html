@@ -122,25 +122,16 @@
             <section class="card">
                 <div class="card-header">
                     <div>
-                        <h2>Organize the survey</h2>
-                        <p class="subtle">Build question groups and add questions to them.</p>
+                        <h2>Survey</h2>
                     </div>
                 </div>
 
                 <div class="card-subsection">
-                    <p class="eyebrow">Add Question Group</p>
-                    <div class="form-grid slim">
-                        <label>
-                            <span>Group title</span>
-                            <input id="group-title" type="text" placeholder="e.g. Mobility">
-                        </label>
-                        <button id="add-group" class="primary-btn short">Add Group</button>
+                    <div class="card-header tight">
+                        <p class="eyebrow">Questions</p>
+                        <button id="add-question" class="primary-btn short">+ Add Question</button>
                     </div>
-                </div>
-
-                <div class="card-subsection bordered">
-                    <p class="eyebrow">Groups & Questions</p>
-                    <div id="group-list" class="group-list"></div>
+                    <div id="question-list" class="vertical-list"></div>
                 </div>
 
                 <div class="card-subsection">

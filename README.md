@@ -14,8 +14,9 @@ This project implements an interactive map system with physical AprilTag markers
 - [ ] Visualization: hexagon or heatmap or clusterMap
 - [ ] OpenCV delay?
 - [ ] controlling map in setup?!
-- [ ] UI react to questions
+- [ ] UI react to questions + Customizable UI based on question.
 - [ ] defaultState overlays is hardcoded for Palaiseau specifically -> it should be fixed
 - [ ] Storing answers
 - [ ] See others inputs
+
 

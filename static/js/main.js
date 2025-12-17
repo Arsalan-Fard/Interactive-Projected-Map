@@ -14,7 +14,7 @@ const fallbackConfig = {
     maps: [
         {
             id: 'palaiseau-outdoor',
-            label: 'Palaiseau outdoor',
+            label: 'IP Paris Campus',
             style: CONFIG.style,
             center: CONFIG.center,
             zoom: CONFIG.zoom,
@@ -49,6 +49,7 @@ function normalizeConfig(raw) {
 
     const derivedQuestionFlow = () => {
         if (raw?.questionFlow) return raw.questionFlow;
+        if (raw?.questions) return raw.questions; // Support flat questions
         if (raw?.questionGroups) {
             return raw.questionGroups.map(group => ({
                 id: group.id,
@@ -105,6 +106,16 @@ async function loadSetupConfig() {
 }
 
 function flattenQuestions(flow) {
+    if (!flow || !Array.isArray(flow) || flow.length === 0) return [];
+
+    // Check if the first item looks like a group (has 'questions' array)
+    // If not, assume it is already a flat list of questions
+    const isGrouped = flow[0].questions && Array.isArray(flow[0].questions);
+
+    if (!isGrouped) {
+        return flow;
+    }
+
     const sortedGroups = [...(flow || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
     const list = [];
     sortedGroups.forEach(group => {
@@ -112,6 +123,10 @@ function flattenQuestions(flow) {
             list.push({ ...q, groupId: group.id, groupTitle: group.title });
         });
     });
+    
+    // Sort flat list by order if present
+    list.sort((a, b) => (a.order || 0) - (b.order || 0));
+    
     return list;
 }
 

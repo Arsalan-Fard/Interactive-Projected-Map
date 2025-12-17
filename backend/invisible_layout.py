@@ -79,7 +79,6 @@ if __name__ == '__main__':
             tag_size = 50 if tag_id in [4, 5] else 80
             window = AprilTagOverlay(file_path, tag_id, tag_size)
             
-            # Get screen geometry for positioning
             screen_geom = app.primaryScreen().geometry()
             s_width = screen_geom.width()
             s_height = screen_geom.height()

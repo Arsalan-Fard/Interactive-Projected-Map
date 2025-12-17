@@ -116,7 +116,7 @@ export function addBusLanes(map) {
             'visibility': 'none'
         },
         'paint': {
-            'line-color': '#BA55D3', // MediumOrchid
+            'line-color': '#BA55D3', 
             'line-width': 3,
             'line-opacity': 0.8
         }
@@ -207,10 +207,7 @@ export function addFloorplan(map) {
     });
 }
 
-// ---------------------------------------------------------
-// NEW DYNAMIC LOADER
-// ---------------------------------------------------------
-
+// Dynamic Parts
 const specializedLoaders = {
     'palaiseau-roads': addPalaiseauRoads,
     'walking-network': addWalkingNetwork,
@@ -240,11 +237,9 @@ function getRandomColor() {
 export function loadAndRenderLayer(map, layerConfig, visible = true) {
     const visibility = visible ? 'visible' : 'none';
 
-    // 1. If we have a specialized loader (legacy/custom style), use it
     if (specializedLoaders[layerConfig.id]) {
         specializedLoaders[layerConfig.id](map);
         
-        // Force visibility update regardless of whether it was just added or existed
         const ids = getLayerIds(layerConfig.id);
         ids.forEach(id => {
             if (map.getLayer(id)) {
@@ -254,7 +249,6 @@ export function loadAndRenderLayer(map, layerConfig, visible = true) {
         return;
     }
 
-    // 2. Generic loader for new layers
     if (!layerConfig.file) return;
 
     if (layerConfig.type === 'line' || layerConfig.type === 'point') {
@@ -268,7 +262,6 @@ export function loadAndRenderLayer(map, layerConfig, visible = true) {
 
         const layerId = `${layerConfig.id}-layer`;
         
-        // If layer exists, update visibility
         if (map.getLayer(layerId)) {
              map.setLayoutProperty(layerId, 'visibility', visibility);
              return;

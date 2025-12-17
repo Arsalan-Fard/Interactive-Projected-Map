@@ -5,7 +5,6 @@ __pycache__/
 env/
 venv/
 static/js/config.js
-data/
 1.py
 cache
 .vscode

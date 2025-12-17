@@ -13,10 +13,10 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
 
 # OSMnx Service Logic
-print("Loading walking network graph from OSMnx...")
+print("Loading walking network graph from OSMnx")
 try:
     G = ox.graph_from_place("Palaiseau, France", network_type="walk")
-    print(f"Graph loaded! {len(G.nodes)} nodes, {len(G.edges)} edges")
+    print(f"Graph loaded. {len(G.nodes)} nodes, {len(G.edges)} edges")
 except Exception as e:
     print(f"Error loading graph: {e}")
     G = None
