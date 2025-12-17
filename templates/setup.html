@@ -8,176 +8,172 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/setup.css') }}">
 </head>
 <body>
-    <div class="page">
-        <div class="main-layout">
-            <aside class="sidebar">
-                <section class="card">
-                    <div class="card-header">
-                        <div>
-                            <h1>Tabletop Map Setup</h1>
-                        </div>
+    <div class="app-container">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-content">
+                <div class="top-bar-left">
+                    <h1 class="app-title">Tangible Map Setup</h1>
+                </div>
+                <div class="top-bar-actions">
+                    <div class="project-selector">
+                        <select id="project-dropdown" class="project-dropdown">
+                            <option value="">Select or create a project...</option>
+                        </select>
                     </div>
-                    <div class="hero-actions" style="margin-bottom: 12px;">
-                        <span id="save-status" class="status-dot">Unsaved</span>
-                        <button id="save-server" class="ghost-btn">Save to server</button>
-                        <button id="download-config" class="primary-btn">Download config</button>
-                    </div>
-                    <div class="card-header">
-                        <div>
-                            <h3>Projects List</h3>
-                        </div>
-                        <div class="hero-actions">
-                            <button id="new-project" class="ghost-btn">New project</button>
-                            <button id="refresh-projects" class="text-btn">Refresh list</button>
-                        </div>
-                    </div>
-                    <div id="project-list" class="vertical-list"></div>
-                </section>
-            </aside>
-
-            <div class="main-content">
-                <section class="grid">
-            <div class="vertical-list">
-                <section class="card">
-                    <div class="card-header">
-                        <div>
-                            <h2>Project Details</h2>
-                        </div>
-                        <span class="pill" id="project-pill">Project</span>
-                    </div>
-
-                    <div class="form-grid">
-                        <label>
-                            <span>Project name</span>
-                            <input id="project-name" type="text" placeholder="e.g. Pilot with telecom students">
-                        </label>
-                        <label>
-                            <span>Location / campus</span>
-                            <input id="project-location" type="text" placeholder="e.g. Palaiseau Campus">
-                        </label>
-                        <input id="project-id" type="hidden">
-                    </div>
-                </section>
-
-                <section class="card">
-                    <div class="card-header">
-                        <div>
-                            <h2>Base Maps & Views</h2>
-                        </div>
-                    </div>
-
-                    <div class="map-card-grid" id="map-list"></div>
-
-                    <div class="card-subsection">
-                        <div class="card-header tight">
-                            <div>
-                                <h3 id="selected-map-title">No map selected yet</h3>
-                            </div>
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <span class="pill light" id="selected-map-pill"></span>
-                                <button id="delete-map" class="text-btn" style="color:var(--danger);" title="Delete this map">Delete</button>
-                            </div>
-                        </div>
-                        <div class="form-grid" id="map-detail-form">
-                            <label>
-                                <span>Map Name</span>
-                                <input id="map-label" type="text" placeholder="e.g. Overview">
-                            </label>
-                            <label>
-                                <span>Style / source</span>
-                                <input id="map-style" type="text" placeholder="mapbox://styles/mapbox/light-v11">
-                            </label>
-                            <label>
-                                <span>Center (lng, lat)</span>
-                                <input id="map-center" type="text" placeholder="2.2, 48.714">
-                            </label>
-                            <label>
-                                <span>Zoom</span>
-                                <input id="map-zoom" type="number" step="0.1" min="0" max="22">
-                            </label>
-                            <label>
-                                <span>Pitch</span>
-                                <input id="map-pitch" type="number" step="1" min="0" max="85">
-                            </label>
-                            <label>
-                                <span>Bearing</span>
-                                <input id="map-bearing" type="number" step="1" min="-180" max="180">
-                            </label>
-                        </div>
-
-                        <div class="overlay-list">
-                            <div class="overlay-list-header">
-                                <p class="eyebrow">Layers to load</p>
-                                <button class="text-btn" id="toggle-all-overlays">Toggle all</button>
-                            </div>
-                            <div id="overlay-items"></div>
-                        </div>
-                    </div>
-
-                    <div class="card-subsection bordered">
-                        <p class="eyebrow">Add another map preset</p>
-                        <button id="add-map" class="ghost-btn full">Add New Map</button>
-                    </div>
-                </section>
+                    <span id="save-status" class="status-badge">Unsaved</span>
+                    <button id="new-project" class="btn-secondary">New Project</button>
+                    <button id="save-server" class="btn-primary">Save to Server</button>
+                    <button id="download-config" class="btn-secondary">Download</button>
+                    <button id="delete-project" class="btn-danger">Delete Project</button>
+                </div>
             </div>
-            <section class="card">
-                <div class="card-header">
-                    <div>
-                        <h2>Survey</h2>
-                    </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="project">Project Details</button>
+            <button class="tab-btn" data-tab="maps">Maps & Layers</button>
+            <button class="tab-btn" data-tab="questions">Survey Questions</button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Project Details Tab -->
+            <section class="tab-panel active" data-panel="project">
+                <div class="panel-header">
+                    <h2>Project Information</h2>
+                    <span class="pill" id="project-pill">Project ID</span>
                 </div>
 
-                <div class="card-subsection">
-                    <div class="card-header tight">
-                        <p class="eyebrow">Questions</p>
-                        <button id="add-question" class="primary-btn short">+ Add Question</button>
+                <div class="form-section">
+                    <div class="form-row">
+                        <label class="form-label">Project Name</label>
+                        <input id="project-name" type="text" placeholder="e.g. Pilot with telecom students">
                     </div>
-                    <div id="question-list" class="vertical-list"></div>
-                </div>
-
-                <div class="card-subsection">
-                    <div class="card-header tight">
-                        <div>
-                            <h3 id="selected-question-title">No question selected</h3>
-                        </div>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                             <button id="delete-question" class="text-btn" style="color:var(--danger);" title="Delete this question">Delete</button>
-                        </div>
+                    <div class="form-row">
+                        <label class="form-label">Location</label>
+                        <input id="project-location" type="text" placeholder="e.g. IP Paris Campus">
                     </div>
-                    <div class="form-grid" id="question-detail-form">
-                        <label>
-                            <span>Question text</span>
-                            <input id="question-text" type="text" placeholder="Question text">
-                        </label>
-                        <label>
-                            <span>Interaction type</span>
-                            <select id="question-type">
-                                <option value="text">Free text</option>
-                                <option value="single-choice">Single choice</option>
-                                <option value="multi-choice">Multiple choice</option>
-                                <option value="sticker">Stickers on map</option>
-                                <option value="drawing">Draw on map</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span>Map View (Preset)</span>
-                            <select id="question-map-preset">
-                                <option value="">(Default Project Map)</option>
-                            </select>
-                        </label>
-                    </div>
-                    <!-- Hidden options field in case we need it later, or just remove if strictly not needed -->
-                    <div id="question-options-container" style="display:none; margin-top:8px;">
-                        <label>
-                            <span>Options (one per line)</span>
-                            <textarea id="question-options" rows="3"></textarea>
-                        </label>
+                    <div class="form-row">
+                        <label class="form-label">Project ID</label>
+                        <input id="project-id" type="text" placeholder="Auto-generated from name">
                     </div>
                 </div>
             </section>
-                </section>
-            </div>
-        </div>
+
+            <!-- Maps & Layers Tab -->
+            <section class="tab-panel" data-panel="maps">
+                <div class="panel-header">
+                    <h2>Map Presets</h2>
+                    <button id="add-map" class="btn-primary">Add Map Preset</button>
+                </div>
+
+                <div class="map-presets-grid" id="map-list"></div>
+
+                <div class="map-editor" id="map-editor">
+                    <div class="section-header">
+                        <h3 id="selected-map-title">Select a map to edit</h3>
+                        <div class="header-actions">
+                            <span class="pill-small" id="selected-map-pill"></span>
+                            <button id="delete-map" class="btn-text-danger">Delete Map</button>
+                        </div>
+                    </div>
+
+                    <div class="form-section" id="map-detail-form">
+                        <div class="form-row">
+                            <label class="form-label">Map Name</label>
+                            <input id="map-label" type="text" placeholder="e.g. Overview">
+                        </div>
+                        <div class="form-row">
+                            <label class="form-label">Style URL</label>
+                            <input id="map-style" type="text" placeholder="mapbox://styles/mapbox/light-v11">
+                        </div>
+                        <div class="form-grid-2">
+                            <div class="form-row">
+                                <label class="form-label">Center (lng, lat)</label>
+                                <input id="map-center" type="text" placeholder="2.2, 48.714">
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Zoom</label>
+                                <input id="map-zoom" type="number" step="0.1" min="0" max="22">
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Pitch</label>
+                                <input id="map-pitch" type="number" step="1" min="0" max="85">
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Bearing</label>
+                                <input id="map-bearing" type="number" step="1" min="-180" max="180">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="layers-section">
+                        <div class="section-header">
+                            <h4>Layers to Load</h4>
+                            <button class="btn-text" id="toggle-all-overlays">Toggle All</button>
+                        </div>
+                        <div id="overlay-items" class="layer-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Survey Questions Tab -->
+            <section class="tab-panel" data-panel="questions">
+                <div class="panel-header">
+                    <h2>Survey Questions</h2>
+                    <button id="add-question" class="btn-primary">Add Question</button>
+                </div>
+
+                <div class="questions-layout">
+                    <div class="questions-list-section">
+                        <div class="section-subheader">
+                            <span class="eyebrow">Question Flow (Drag to Reorder)</span>
+                        </div>
+                        <div id="question-list" class="question-list"></div>
+                    </div>
+
+                    <div class="question-editor">
+                        <div class="section-header">
+                            <h3 id="selected-question-title">Select a question to edit</h3>
+                            <button id="delete-question" class="btn-text-danger">Delete Question</button>
+                        </div>
+
+                        <div class="form-section" id="question-detail-form">
+                            <div class="form-row full-width">
+                                <label class="form-label">Question Text</label>
+                                <input id="question-text" type="text" placeholder="Question text">
+                            </div>
+                            <div class="form-grid-2">
+                                <div class="form-row">
+                                    <label class="form-label">Interaction Type</label>
+                                    <select id="question-type">
+                                        <option value="text">Free text</option>
+                                        <option value="single-choice">Single choice</option>
+                                        <option value="multi-choice">Multiple choice</option>
+                                        <option value="sticker">Stickers on map</option>
+                                        <option value="drawing">Draw on map</option>
+                                    </select>
+                                </div>
+                                <div class="form-row">
+                                    <label class="form-label">Map View</label>
+                                    <select id="question-map-preset">
+                                        <option value="">Default</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="question-options-container" style="display:none;">
+                                <div class="form-row full-width">
+                                    <label class="form-label">Options (one per line)</label>
+                                    <textarea id="question-options" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>

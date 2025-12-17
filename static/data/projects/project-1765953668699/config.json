@@ -1,8 +1,8 @@
 {
   "project": {
-    "name": "Pilot Study 1",
+    "name": "2",
     "location": "",
-    "id": "project-1765950204351",
+    "id": "project-1765953668699",
     "mapId": "palaiseau-outdoor"
   },
   "maps": [
@@ -19,10 +19,8 @@
       "bearing": 40,
       "overlays": [
         "palaiseau-roads",
-        "walking-network",
-        "mobility-infrastructure",
-        "bus-lanes",
-        "amenities"
+        "amenities",
+        "walking-network"
       ],
       "description": "Base view for the campus and surroundings"
     },
@@ -56,10 +54,8 @@
     "bearing": 40,
     "overlays": [
       "palaiseau-roads",
-      "walking-network",
-      "mobility-infrastructure",
-      "bus-lanes",
-      "amenities"
+      "amenities",
+      "walking-network"
     ],
     "description": "Base view for the campus and surroundings"
   },
@@ -79,7 +75,7 @@
       "note": "Pedestrian paths used for routes"
     },
     {
-      "id": "mobility-network",
+      "id": "mobility-infrastructure",
       "label": "Bike network",
       "file": "/static/data/mobility_infrastructure.geojson",
       "type": "line",
@@ -131,7 +127,7 @@
       "options": [],
       "required": false,
       "responseShape": "point-collection",
-      "mapId": "telecom-floorplan-view",
+      "mapId": "palaiseau-outdoor",
       "order": 2
     },
     {

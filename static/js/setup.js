@@ -104,15 +104,15 @@ const els = {
     deleteMapBtn: document.getElementById('delete-map'),
     overlayItems: document.getElementById('overlay-items'),
     toggleAllOverlays: document.getElementById('toggle-all-overlays'),
-    projectList: document.getElementById('project-list'),
+    projectDropdown: document.getElementById('project-dropdown'),
     newProject: document.getElementById('new-project'),
-    refreshProjects: document.getElementById('refresh-projects'),
+    deleteProject: document.getElementById('delete-project'),
     saveServer: document.getElementById('save-server'),
     downloadConfig: document.getElementById('download-config'),
     saveStatus: document.getElementById('save-status'),
     questionList: document.getElementById('question-list'),
     addQuestionBtn: document.getElementById('add-question'),
-    
+
     questionDetailTitle: document.getElementById('selected-question-title'),
     questionText: document.getElementById('question-text'),
     questionType: document.getElementById('question-type'),
@@ -184,7 +184,7 @@ async function loadProjectsList() {
     } catch (err) {
         projects = [];
     }
-    renderProjectList();
+    renderProjectDropdown();
 }
 
 async function loadProjectById(projectId) {
@@ -198,16 +198,7 @@ async function loadProjectById(projectId) {
             renderMapDetails();
             renderOverlayList();
             renderQuestions();
-            
-            const allRows = els.projectList.querySelectorAll('.project-row');
-            allRows.forEach(row => {
-                const openBtn = row.querySelector('.open-project');
-                if (openBtn && openBtn.dataset.projectId === projectId) {
-                    row.classList.add('active');
-                } else {
-                    row.classList.remove('active');
-                }
-            });
+            renderProjectDropdown();
 
             markSaved(`Loaded ${projectId}`);
             return;
@@ -235,7 +226,7 @@ function newProject() {
     state.project.id = tempId;
     state.project.name = 'New Project';
     state.project.location = '';
-    
+
     if (!state.project.mapId && state.maps.length) {
         state.project.mapId = state.maps[0].id;
     }
@@ -254,13 +245,9 @@ function newProject() {
     renderMapDetails();
     renderOverlayList();
     renderQuestions();
-    
-    const allRows = els.projectList.querySelectorAll('.project-row');
-    allRows.forEach(row => row.classList.remove('active'));
 
     persistStateToServer().then(() => {
         markSaved('New project created');
-        document.querySelector('.grid').scrollIntoView({ behavior: 'smooth' });
     });
 }
 
@@ -275,55 +262,25 @@ function renderProject() {
     els.projectPill.textContent = state.project.id || 'Project';
 }
 
-function renderProjectList() {
-    if (!els.projectList) return;
-    els.projectList.innerHTML = '';
+function renderProjectDropdown() {
+    if (!els.projectDropdown) return;
+    const currentValue = els.projectDropdown.value;
+    els.projectDropdown.innerHTML = '<option value="">Select or create a project...</option>';
+
     const sorted = [...projects].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     sorted.forEach(proj => {
-        const card = document.createElement('div');
-        const isActive = proj.id === state.project.id;
-        card.className = `project-row ${isActive ? 'active' : ''}`;
-        card.innerHTML = `
-            <div class="project-info">
-                <h4>${proj.name || proj.id}</h4>
-            </div>
-            <div class="hero-actions">
-                <button class="ghost-btn small delete-project" data-project-id="${proj.id}" style="color:var(--danger); border-color:var(--danger); opacity:0.7;">Delete</button>
-                <button class="ghost-btn small open-project" data-project-id="${proj.id}">Open</button>
-            </div>
-        `;
-        
-        const openBtn = card.querySelector('.open-project');
-        openBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); 
-            window.location.href = `/app?project=${encodeURIComponent(proj.id)}`;
-        });
-
-        card.addEventListener('click', () => {
-            if (proj.id === state.project.id) return;
-            if (!checkUnsavedChanges()) return;
-            loadProjectById(proj.id);
-        });
-
-        const deleteBtn = card.querySelector('.delete-project');
-        deleteBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            if (confirm(`Are you sure you want to delete project "${proj.name || proj.id}"?\nThis action cannot be undone.`)) {
-                try {
-                    const res = await fetch(`/api/projects/${proj.id}`, { method: 'DELETE' });
-                    if (res.ok) {
-                        await loadProjectsList();
-                    } else {
-                        alert('Failed to delete project');
-                    }
-                } catch (err) {
-                    alert('Error deleting project');
-                }
-            }
-        });
-
-        els.projectList.appendChild(card);
+        const option = document.createElement('option');
+        option.value = proj.id;
+        option.textContent = proj.name || proj.id;
+        els.projectDropdown.appendChild(option);
     });
+
+    // Restore selection
+    if (state.project && state.project.id) {
+        els.projectDropdown.value = state.project.id;
+    } else if (currentValue) {
+        els.projectDropdown.value = currentValue;
+    }
 }
 
 function renderMapCards() {
@@ -717,18 +674,7 @@ async function persistStateToServer() {
         });
         if (response.ok) {
             markSaved('Saved to server');
-            await loadProjectsList(); 
-            
-            const currentId = state.project.id;
-            const allRows = els.projectList.querySelectorAll('.project-row');
-            allRows.forEach(row => {
-                const openBtn = row.querySelector('.open-project');
-                if (openBtn && openBtn.dataset.projectId === currentId) {
-                    row.classList.add('active');
-                } else {
-                    row.classList.remove('active');
-                }
-            });
+            await loadProjectsList();
         } else {
             markSaved('Server save failed');
         }
@@ -737,10 +683,84 @@ async function persistStateToServer() {
     }
 }
 
+async function deleteCurrentProject() {
+    if (!state.project || !state.project.id) {
+        alert('No project selected');
+        return;
+    }
+
+    const projectName = state.project.name || state.project.id;
+    if (!confirm(`Are you sure you want to delete project "${projectName}"?\nThis action cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/projects/${state.project.id}`, { method: 'DELETE' });
+        if (res.ok) {
+            await loadProjectsList();
+            // Reset to default state
+            state = JSON.parse(JSON.stringify(defaultState));
+            renderProject();
+            renderMapCards();
+            renderMapDetails();
+            renderOverlayList();
+            renderQuestions();
+            markSaved('Project deleted');
+        } else {
+            alert('Failed to delete project');
+        }
+    } catch (err) {
+        alert('Error deleting project');
+    }
+}
+
+function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.tab === tabName) {
+            btn.classList.add('active');
+        }
+    });
+
+    // Update tab panels
+    document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.remove('active');
+        if (panel.dataset.panel === tabName) {
+            panel.classList.add('active');
+        }
+    });
+}
+
 function initEvents() {
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // Project dropdown
+    els.projectDropdown?.addEventListener('change', e => {
+        const projectId = e.target.value;
+        if (projectId && projectId !== state.project.id) {
+            if (!checkUnsavedChanges()) {
+                els.projectDropdown.value = state.project.id || '';
+                return;
+            }
+            loadProjectById(projectId);
+        }
+    });
+
+    // Project actions
+    els.newProject?.addEventListener('click', newProject);
+    els.deleteProject?.addEventListener('click', deleteCurrentProject);
+    els.saveServer?.addEventListener('click', persistStateToServer);
+    els.downloadConfig?.addEventListener('click', downloadConfig);
+
+    // Project details
     els.projectName.addEventListener('input', e => {
         state.project.name = e.target.value;
         markSaved('Unsaved changes');
+        renderProjectDropdown();
     });
     els.projectLocation.addEventListener('input', e => {
         state.project.location = e.target.value;
@@ -748,10 +768,11 @@ function initEvents() {
     });
     els.projectId.addEventListener('input', e => {
         state.project.id = slugify(e.target.value || 'project');
-        els.projectPill.textContent = state.project.id; 
+        els.projectPill.textContent = state.project.id;
         markSaved('Unsaved changes');
     });
 
+    // Map details
     els.mapStyle.addEventListener('input', e => updateSelectedMap({ style: e.target.value }));
     els.mapCenter.addEventListener('input', e => {
         const center = parseCenter(e.target.value);
@@ -766,26 +787,20 @@ function initEvents() {
     });
     els.deleteMapBtn.addEventListener('click', deleteMap);
 
+    // Overlays
     els.toggleAllOverlays.addEventListener('click', toggleAllOverlays);
     els.addMapBtn.addEventListener('click', addMapFromForm);
 
+    // Questions
     els.addQuestionBtn.addEventListener('click', addDefaultQuestion);
-    
-    // Question detail listeners
     els.deleteQuestionBtn.addEventListener('click', deleteSelectedQuestion);
-    
-    els.questionText.addEventListener('input', updateSelectedQuestion); 
+    els.questionText.addEventListener('input', updateSelectedQuestion);
     els.questionType.addEventListener('change', () => {
-        updateSelectedQuestion(); 
-        renderQuestionDetails(); 
+        updateSelectedQuestion();
+        renderQuestionDetails();
     });
     els.questionMapPreset.addEventListener('change', updateSelectedQuestion);
     if(els.questionOptions) els.questionOptions.addEventListener('input', updateSelectedQuestion);
-
-    els.saveServer?.addEventListener('click', persistStateToServer);
-    els.downloadConfig.addEventListener('click', downloadConfig);
-    els.refreshProjects?.addEventListener('click', loadProjectsList);
-    els.newProject?.addEventListener('click', newProject);
 }
 
 async function init() {
