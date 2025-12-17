@@ -1,8 +1,6 @@
-/* ==========================================
-   Design System - Variables
-   ========================================== */
+
 :root {
-    /* Colors */
+    
     --bg-primary: #0a0d14;
     --bg-secondary: #141820;
     --bg-tertiary: #1c2128;
@@ -15,7 +13,7 @@
     --text-secondary: #8b949e;
     --text-muted: #6e7681;
 
-    /* Spacing */
+    
     --space-xs: 4px;
     --space-sm: 8px;
     --space-md: 12px;
@@ -24,7 +22,7 @@
     --space-2xl: 32px;
     --space-3xl: 48px;
 
-    /* Typography */
+    
     --text-xs: 11px;
     --text-sm: 13px;
     --text-base: 14px;
@@ -32,22 +30,20 @@
     --text-xl: 20px;
     --text-2xl: 24px;
 
-    /* Radius */
+    
     --radius-sm: 4px;
     --radius-md: 6px;
     --radius-lg: 8px;
 
-    /* Layout helpers */
+    
     --top-bar-height: 76px;
 
-    /* Transitions */
+    
     --transition-fast: 150ms ease;
     --transition-base: 200ms ease;
 }
 
-/* ==========================================
-   Reset & Base Styles
-   ========================================== */
+
 * {
     box-sizing: border-box;
 }
@@ -62,18 +58,14 @@ body {
     line-height: 1.5;
 }
 
-/* ==========================================
-   Layout Structure
-   ========================================== */
+
 .app-container {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
 
-/* ==========================================
-   Top Bar
-   ========================================== */
+
 .top-bar {
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-subtle);
@@ -248,9 +240,7 @@ body {
     color: #dc2626;
 }
 
-/* ==========================================
-   Tab Navigation
-   ========================================== */
+
 .tab-nav {
     background: var(--bg-secondary);
     border: 1px solid var(--border-subtle);
@@ -292,9 +282,7 @@ body {
     border-bottom-color: var(--accent-primary);
 }
 
-/* ==========================================
-   Main Content
-   ========================================== */
+
 .main-content {
     max-width: 1400px;
     margin: 0 auto;
@@ -310,9 +298,7 @@ body {
     display: block;
 }
 
-/* ==========================================
-   Panel Header
-   ========================================== */
+
 .panel-header {
     display: flex;
     justify-content: space-between;
@@ -359,9 +345,7 @@ body {
     margin-bottom: var(--space-md);
 }
 
-/* ==========================================
-   Pills & Badges
-   ========================================== */
+
 .pill,
 .pill-small {
     padding: var(--space-xs) var(--space-md);
@@ -388,9 +372,7 @@ body {
     margin: 0;
 }
 
-/* ==========================================
-   Forms
-   ========================================== */
+
 .form-section {
     background: var(--bg-secondary);
     border: 1px solid var(--border-subtle);
@@ -471,9 +453,7 @@ textarea {
     resize: vertical;
 }
 
-/* ==========================================
-   Map Presets Grid
-   ========================================== */
+
 .map-presets-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -534,9 +514,7 @@ textarea {
     color: var(--text-muted);
 }
 
-/* ==========================================
-   Map Editor
-   ========================================== */
+
 .map-editor {
     background: var(--bg-secondary);
     border: 1px solid var(--border-subtle);
@@ -544,9 +522,7 @@ textarea {
     padding: var(--space-xl);
 }
 
-/* ==========================================
-   Layers Section
-   ========================================== */
+
 .layers-section {
     margin-top: var(--space-2xl);
     padding-top: var(--space-xl);
@@ -598,9 +574,7 @@ textarea {
     flex-shrink: 0;
 }
 
-/* ==========================================
-   Questions Layout
-   ========================================== */
+
 .questions-layout {
     display: grid;
     grid-template-columns: 1fr 1.5fr;
@@ -653,9 +627,7 @@ textarea {
     padding: var(--space-xl);
 }
 
-/* ==========================================
-   Responsive
-   ========================================== */
+
 @media (max-width: 1024px) {
     .top-bar-content {
         flex-direction: column;
@@ -707,3 +679,5 @@ textarea {
         grid-template-columns: 1fr;
     }
 }
+
+
