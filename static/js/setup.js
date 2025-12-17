@@ -85,7 +85,7 @@ let state = JSON.parse(JSON.stringify(defaultState));
 let projects = [];
 let selectedQuestionId = null; 
 let isSwitching = false; 
-let draggedQuestionId = null; // Track dragged item
+let sortableInstance = null;
 
 const els = {
     projectName: document.getElementById('project-name'),
@@ -437,7 +437,6 @@ function renderOverlayList() {
             <div class="info">
                 <strong>${layer.label}</strong>
                 <small>${layer.file}</small>
-                <small>${layer.note || ''}</small>
             </div>
             <input type="checkbox" ${checked ? 'checked' : ''} data-layer="${layer.id}">
         `;
@@ -497,10 +496,8 @@ function renderQuestions() {
         
         const card = document.createElement('div');
         card.className = `question-chip ${isActive ? 'active' : ''}`;
-        card.dataset.id = q.id;
-        card.dataset.index = index;
-        card.draggable = true;
-
+        card.dataset.id = q.id; // Important for Sortable
+        
         if (isActive) {
             card.style.borderColor = 'var(--accent)';
             card.style.background = 'rgba(94, 234, 212, 0.1)';
@@ -521,42 +518,24 @@ function renderQuestions() {
             selectQuestion(q.id);
         });
 
-        // Drag and Drop Events
-        card.addEventListener('dragstart', (e) => {
-            draggedQuestionId = q.id;
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', index);
-            card.style.opacity = '0.4';
-        });
+        els.questionList.appendChild(card);
+    });
 
-        card.addEventListener('dragend', () => {
-            card.style.opacity = '1';
-            draggedQuestionId = null;
-            const allCards = els.questionList.querySelectorAll('.question-chip');
-            allCards.forEach(c => c.classList.remove('drag-over'));
-        });
+    if (!sortableInstance && els.questionList) {
+        sortableInstance = new Sortable(els.questionList, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function (evt) {
+                const itemEl = evt.item; 
+                const newIndex = evt.newIndex;
+                const oldIndex = evt.oldIndex;
 
-        card.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            card.classList.add('drag-over');
-        });
+                if (newIndex === oldIndex) return;
 
-        card.addEventListener('dragleave', () => {
-            card.classList.remove('drag-over');
-        });
-
-        card.addEventListener('drop', (e) => {
-            e.preventDefault();
-            card.classList.remove('drag-over');
-            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-            const toIndex = index;
-
-            if (fromIndex !== toIndex) {
                 // Reorder array
-                const movedItem = state.questions[fromIndex];
-                state.questions.splice(fromIndex, 1);
-                state.questions.splice(toIndex, 0, movedItem);
+                const movedItem = state.questions[oldIndex];
+                state.questions.splice(oldIndex, 1);
+                state.questions.splice(newIndex, 0, movedItem);
                 
                 // Update order property
                 state.questions.forEach((q, idx) => {
@@ -564,12 +543,10 @@ function renderQuestions() {
                 });
 
                 markSaved('Unsaved changes');
-                renderQuestions();
+                // No need to re-render full list as Sortable already moved the DOM
             }
         });
-
-        els.questionList.appendChild(card);
-    });
+    }
 }
 
 function selectQuestion(questionId) {

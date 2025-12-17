@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Session Setup | Tangible Map</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/setup.css') }}">
 </head>
 <body>
@@ -137,7 +138,6 @@
                 <div class="card-subsection">
                     <div class="card-header tight">
                         <div>
-                            <p class="eyebrow">Selected Question</p>
                             <h3 id="selected-question-title">No question selected</h3>
                         </div>
                         <div style="display:flex; gap:8px; align-items:center;">
@@ -180,6 +180,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script type="module" src="{{ url_for('static', filename='js/setup.js') }}"></script>
 </body>
 </html>

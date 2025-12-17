@@ -1,20 +1,22 @@
 {
   "project": {
-    "name": "Pilot 01",
+    "name": "Pilot Study 1",
     "location": "",
-    "id": "project-1765946036931",
+    "id": "project-1765950204351",
     "mapId": "palaiseau-outdoor"
   },
   "maps": [
     {
-      "bearing": 40,
+      "id": "palaiseau-outdoor",
+      "label": "IP Paris Campus",
+      "style": "mapbox://styles/mapbox/light-v11",
       "center": [
         2.2,
         48.714
       ],
-      "description": "Base view for the campus and surroundings",
-      "id": "palaiseau-outdoor",
-      "label": "IP Paris Campus",
+      "zoom": 15,
+      "pitch": 45,
+      "bearing": 40,
       "overlays": [
         "palaiseau-roads",
         "walking-network",
@@ -22,36 +24,36 @@
         "bus-lanes",
         "amenities"
       ],
-      "pitch": 45,
-      "style": "mapbox://styles/mapbox/light-v11",
-      "zoom": 15
+      "description": "Base view for the campus and surroundings"
     },
     {
-      "bearing": 0,
+      "id": "telecom-floorplan-view",
+      "label": "Telecom indoor",
+      "style": "mapbox://styles/mapbox/light-v11",
       "center": [
         2.2005,
         48.7138
       ],
-      "description": "Image overlay for indoor exercises",
-      "id": "telecom-floorplan-view",
-      "label": "Telecom indoor",
+      "zoom": 17,
+      "pitch": 0,
+      "bearing": 0,
       "overlays": [
         "telecom-floorplan"
       ],
-      "pitch": 0,
-      "style": "mapbox://styles/mapbox/light-v11",
-      "zoom": 17
+      "description": "Image overlay for indoor exercises"
     }
   ],
   "map": {
-    "bearing": 40,
+    "id": "palaiseau-outdoor",
+    "label": "IP Paris Campus",
+    "style": "mapbox://styles/mapbox/light-v11",
     "center": [
       2.2,
       48.714
     ],
-    "description": "Base view for the campus and surroundings",
-    "id": "palaiseau-outdoor",
-    "label": "IP Paris Campus",
+    "zoom": 15,
+    "pitch": 45,
+    "bearing": 40,
     "overlays": [
       "palaiseau-roads",
       "walking-network",
@@ -59,75 +61,53 @@
       "bus-lanes",
       "amenities"
     ],
-    "pitch": 45,
-    "style": "mapbox://styles/mapbox/light-v11",
-    "zoom": 15
+    "description": "Base view for the campus and surroundings"
   },
   "overlays": [
     {
-      "file": "/static/data/palaiseau_roads.geojson",
       "id": "palaiseau-roads",
       "label": "Road network",
-      "note": "OSM roads for the outdoor view",
-      "type": "line"
+      "file": "/static/data/palaiseau_roads.geojson",
+      "type": "line",
+      "note": "OSM roads for the outdoor view"
     },
     {
-      "file": "/static/data/walking_network.geojson",
       "id": "walking-network",
       "label": "Walking network",
-      "note": "Pedestrian paths used for routes",
-      "type": "line"
+      "file": "/static/data/walking_network.geojson",
+      "type": "line",
+      "note": "Pedestrian paths used for routes"
     },
     {
-      "file": "/static/data/mobility_infrastructure.geojson",
       "id": "mobility-infrastructure",
       "label": "Bike infrastructure",
-      "note": "Cycleways and shared lanes",
-      "type": "line"
+      "file": "/static/data/mobility_infrastructure.geojson",
+      "type": "line",
+      "note": "Cycleways and shared lanes"
     },
     {
-      "file": "/static/data/bus_lanes.geojson",
       "id": "bus-lanes",
       "label": "Bus lanes",
-      "note": "Transit priority lanes",
-      "type": "line"
+      "file": "/static/data/bus_lanes.geojson",
+      "type": "line",
+      "note": "Transit priority lanes"
     },
     {
-      "file": "/static/data/amenities.geojson",
       "id": "amenities",
       "label": "Amenities",
-      "note": "Hospitals, schools, markets, libraries",
-      "type": "point"
+      "file": "/static/data/amenities.geojson",
+      "type": "point",
+      "note": "Hospitals, schools, markets, libraries"
     },
     {
-      "file": "/static/data/images.jpg",
       "id": "telecom-floorplan",
       "label": "Telecom floorplan",
-      "note": "Indoor overlay for the Telecom building",
-      "type": "image"
+      "file": "/static/data/images.jpg",
+      "type": "image",
+      "note": "Indoor overlay for the Telecom building"
     }
   ],
   "questionFlow": [
-    {
-      "id": "bike-lanes",
-      "text": "Where should we add bike lanes?",
-      "type": "sticker",
-      "options": [],
-      "required": false,
-      "responseShape": "point-collection",
-      "mapId": "telecom-floorplan-view",
-      "order": 1
-    },
-    {
-      "id": "confusing-areas",
-      "text": "Where do you get confused?",
-      "type": "sticker",
-      "options": [],
-      "required": false,
-      "responseShape": "point-collection",
-      "mapId": null,
-      "order": 2
-    },
     {
       "id": "arrival-mode",
       "text": "How do you typically travel to campus?",
@@ -142,6 +122,26 @@
       "required": true,
       "responseShape": "scalar",
       "mapId": "palaiseau-outdoor",
+      "order": 1
+    },
+    {
+      "id": "bike-lanes",
+      "text": "Where should we add bike lanes?",
+      "type": "sticker",
+      "options": [],
+      "required": false,
+      "responseShape": "point-collection",
+      "mapId": "telecom-floorplan-view",
+      "order": 2
+    },
+    {
+      "id": "confusing-areas",
+      "text": "Where do you get confused?",
+      "type": "sticker",
+      "options": [],
+      "required": false,
+      "responseShape": "point-collection",
+      "mapId": "palaiseau-outdoor",
       "order": 3
     },
     {
@@ -151,11 +151,18 @@
       "options": [],
       "required": false,
       "responseShape": "line-string",
-      "mapId": null,
+      "mapId": "palaiseau-outdoor",
       "order": 4
     }
   ],
   "responseTemplate": {
+    "arrival-mode": {
+      "questionId": "arrival-mode",
+      "type": "single-choice",
+      "responseShape": "scalar",
+      "required": true,
+      "answers": []
+    },
     "bike-lanes": {
       "questionId": "bike-lanes",
       "type": "sticker",
@@ -168,13 +175,6 @@
       "type": "sticker",
       "responseShape": "point-collection",
       "required": false,
-      "answers": []
-    },
-    "arrival-mode": {
-      "questionId": "arrival-mode",
-      "type": "single-choice",
-      "responseShape": "scalar",
-      "required": true,
       "answers": []
     },
     "priority-corridors": {
