@@ -269,12 +269,110 @@ async function initApp() {
         });
     }
 
-    const isochroneBtn = document.getElementById('btn-isochrone');
-    if (isochroneBtn) {
-        isochroneBtn.addEventListener('click', () => {
-            isochroneBtn.classList.toggle('active');
+    const btnWalk = document.getElementById('btn-isochrone');
+    const btnBike = document.getElementById('btn-isochrone-bike');
+    
+    let activeIsochroneMode = null; // 'walk' or 'bike'
+
+    function resetIsochroneUI() {
+        if (btnWalk) btnWalk.classList.remove('active');
+        if (btnBike) btnBike.classList.remove('active');
+        activeIsochroneMode = null;
+        if (map.getSource('isochrone')) {
+            map.setLayoutProperty('isochrone-fill', 'visibility', 'none');
+            map.setLayoutProperty('isochrone-line', 'visibility', 'none');
+        }
+    }
+
+    if (btnWalk) {
+        btnWalk.addEventListener('click', () => {
+            const wasActive = btnWalk.classList.contains('active');
+            resetIsochroneUI();
+            if (!wasActive) {
+                btnWalk.classList.add('active');
+                activeIsochroneMode = 'walk';
+            }
         });
     }
+
+    if (btnBike) {
+        btnBike.addEventListener('click', () => {
+            const wasActive = btnBike.classList.contains('active');
+            resetIsochroneUI();
+            if (!wasActive) {
+                btnBike.classList.add('active');
+                activeIsochroneMode = 'bike';
+            }
+        });
+    }
+
+    map.on('click', async (e) => {
+        if (!activeIsochroneMode) return;
+
+        const center = e.lngLat;
+        // Walk: ~1.2km (4-5km/h), Bike: ~3.75km (15km/h)
+        const distance = activeIsochroneMode === 'walk' ? 1200 : 3750;
+        const color = activeIsochroneMode === 'walk' ? '#5b94c6' : '#9b59b6';
+
+        try {
+            map.getCanvas().style.cursor = 'wait';
+            
+            const response = await fetch('/api/isochrone', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lat: center.lat,
+                    lon: center.lng,
+                    distance: distance,
+                    mode: activeIsochroneMode
+                })
+            });
+
+            map.getCanvas().style.cursor = '';
+
+            if (!response.ok) return;
+
+            const geojson = await response.json();
+
+            if (map.getSource('isochrone')) {
+                map.getSource('isochrone').setData(geojson);
+                map.setPaintProperty('isochrone-fill', 'fill-color', color);
+                map.setPaintProperty('isochrone-line', 'line-color', color);
+                map.setLayoutProperty('isochrone-fill', 'visibility', 'visible');
+                map.setLayoutProperty('isochrone-line', 'visibility', 'visible');
+            } else {
+                map.addSource('isochrone', {
+                    type: 'geojson',
+                    data: geojson
+                });
+
+                map.addLayer({
+                    id: 'isochrone-fill',
+                    type: 'fill',
+                    source: 'isochrone',
+                    layout: {},
+                    paint: {
+                        'fill-color': color,
+                        'fill-opacity': 0.3
+                    }
+                });
+
+                map.addLayer({
+                    id: 'isochrone-line',
+                    type: 'line',
+                    source: 'isochrone',
+                    layout: {},
+                    paint: {
+                        'line-color': color,
+                        'line-width': 2
+                    }
+                });
+            }
+        } catch (err) {
+            console.error("Isochrone error:", err);
+            map.getCanvas().style.cursor = '';
+        }
+    });
 
     let questions = flattenQuestions(setupConfig.questionFlow);
     if (!questions.length) {
@@ -293,7 +391,7 @@ async function initApp() {
         dotsContainer.innerHTML = '';
         questions.forEach((q, index) => {
             const dot = document.createElement('span');
-            dot.className = 'dot';
+            dot.className = 'dot w-2.5 h-2.5 flex-none rounded-full bg-white/30 transition-all duration-300 cursor-pointer hover:bg-white/50 hover:scale-110 [&.active]:bg-gradient-to-br [&.active]:from-[#667eea] [&.active]:to-[#764ba2] [&.active]:scale-125 [&.active]:shadow-sm';
             dot.title = q.text;
             dot.addEventListener('click', () => {
                 currentQuestionIndex = index;

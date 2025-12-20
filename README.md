@@ -18,6 +18,6 @@ This project implements an interactive map system with physical AprilTag markers
 - [ ] defaultState overlays is hardcoded for Palaiseau specifically -> it should be fixed
 - [ ] Storing answers
 - [ ] See others inputs
-
+- [ ] Dockerize
 
 

@@ -16,20 +16,38 @@ CORS(app)
 print("Loading walking network graph from OSMnx")
 try:
     G = ox.graph_from_place("Palaiseau, France", network_type="walk")
-    print(f"Graph loaded. {len(G.nodes)} nodes, {len(G.edges)} edges")
+    print(f"Walking graph loaded. {len(G.nodes)} nodes")
+    
+    G_bike = ox.graph_from_place("Palaiseau, France", network_type="bike")
+    print(f"Cycling graph loaded. {len(G_bike.nodes)} nodes")
 except Exception as e:
-    print(f"Error loading graph: {e}")
+    print(f"Error loading graphs: {e}")
     G = None
+    G_bike = None
 
-def get_isochrone(lat, lon, distance_meters):
-    if G is None:
+def get_isochrone(lat, lon, distance_meters, mode='walk'):
+    graph = G if mode == 'walk' else G_bike
+    
+    if graph is None:
         return None
     try:
-        node = ox.nearest_nodes(G, lon, lat)
-        subgraph = nx.ego_graph(G, node, radius=distance_meters, distance="length")
+        node = ox.nearest_nodes(graph, lon, lat)
+        subgraph = nx.ego_graph(graph, node, radius=distance_meters, distance="length")
+        
+        if len(subgraph.nodes) < 3:
+            return None
+
         nodes_gdf = ox.graph_to_gdfs(subgraph, edges=False)
-        geojson = json.loads(nodes_gdf.to_json())
-        return geojson
+        polygon = nodes_gdf.unary_union.convex_hull
+        
+        return {
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "properties": {"distance": distance_meters, "mode": mode},
+                "geometry": json.loads(json.dumps(polygon.__geo_interface__))
+            }]
+        }
     except Exception as e:
         print(f"Error calculating isochrone: {e}")
         return None
@@ -78,12 +96,15 @@ def calculate_isochrone():
         data = request.json
         lat = float(data.get('lat'))
         lon = float(data.get('lon'))
-        distance = int(data.get('distance', 500))  
+        distance = int(data.get('distance', 500))
+        mode = data.get('mode', 'walk')
+        
         if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
             return jsonify({"error": "Invalid coordinates"}), 400
-        if not (10 <= distance <= 5000):
-            return jsonify({"error": "Distance must be between 10 and 5000 meters"}), 400
-        isochrone = get_isochrone(lat, lon, distance)
+        if not (10 <= distance <= 10000):
+            return jsonify({"error": "Distance must be between 10 and 10000 meters"}), 400
+            
+        isochrone = get_isochrone(lat, lon, distance, mode)
         if isochrone is None:
             return jsonify({"error": "Failed to calculate isochrone"}), 500
         return jsonify(isochrone)

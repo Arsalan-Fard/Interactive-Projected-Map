@@ -222,7 +222,8 @@ export function initDraggableItems(map) {
                     fontFamily: 'sans-serif',
                     fontSize: '14px',
                     transform: 'translate(-50%, -50%)', 
-                    userSelect: 'none'
+                    userSelect: 'none',
+                    transition: 'none'
                 });
 
                 // Activate layer when detached
