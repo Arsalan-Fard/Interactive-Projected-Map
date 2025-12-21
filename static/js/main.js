@@ -248,26 +248,42 @@ async function initApp() {
     initDraggableStickers(map);
 
     const draw = new MapboxDraw({
-        displayControlsDefault: true,
-        controls: {
-            point: true,
-            line_string: true,
-            polygon: true,
-            trash: true
-        }
+        displayControlsDefault: false
     });
+    map.addControl(draw);
 
     const drawBtn = document.getElementById('btn-draw');
+    const surfaceBtn = document.getElementById('btn-surface');
+
+    function setDrawMode(targetMode) {
+        const mode = draw.getMode();
+        if (mode !== targetMode) {
+            draw.changeMode(targetMode);
+        } else {
+            draw.changeMode('simple_select');
+        }
+    }
+
+    function syncDrawButtons(mode) {
+        if (drawBtn) drawBtn.classList.toggle('active', mode === 'draw_line_string');
+        if (surfaceBtn) surfaceBtn.classList.toggle('active', mode === 'draw_polygon');
+    }
+
     if (drawBtn) {
         drawBtn.addEventListener('click', () => {
-            drawBtn.classList.toggle('active');
-            if (drawBtn.classList.contains('active')) {
-                map.addControl(draw, 'top-left');
-            } else {
-                map.removeControl(draw);
-            }
+            setDrawMode('draw_line_string');
         });
     }
+
+    if (surfaceBtn) {
+        surfaceBtn.addEventListener('click', () => {
+            setDrawMode('draw_polygon');
+        });
+    }
+
+    map.on('draw.modechange', (e) => {
+        syncDrawButtons(e.mode);
+    });
 
     const btnWalk = document.getElementById('btn-isochrone');
     const btnBike = document.getElementById('btn-isochrone-bike');
