@@ -289,17 +289,17 @@ function renderMapCards() {
     renderQuestionMapSelect(); 
     state.maps.forEach(map => {
         const card = document.createElement('div');
-        card.className = `map-card ${map.id === state.project.mapId ? 'active' : ''}`;
+        card.className = `map-card bg-bg-secondary border-2 border-border-subtle rounded-lg p-4 cursor-pointer transition-all duration-200 hover:border-border-focus hover:-translate-y-0.5 ${map.id === state.project.mapId ? 'active border-accent-primary bg-blue-500/5' : ''}`;
         card.dataset.id = map.id;
         card.innerHTML = `
-            <h4>${map.label}</h4>
-            <div class="map-meta">
-                <span>${map.description || 'No description'}</span>
-                <span>Style: ${map.style}</span>
-                <span>Center: ${map.center.join(', ')} | Zoom: ${map.zoom}</span>
+            <h4 class="mb-2 text-base font-semibold text-text-primary m-0">${map.label}</h4>
+            <div class="text-sm text-text-secondary leading-6 block">
+                <span class="block mb-1">${map.description || 'No description'}</span>
+                <span class="block mb-1">Style: ${map.style}</span>
+                <span class="block mb-1">Center: ${map.center.join(', ')} | Zoom: ${map.zoom}</span>
             </div>
-            <div class="chip-row">
-                ${map.overlays.map(o => `<span class="chip">${o}</span>`).join('')}
+            <div class="flex flex-wrap gap-1 mt-3">
+                ${map.overlays.map(o => `<span class="px-2 py-0.5 bg-bg-tertiary border border-border-subtle rounded text-xs text-text-muted">${o}</span>`).join('')}
             </div>
         `;
         card.addEventListener('click', () => {
@@ -389,14 +389,14 @@ function renderOverlayList() {
 
     state.overlays.forEach(layer => {
         const wrapper = document.createElement('div');
-        wrapper.className = 'overlay-item';
+        wrapper.className = 'overlay-item flex justify-between items-center p-3 bg-bg-tertiary border border-border-subtle rounded-md transition-colors duration-200 hover:border-border-focus';
         const checked = selected.overlays.includes(layer.id);
         wrapper.innerHTML = `
-            <div class="info">
-                <strong>${layer.label}</strong>
-                <small>${layer.file}</small>
+            <div class="flex-1">
+                <strong class="block text-text-primary text-sm mb-0.5">${layer.label}</strong>
+                <small class="block text-text-secondary text-xs">${layer.file}</small>
             </div>
-            <input type="checkbox" ${checked ? 'checked' : ''} data-layer="${layer.id}">
+            <input type="checkbox" ${checked ? 'checked' : ''} data-layer="${layer.id}" class="w-[18px] h-[18px] cursor-pointer flex-shrink-0">
         `;
         const checkbox = wrapper.querySelector('input');
         checkbox.addEventListener('change', () => {
@@ -453,23 +453,15 @@ function renderQuestions() {
         const isActive = selectedQuestionId === q.id;
         
         const card = document.createElement('div');
-        card.className = `question-chip ${isActive ? 'active' : ''}`;
+        card.className = `question-chip p-3 bg-bg-tertiary border-2 border-border-subtle rounded-md cursor-grab transition-all duration-200 hover:border-border-focus mb-2 block ${isActive ? 'active border-accent-primary bg-blue-500/5' : ''}`;
         card.dataset.id = q.id; // Important for Sortable
         
-        if (isActive) {
-            card.style.borderColor = 'var(--accent)';
-            card.style.background = 'rgba(94, 234, 212, 0.1)';
-        }
-        card.style.cursor = 'grab';
-        card.style.display = 'block';
-        card.style.marginBottom = '8px';
-        
         card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; pointer-events:none;">
-                <span class="type">${q.type}</span>
-                ${q.mapId ? `<span class="pill light tiny" style="font-size:10px; padding:2px 6px;">${mapLabel}</span>` : ''}
+            <div class="flex justify-between items-center pointer-events-none">
+                <span class="text-xs text-accent-primary font-semibold uppercase tracking-wider">${q.type}</span>
+                ${q.mapId ? `<span class="text-[10px] px-1.5 py-0.5 bg-blue-500/10 border border-accent-primary rounded-full text-accent-primary">${mapLabel}</span>` : ''}
             </div>
-            <div style="margin-top:4px; pointer-events:none;">${q.text}</div>
+            <div class="mt-1 pointer-events-none text-sm">${q.text}</div>
         `;
 
         card.addEventListener('click', () => {
@@ -726,9 +718,12 @@ function switchTab(tabName) {
 
     // Update tab panels
     document.querySelectorAll('.tab-panel').forEach(panel => {
-        panel.classList.remove('active');
         if (panel.dataset.panel === tabName) {
-            panel.classList.add('active');
+            panel.classList.remove('hidden');
+            panel.classList.add('block');
+        } else {
+            panel.classList.remove('block');
+            panel.classList.add('hidden');
         }
     });
 }

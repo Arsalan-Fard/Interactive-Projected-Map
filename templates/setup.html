@@ -1,155 +1,187 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Session Setup | Tangible Map</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/setup.css') }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        bg: {
+                            primary: '#0a0d14',
+                            secondary: '#141820',
+                            tertiary: '#1c2128',
+                        },
+                        border: {
+                            subtle: '#2d333d',
+                            focus: '#3d4450',
+                        },
+                        accent: {
+                            primary: '#3b82f6',
+                            success: '#10b981',
+                            danger: '#ef4444',
+                        },
+                        text: {
+                            primary: '#e6edf3',
+                            secondary: '#8b949e',
+                            muted: '#6e7681',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica Neue', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body>
-    <div class="app-container">
+<body class="m-0 p-0 bg-bg-primary text-text-primary font-sans text-sm leading-6">
+    <div class="app-container min-h-screen flex flex-col">
         <!-- Top Bar -->
-        <header class="top-bar">
-            <div class="top-bar-content">
-                <div class="top-bar-left">
-                    <h1 class="app-title">Tangible Map Setup</h1>
+        <header class="top-bar bg-bg-secondary border-b border-border-subtle sticky top-0 z-[100]">
+            <div class="top-bar-content max-w-[1400px] mx-auto py-4 px-6 flex justify-between items-center gap-6 lg:flex-row flex-col lg:items-center items-stretch">
+                <div class="top-bar-left flex lg:flex-row flex-col items-center gap-4 flex-1 min-w-0">
+                    <h1 class="app-title text-3xl font-semibold m-0 whitespace-nowrap leading-tight">Tangible Map Setup</h1>
                 </div>
-                <div class="top-bar-actions">
-                    <button id="open-project" class="btn-secondary">Open</button>
-                    <div class="project-selector">
-                        <select id="project-dropdown" class="project-dropdown">
+                <div class="top-bar-actions flex gap-2 items-center flex-wrap justify-start">
+                    <button id="open-project" class="btn-secondary h-10 px-4 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 border border-transparent flex items-center justify-center gap-2 whitespace-nowrap bg-transparent text-text-primary border-border-subtle hover:border-accent-primary hover:text-accent-primary">Open</button>
+                    <div class="project-selector lg:flex-[0_0_240px] flex-auto w-full">
+                        <select id="project-dropdown" class="project-dropdown w-full h-[35px] px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm cursor-pointer transition-colors duration-200 leading-none hover:border-border-focus focus:outline-none focus:border-accent-primary">
                             <option value="">Select or create a project...</option>
                         </select>
                     </div>
-                    <span id="save-status" class="status-badge" style="display: none">Unsaved</span>
-                    <button id="new-project" class="btn-secondary">New Project</button>
-                    <button id="save-server" class="btn-secondary">Save to Server</button>
-                    <button id="download-config" class="btn-secondary">Download</button>
-                    <button id="delete-project" class="btn-danger">Delete Project</button>
+                    <span id="save-status" class="status-badge h-10 px-3 py-1 bg-bg-tertiary border border-border-subtle rounded text-[11px] text-text-secondary font-medium uppercase tracking-wider flex items-center" style="display: none">Unsaved</span>
+                    <button id="new-project" class="btn-secondary h-10 px-4 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 border border-transparent flex items-center justify-center gap-2 whitespace-nowrap bg-transparent text-text-primary border-border-subtle hover:border-accent-primary hover:text-accent-primary">New Project</button>
+                    <button id="save-server" class="btn-secondary h-10 px-4 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 border border-transparent flex items-center justify-center gap-2 whitespace-nowrap bg-transparent text-text-primary border-border-subtle hover:border-accent-primary hover:text-accent-primary">Save to Server</button>
+                    <button id="download-config" class="btn-secondary h-10 px-4 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 border border-transparent flex items-center justify-center gap-2 whitespace-nowrap bg-transparent text-text-primary border-border-subtle hover:border-accent-primary hover:text-accent-primary">Download</button>
+                    <button id="delete-project" class="btn-danger h-10 px-4 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 border border-transparent flex items-center justify-center gap-2 whitespace-nowrap bg-transparent text-accent-danger border-accent-danger hover:bg-accent-danger hover:text-white">Delete Project</button>
                 </div>
             </div>
         </header>
 
         <!-- Tab Navigation -->
-        <nav class="tab-nav">
-            <button class="tab-btn active" data-tab="project">Project Details</button>
-            <button class="tab-btn" data-tab="maps">Maps & Layers</button>
-            <button class="tab-btn" data-tab="questions">Survey Questions</button>
+        <nav class="tab-nav bg-bg-secondary border border-border-subtle rounded-lg sticky top-[calc(76px+12px)] z-[90] mt-4 shadow-xl max-w-[1400px] mx-auto py-2 px-6 flex gap-2 w-[calc(100%-32px)] lg:w-full">
+            <button class="tab-btn py-3 px-4 bg-transparent border-0 border-b-2 border-transparent text-text-secondary text-sm font-medium cursor-pointer transition-all duration-200 relative hover:text-text-primary [&.active]:text-accent-primary [&.active]:border-accent-primary active" data-tab="project">Project Details</button>
+            <button class="tab-btn py-3 px-4 bg-transparent border-0 border-b-2 border-transparent text-text-secondary text-sm font-medium cursor-pointer transition-all duration-200 relative hover:text-text-primary [&.active]:text-accent-primary [&.active]:border-accent-primary" data-tab="maps">Maps & Layers</button>
+            <button class="tab-btn py-3 px-4 bg-transparent border-0 border-b-2 border-transparent text-text-secondary text-sm font-medium cursor-pointer transition-all duration-200 relative hover:text-text-primary [&.active]:text-accent-primary [&.active]:border-accent-primary" data-tab="questions">Survey Questions</button>
         </nav>
 
         <!-- Main Content Area -->
-        <main class="main-content">
+        <main class="main-content max-w-[1400px] mx-auto py-8 px-6 w-full md:px-4">
             <!-- Project Details Tab -->
-            <section class="tab-panel active" data-panel="project">
-                <div class="panel-header">
-                    <h2>Project Information</h2>
-                    <span class="pill" id="project-pill">Project ID</span>
+            <section class="tab-panel active block" data-panel="project">
+                <div class="panel-header flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold m-0">Project Information</h2>
+                    <span class="pill px-3 py-1 bg-blue-500/10 border border-accent-primary rounded-full text-xs font-semibold text-accent-primary tracking-wider" id="project-pill">Project ID</span>
                 </div>
 
-                <div class="form-section">
-                    <div class="form-row">
-                        <label class="form-label">Project Name</label>
-                        <input id="project-name" type="text" placeholder="e.g. Pilot with telecom students">
+                <div class="form-section bg-bg-secondary border border-border-subtle rounded-lg p-6 mb-6">
+                    <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                        <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Project Name</label>
+                        <input id="project-name" type="text" placeholder="e.g. Pilot with telecom students" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
                     </div>
-                    <div class="form-row">
-                        <label class="form-label">Location</label>
-                        <input id="project-location" type="text" placeholder="e.g. IP Paris Campus">
+                    <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                        <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Location</label>
+                        <input id="project-location" type="text" placeholder="e.g. IP Paris Campus" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
                     </div>
-                    <div class="form-row">
-                        <label class="form-label">Project ID</label>
-                        <input id="project-id" type="text" placeholder="Auto-generated from name">
+                    <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                        <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Project ID</label>
+                        <input id="project-id" type="text" placeholder="Auto-generated from name" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
                     </div>
                 </div>
             </section>
 
             <!-- Maps & Layers Tab -->
-            <section class="tab-panel" data-panel="maps">
-                <div class="panel-header">
-                    <h2>Map Presets</h2>
-                    <button id="add-map" class="btn-primary">Add Map Preset</button>
+            <section class="tab-panel hidden" data-panel="maps">
+                <div class="panel-header flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold m-0">Map Presets</h2>
+                    <button id="add-map" class="btn-primary h-[34px] px-4 text-[13px] bg-accent-primary text-white border border-accent-primary rounded-md font-medium cursor-pointer transition-all duration-200 flex items-center justify-center hover:bg-blue-600 hover:border-blue-600">Add Map Preset</button>
                 </div>
 
-                <div class="map-presets-grid" id="map-list"></div>
+                <div class="map-presets-grid grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] md:grid-cols-1 gap-4 mb-8" id="map-list"></div>
 
-                <div class="map-editor" id="map-editor">
-                    <div class="section-header">
-                        <h3 id="selected-map-title">Select a map to edit</h3>
-                        <div class="header-actions">
-                            <span class="pill-small" id="selected-map-pill"></span>
-                            <button id="delete-map" class="btn-text-danger">Delete Map</button>
+                <div class="map-editor bg-bg-secondary border border-border-subtle rounded-lg p-6" id="map-editor">
+                    <div class="section-header flex justify-between items-center mb-4">
+                        <h3 id="selected-map-title" class="text-lg font-semibold m-0">Select a map to edit</h3>
+                        <div class="header-actions flex gap-3 items-center">
+                            <span class="pill-small px-2 py-0.5 text-[10px] bg-blue-500/10 border border-accent-primary rounded-full font-semibold text-accent-primary tracking-wider" id="selected-map-pill"></span>
+                            <button id="delete-map" class="btn-text-danger bg-transparent border-0 h-auto p-1 text-accent-danger cursor-pointer transition-colors duration-200 hover:text-red-600">Delete Map</button>
                         </div>
                     </div>
 
-                    <div class="form-section" id="map-detail-form">
-                        <div class="form-row">
-                            <label class="form-label">Map Name</label>
-                            <input id="map-label" type="text" placeholder="e.g. Overview">
+                    <div class="form-section bg-bg-secondary border border-border-subtle rounded-lg p-6 mb-6" id="map-detail-form">
+                        <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                            <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Map Name</label>
+                            <input id="map-label" type="text" placeholder="e.g. Overview" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
                         </div>
-                        <div class="form-row">
-                            <label class="form-label">Style URL</label>
-                            <input id="map-style" type="text" placeholder="mapbox://styles/mapbox/light-v11">
+                        <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                            <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Style URL</label>
+                            <input id="map-style" type="text" placeholder="mapbox://styles/mapbox/light-v11" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
                         </div>
-                        <div class="form-grid-2">
-                            <div class="form-row">
-                                <label class="form-label">Center (lng, lat)</label>
-                                <input id="map-center" type="text" placeholder="2.2, 48.714">
+                        <div class="form-grid-2 grid grid-cols-2 md:grid-cols-1 gap-4">
+                            <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                                <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Center (lng, lat)</label>
+                                <input id="map-center" type="text" placeholder="2.2, 48.714" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
                             </div>
-                            <div class="form-row">
-                                <label class="form-label">Zoom</label>
-                                <input id="map-zoom" type="number" step="0.1" min="0" max="22">
+                            <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                                <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Zoom</label>
+                                <input id="map-zoom" type="number" step="0.1" min="0" max="22" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
                             </div>
-                            <div class="form-row">
-                                <label class="form-label">Pitch</label>
-                                <input id="map-pitch" type="number" step="1" min="0" max="85">
+                            <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                                <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Pitch</label>
+                                <input id="map-pitch" type="number" step="1" min="0" max="85" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
                             </div>
-                            <div class="form-row">
-                                <label class="form-label">Bearing</label>
-                                <input id="map-bearing" type="number" step="1" min="-180" max="180">
+                            <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                                <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Bearing</label>
+                                <input id="map-bearing" type="number" step="1" min="-180" max="180" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
                             </div>
                         </div>
                     </div>
 
-                    <div class="layers-section">
-                        <div class="section-header">
-                            <h4>Layers to Load</h4>
-                            <button class="btn-text" id="toggle-all-overlays">Toggle All</button>
+                    <div class="layers-section mt-8 pt-6 border-t border-border-subtle">
+                        <div class="section-header flex justify-between items-center mb-4">
+                            <h4 class="text-xs font-semibold uppercase tracking-wider text-text-secondary m-0">Layers to Load</h4>
+                            <button class="btn-text bg-transparent border-0 h-auto p-1 text-text-secondary cursor-pointer transition-colors duration-200 hover:text-text-primary" id="toggle-all-overlays">Toggle All</button>
                         </div>
-                        <div id="overlay-items" class="layer-list"></div>
+                        <div id="overlay-items" class="layer-list flex flex-col gap-3"></div>
                     </div>
                 </div>
             </section>
 
             <!-- Survey Questions Tab -->
-            <section class="tab-panel" data-panel="questions">
-                <div class="panel-header">
-                    <h2>Survey Questions</h2>
-                    <button id="add-question" class="btn-primary">Add Question</button>
+            <section class="tab-panel hidden" data-panel="questions">
+                <div class="panel-header flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold m-0">Survey Questions</h2>
+                    <button id="add-question" class="btn-primary h-[34px] px-4 text-[13px] bg-accent-primary text-white border border-accent-primary rounded-md font-medium cursor-pointer transition-all duration-200 flex items-center justify-center hover:bg-blue-600 hover:border-blue-600">Add Question</button>
                 </div>
 
-                <div class="questions-layout">
-                    <div class="questions-list-section">
-                        <div class="section-subheader">
-                            <span class="eyebrow">Question Flow (Drag to Reorder)</span>
+                <div class="questions-layout grid grid-cols-[1fr_1.5fr] lg:grid-cols-1 gap-8">
+                    <div class="questions-list-section bg-bg-secondary border border-border-subtle rounded-lg p-6">
+                        <div class="section-subheader mb-3">
+                            <span class="eyebrow uppercase tracking-wider text-[11px] text-text-muted font-semibold m-0">Question Flow (Drag to Reorder)</span>
                         </div>
-                        <div id="question-list" class="question-list"></div>
+                        <div id="question-list" class="question-list flex flex-col gap-3"></div>
                     </div>
 
-                    <div class="question-editor">
-                        <div class="section-header">
-                            <h3 id="selected-question-title">Select a question to edit</h3>
-                            <button id="delete-question" class="btn-text-danger">Delete Question</button>
+                    <div class="question-editor bg-bg-secondary border border-border-subtle rounded-lg p-6">
+                        <div class="section-header flex justify-between items-center mb-4">
+                            <h3 id="selected-question-title" class="text-lg font-semibold m-0">Select a question to edit</h3>
+                            <button id="delete-question" class="btn-text-danger bg-transparent border-0 h-auto p-1 text-accent-danger cursor-pointer transition-colors duration-200 hover:text-red-600">Delete Question</button>
                         </div>
 
-                        <div class="form-section" id="question-detail-form">
-                            <div class="form-row full-width">
-                                <label class="form-label">Question Text</label>
-                                <input id="question-text" type="text" placeholder="Question text">
+                        <div class="form-section bg-bg-secondary border border-border-subtle rounded-lg p-6 mb-6" id="question-detail-form">
+                            <div class="form-row full-width grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                                <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Question Text</label>
+                                <input id="question-text" type="text" placeholder="Question text" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
                             </div>
-                            <div class="form-grid-2">
-                                <div class="form-row">
-                                    <label class="form-label">Interaction Type</label>
-                                    <select id="question-type">
+                            <div class="form-grid-2 grid grid-cols-2 md:grid-cols-1 gap-4">
+                                <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                                    <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Interaction Type</label>
+                                    <select id="question-type" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
                                         <option value="text">Free text</option>
                                         <option value="single-choice">Single choice</option>
                                         <option value="multi-choice">Multiple choice</option>
@@ -157,17 +189,17 @@
                                         <option value="drawing">Draw on map</option>
                                     </select>
                                 </div>
-                                <div class="form-row">
-                                    <label class="form-label">Map View</label>
-                                    <select id="question-map-preset">
+                                <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                                    <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Map View</label>
+                                    <select id="question-map-preset" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
                                         <option value="">Default</option>
                                     </select>
                                 </div>
                             </div>
                             <div id="question-options-container" style="display:none;">
-                                <div class="form-row full-width">
-                                    <label class="form-label">Options (one per line)</label>
-                                    <textarea id="question-options" rows="3"></textarea>
+                                <div class="form-row full-width grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                                    <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Options (one per line)</label>
+                                    <textarea id="question-options" rows="3" class="w-full min-h-[80px] px-3 py-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary resize-y"></textarea>
                                 </div>
                             </div>
                         </div>
