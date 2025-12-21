@@ -30,7 +30,7 @@ const fallbackConfig = {
             title: 'Default',
             order: 1,
             questions: [
-                { id: 'travel-mode', text: 'How do you typically travel to campus?', type: 'single-choice', options: [], required: false, storageKey: 'travel_mode', responseShape: 'scalar' },
+                { id: 'travel-mode', text: 'How do you typically travel to campus?', type: 'single-choice', options: ['Walk', 'Bike', 'Bus', 'Car', 'Other'], required: false, storageKey: 'travel_mode', responseShape: 'scalar' },
                 { id: 'bike-lanes', text: 'Where do you suggest to add more bike lanes?', type: 'sticker', options: [], required: false, storageKey: 'bike_lanes', responseShape: 'point-collection' },
                 { id: 'confused', text: 'In Which points do you get confused?', type: 'sticker', options: [], required: false, storageKey: 'confused_points', responseShape: 'point-collection' }
             ]
@@ -399,6 +399,7 @@ async function initApp() {
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
     const questionText = document.querySelector('.question-text');
+    const questionOptions = document.getElementById('question-options');
     const dotsContainer = document.querySelector('.progress-dots');
     let dots = [];
 
@@ -418,9 +419,34 @@ async function initApp() {
         dots = dotsContainer.querySelectorAll('.dot');
     }
 
+    function renderQuestionOptions(question) {
+        if (!questionOptions) return;
+        const options = Array.isArray(question?.options) ? question.options : [];
+        const shouldShow = options.length > 0 && ['single-choice', 'multi-choice'].includes(question?.type);
+        if (!shouldShow) {
+            questionOptions.innerHTML = '';
+            questionOptions.classList.add('hidden');
+            return;
+        }
+
+        questionOptions.classList.remove('hidden');
+        questionOptions.innerHTML = '';
+        options.forEach(option => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'question-option w-full text-left px-3 py-2 rounded-md bg-white/5 border border-white/10 text-white/85 text-xs font-medium tracking-wide transition-all duration-200 hover:bg-white/10 hover:border-white/25';
+            button.textContent = option;
+            questionOptions.appendChild(button);
+        });
+    }
+
     function updateQuestion() {
         if (!questions.length) {
             questionText.textContent = 'No questions configured';
+            if (questionOptions) {
+                questionOptions.innerHTML = '';
+                questionOptions.classList.add('hidden');
+            }
             prevBtn.disabled = true;
             nextBtn.disabled = true;
             return;
@@ -428,6 +454,7 @@ async function initApp() {
 
         const q = questions[currentQuestionIndex];
         questionText.textContent = q.text;
+        renderQuestionOptions(q);
 
         // Map switching logic
         if (q.mapId && setupConfig.maps) {

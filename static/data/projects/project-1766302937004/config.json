@@ -128,8 +128,7 @@
         "Walk",
         "Bike",
         "Bus",
-        "Car",
-        "Other"
+        "Car"
       ],
       "required": true,
       "responseShape": "scalar",
