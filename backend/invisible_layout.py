@@ -66,10 +66,10 @@ class AprilTagOverlay(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     
-    ids = [0, 1, 2, 3, 4, 5]
+    ids = [1, 2, 3, 4, 5, 6]
     windows = []
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    tags_dir = os.path.join(base_dir, 'generated_tags')
+    tags_dir = os.path.join(base_dir, '../generated_tags')
     
     for i, tag_id in enumerate(ids):
         filename = f"tag25h9_id{tag_id:02d}.png"
@@ -87,13 +87,13 @@ if __name__ == '__main__':
             
             x, y = 100 + (i * 150), 100  # Default position
             
-            if tag_id == 0:   # Top Left
+            if tag_id == 1:   # Top Left
                 x, y = 0, 25
-            elif tag_id == 1: # Top Right
+            elif tag_id == 2: # Top Right
                 x, y = s_width - w + 125, 25
-            elif tag_id == 2: # Bottom Right
+            elif tag_id == 3: # Bottom Right
                 x, y = s_width - w + 125, s_height - h - 10
-            elif tag_id == 3: # Bottom Left
+            elif tag_id == 4: # Bottom Left
                 x, y = 0, s_height - h - 10
             
             window.move(x, y)

@@ -40,6 +40,7 @@
 </head>
 
 <body class="m-0 p-0 bg-black h-screen w-screen overflow-hidden">
+    <div id="debug-ids" class="absolute top-2 left-2 z-[9999] text-white bg-black/50 p-2 rounded text-xs font-mono pointer-events-none">IDs: -</div>
     <div id="main_container" class="relative w-full h-full flex flex-col">
         <!-- Left Sidebar -->
         <div id="left-sidebar"
@@ -236,6 +237,8 @@
         </div>
     </div>
 
+    <script src="{{ url_for('static', filename='js/maptastic/maptastic.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/maptastic/maptastic-init.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 

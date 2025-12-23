@@ -124,10 +124,10 @@ function flattenQuestions(flow) {
             list.push({ ...q, groupId: group.id, groupTitle: group.title });
         });
     });
-    
+
     // Sort flat list by order if present
     list.sort((a, b) => (a.order || 0) - (b.order || 0));
-    
+
     return list;
 }
 
@@ -147,6 +147,10 @@ async function initApp() {
         document.body.style.transform = 'scaleX(-1)';
     }
 
+    if (setupConfig.project.tuiMode) {
+        document.body.classList.add('tui-mode');
+    }
+
     mapboxgl.accessToken = CONFIG.accessToken;
 
     const map = new mapboxgl.Map({
@@ -156,13 +160,14 @@ async function initApp() {
         zoom: setupConfig.map.zoom,
         pitch: setupConfig.map.pitch,
         bearing: setupConfig.map.bearing,
-        attributionControl: false
+        attributionControl: false,
+        trackResize: false
     });
 
     let currentActiveOverlayIds = new Set(setupConfig.map.overlays || []);
 
     map.on('style.load', () => {
-        
+
         add3DBuildings(map);
 
         if (setupConfig.overlays) {
@@ -195,68 +200,159 @@ async function initApp() {
     });
     setActiveStyleButton(setupConfig.map.style, styles);
 
-    const debugDot = document.createElement('div');
-    Object.assign(debugDot.style, {
-        position: 'absolute',
-        width: '20px',
-        height: '20px',
-        backgroundColor: 'red',
-        borderRadius: '50%',
-        zIndex: '9999',
-        pointerEvents: 'none',
-        transform: 'translate(-50%, -50%)', 
-        display: 'none', 
-        left: '0%',
-        top: '0%'
-    });
-    document.getElementById('main_container').appendChild(debugDot);
-
+        const debugDot = document.createElement('div');
+        Object.assign(debugDot.style, {
+            position: 'absolute',
+            width: '20px',
+            height: '20px',
+            backgroundColor: 'red',
+            borderRadius: '50%',
+            zIndex: '9999',
+            pointerEvents: 'none',
+            transform: 'translate(-50%, -50%)', 
+            display: 'none', 
+            left: '0%',
+            top: '0%'
+        });
+        document.body.appendChild(debugDot);
+    
+        // Create SVG overlay for debug lines
+        const debugSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        Object.assign(debugSvg.style, {
+            position: 'absolute',
+            top: '0',
+            left: '0',
+            width: '100%',
+            height: '100%',
+            zIndex: '9998', // Below dot, above map
+            pointerEvents: 'none',
+            overflow: 'visible'
+        });
+        document.body.appendChild(debugSvg);
+    
+        const debugLines = [1, 2, 3, 4].map(i => {
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("stroke", "blue");
+            line.setAttribute("stroke-width", "2");
+            line.setAttribute("opacity", "0.5");
+            line.style.display = 'none';
+            debugSvg.appendChild(line);
+            return line;
+        });
+    
         async function checkPosition() {
-
-
+    
+    
             try {
-
+    
                 const response = await fetch('http://localhost:5000/api/position');
-
+    
                 if (!response.ok) {
                     return; 
                 }
-
     
-
                 const data = await response.json();
-
     
-
+                const debugIds = document.getElementById('debug-ids');
+                if (debugIds) {
+                    const idsList = data.detected_ids ? data.detected_ids.join(', ') : '-';
+                    debugIds.textContent = `IDs: ${idsList}`;
+                }
+    
                 if (data.valid) {
-                const clampedX = Math.max(0, Math.min(1, data.x));
-                const clampedY = Math.max(0, Math.min(1, data.y));
-
-                debugDot.style.left = `${clampedX * 100}%`;
-                debugDot.style.top = `${clampedY * 100}%`;
-                debugDot.style.display = 'block';
-
-                if (data.id === 5) {
-                    const dotRect = debugDot.getBoundingClientRect();
-                    const element = document.elementFromPoint(
-                        dotRect.left + dotRect.width / 2, 
-                        dotRect.top + dotRect.height / 2
-                    );
-
-                    if (element) {
-                        const button = element.closest('button');
-                        if (button && styles[button.id] && !button.classList.contains('active')) {
-                            button.click();
+                    let screenX, screenY;
+    
+                    // Try to get Maptastic coordinates
+                    let corners = null;
+                                    if (window.maptastic) {
+                                        const layout = window.maptastic.getLayout();
+                                        const layer = layout.find(l => l.id === 'main_container');
+                                        if (layer && layer.targetPoints) {
+                                            corners = layer.targetPoints; // [ [x,y], [x,y], [x,y], [x,y] ] (TL, TR, BR, BL)
+                                        }
+                                    }
+                    
+                                    if (data.valid && corners) {
+                                        // Use Backend Normalized Coordinates (0.0 - 1.0)
+                                        const u = data.x;
+                                        const v = data.y;
+                    
+                                        // Maptastic Corners: 0:TL, 1:TR, 2:BR, 3:BL
+                                        const tl = corners[0];
+                                        const tr = corners[1];
+                                        const br = corners[2];
+                                        const bl = corners[3];
+                    
+                                        // Bilinear Interpolation
+                                        // 1. Interpolate along top and bottom edges (X-axis)
+                                        const topX = tl[0] + (tr[0] - tl[0]) * u;
+                                        const topY = tl[1] + (tr[1] - tl[1]) * u;
+                    
+                                        const botX = bl[0] + (br[0] - bl[0]) * u;
+                                        const botY = bl[1] + (br[1] - bl[1]) * u;
+                    
+                                        // 2. Interpolate vertically between the two points found above (Y-axis)
+                                        screenX = topX + (botX - topX) * v;
+                                        screenY = topY + (botY - topY) * v;
+                    
+                                        // Update debug lines to show the projection
+                                        const cornerList = [tl, tr, br, bl];
+                                        cornerList.forEach((corner, index) => {
+                                            const line = debugLines[index];
+                                            line.setAttribute("x1", screenX);
+                                            line.setAttribute("y1", screenY);
+                                            line.setAttribute("x2", corner[0]);
+                                            line.setAttribute("y2", corner[1]);
+                                            line.style.display = 'block';
+                                        });
+                    
+                                    } else if (data.valid && !corners) {
+                                        // Fallback if Maptastic isn't ready or found
+                                        screenX = data.x * window.innerWidth;
+                                        screenY = data.y * window.innerHeight;
+                                        debugLines.forEach(l => l.style.display = 'none');
+                                    } else {
+                                        debugLines.forEach(l => l.style.display = 'none');
+                                    }
+                    
+                                    if (data.valid) {
+                                        debugDot.style.left = `${screenX}px`;
+                                        debugDot.style.top = `${screenY}px`;
+                                        debugDot.style.display = 'block';
+                                    } else {
+                                        debugDot.style.display = 'none';
+                                    }
+                    
+                                    if (data.valid && data.id === 5) {                        const element = document.elementFromPoint(screenX, screenY);
+    
+                        if (element) {
+                            const button = element.closest('button');
+                            const layerButtons = ['btn-layer-bus', 'btn-layer-bike', 'btn-layer-walk', 'btn-layer-roads'];
+    
+                            if (button) {
+                                if (layerButtons.includes(button.id)) {
+                                    const btnRect = button.getBoundingClientRect();
+                                    const isRightHalf = screenX > (btnRect.left + btnRect.width / 2);
+                                    const isActive = button.classList.contains('active');
+    
+                                    if (isRightHalf && !isActive) {
+                                        button.click(); // Activate
+                                    } else if (!isRightHalf && isActive) {
+                                        button.click(); // Deactivate
+                                    }
+                                } else if (styles[button.id] && !button.classList.contains('active')) {
+                                    button.click(); // Standard activation for map styles
+                                }
+                            }
                         }
                     }
+                } else {
+                    debugDot.style.display = 'none';
                 }
-            } else {
-                debugDot.style.display = 'none';
+            } catch (error) {
+                console.error("CheckPosition error:", error);
             }
-        } catch (error) {
-            console.error("CheckPosition error:", error);
         }
-    }
 
     setInterval(checkPosition, 100);
     initLayerToggles(map);
@@ -302,7 +398,7 @@ async function initApp() {
 
     const btnWalk = document.getElementById('btn-isochrone');
     const btnBike = document.getElementById('btn-isochrone-bike');
-    
+
     let activeIsochroneMode = null; // 'walk' or 'bike'
 
     function resetIsochroneUI() {
@@ -347,7 +443,7 @@ async function initApp() {
 
         try {
             map.getCanvas().style.cursor = 'wait';
-            
+
             const response = await fetch('/api/isochrone', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

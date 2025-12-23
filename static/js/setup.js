@@ -4,7 +4,8 @@ const defaultState = {
         location: 'Palaiseau Campus',
         id: 'project-palaiseau',
         mapId: 'palaiseau-outdoor',
-        rearProjection: false
+        rearProjection: false,
+        tuiMode: false
     },
     overlays: [
         { id: 'palaiseau-roads', label: 'Road network', file: '/static/data/palaiseau_roads.geojson', type: 'line', note: 'OSM roads for the outdoor view' },
@@ -94,6 +95,7 @@ const els = {
     projectId: document.getElementById('project-id'),
     projectPill: document.getElementById('project-pill'),
     projectRearProjection: document.getElementById('project-rear-projection'),
+    projectTuiMode: document.getElementById('project-tui-mode'),
     mapList: document.getElementById('map-list'),
     mapStyle: document.getElementById('map-style'),
     mapCenter: document.getElementById('map-center'),
@@ -265,6 +267,9 @@ function renderProject() {
     els.projectPill.textContent = state.project.id || 'Project';
     if (els.projectRearProjection) {
         els.projectRearProjection.checked = !!state.project.rearProjection;
+    }
+    if (els.projectTuiMode) {
+        els.projectTuiMode.checked = !!state.project.tuiMode;
     }
 }
 
@@ -780,6 +785,11 @@ function initEvents() {
 
     els.projectRearProjection?.addEventListener('change', e => {
         state.project.rearProjection = e.target.checked;
+        markSaved('Unsaved changes');
+    });
+
+    els.projectTuiMode?.addEventListener('change', e => {
+        state.project.tuiMode = e.target.checked;
         markSaved('Unsaved changes');
     });
 

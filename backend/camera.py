@@ -13,7 +13,7 @@ from flask_cors import CORS
 
 position_lock = threading.Lock()
 # relative position (0.0 to 1.0) inside the map formed by ids 1,2,3,4
-current_position = {"x": 0.0, "y": 0.0, "valid": False}
+current_position = {"x": 0.0, "y": 0.0, "valid": False, "detected_ids": []}
 
 app = Flask(__name__)
 CORS(app)  
@@ -77,10 +77,10 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
     # --- TWEAK IMAGE PARAMETERS HERE ---
     ENABLE_IMAGE_ENHANCEMENTS = False  # Set to False to see original image
 
-    adj_contrast   = 0.9    # > 1.0 increases contrast
+    adj_contrast   = 0.5   # > 1.0 increases contrast
     adj_brightness = 90     # > 0 increases brightness
     adj_saturation = 1.6     # > 1.0 increases saturation
-    adj_gamma      = 1.1     # < 1.0 brightens shadows
+    adj_gamma      = 0.5     # < 1.0 brightens shadows
 
     # Pre-calculate gamma table
     invGamma = 1.0 / adj_gamma
@@ -215,6 +215,12 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
                     py = pts_transformed[0][0][1]
                     
                     found_position = True
+                    
+                    # Calculate distances to each corner
+                    d1 = np.linalg.norm(tracked_center - closest_boundary_corners[1])
+                    d2 = np.linalg.norm(tracked_center - closest_boundary_corners[2])
+                    d3 = np.linalg.norm(tracked_center - closest_boundary_corners[3])
+                    d4 = np.linalg.norm(tracked_center - closest_boundary_corners[4])
                                         
                     for corner_id in boundary_ids:
                         if corner_id in closest_boundary_corners:
@@ -242,10 +248,19 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
             if found_position:
                 current_position["x"] = float(px)
                 current_position["y"] = float(py)
+                current_position["distances"] = {
+                    "d1": float(d1),
+                    "d2": float(d2),
+                    "d3": float(d3),
+                    "d4": float(d4)
+                }
                 current_position["id"] = tracked_id
                 current_position["valid"] = True
             else:
                 current_position["valid"] = False
+            
+            # Update detected IDs list
+            current_position["detected_ids"] = [int(i) for i in ids.flatten()] if ids is not None else []
 
         cv2.imshow(window_name, frame)
 

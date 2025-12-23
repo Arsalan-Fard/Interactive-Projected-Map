@@ -5,4 +5,4 @@ var configObject = {
 };
 
 // Initialize Maptastic immediately, matching the working example
-var maptastic = Maptastic(configObject);
+window.maptastic = Maptastic(configObject);
