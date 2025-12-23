@@ -187,6 +187,91 @@ def save_geojson():
         print(f"Error saving GeoJSON: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/save_responses', methods=['POST'])
+def save_responses():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Invalid JSON'}), 400
+
+        responses = data.get('responses') if isinstance(data, dict) else None
+        if responses is None:
+            responses = data
+
+        filename = data.get('filename') if isinstance(data, dict) else None
+        if not filename:
+            filename = f"responses_{int(time.time())}.json"
+        filename = os.path.basename(filename)
+
+        project_id = None
+        if isinstance(data, dict):
+            project_id = data.get('projectId')
+        if not project_id and isinstance(responses, dict):
+            project_id = responses.get('projectId')
+
+        if not project_id:
+            latest = get_latest_config_path()
+            if latest:
+                try:
+                    with open(latest, 'r') as f:
+                        cfg = json.load(f)
+                        project_id = cfg.get('project', {}).get('id')
+                except Exception:
+                    project_id = None
+        if not project_id:
+            project_id = 'default-project'
+
+        answers_dir = os.path.join(CONFIG_ROOT, project_id, 'answers')
+        os.makedirs(answers_dir, exist_ok=True)
+        filepath = os.path.join(answers_dir, filename)
+
+        with open(filepath, 'w') as f:
+            json.dump(responses, f, indent=2)
+
+        print(f"Saved responses to {filepath}")
+        return jsonify({'status': 'success', 'filepath': filepath})
+    except Exception as e:
+        print(f"Error saving responses: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/responses', methods=['GET'])
+def list_responses():
+    project_id = request.args.get('project')
+    if not project_id:
+        latest = get_latest_config_path()
+        if latest:
+            try:
+                with open(latest, 'r') as f:
+                    cfg = json.load(f)
+                    project_id = cfg.get('project', {}).get('id')
+            except Exception:
+                project_id = None
+    if not project_id:
+        project_id = 'default-project'
+
+    answers_dir = os.path.join(CONFIG_ROOT, project_id, 'answers')
+    if not os.path.exists(answers_dir):
+        return jsonify({'responses': []})
+
+    responses = []
+    for entry in os.scandir(answers_dir):
+        if not entry.is_file() or not entry.name.endswith('.json'):
+            continue
+        try:
+            with open(entry.path, 'r') as f:
+                data = json.load(f)
+            if not isinstance(data, dict) or 'answers' not in data:
+                continue
+            if not data.get('savedAt'):
+                data['savedAt'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(entry.stat().st_mtime))
+            data['__filename'] = entry.name
+            responses.append(data)
+        except Exception:
+            continue
+
+    responses.sort(key=lambda item: item.get('savedAt', ''), reverse=True)
+    return jsonify({'responses': responses})
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({

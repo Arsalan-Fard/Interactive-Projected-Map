@@ -1,6 +1,6 @@
 import { CONFIG } from './config.js';
 import { add3DBuildings, loadAndRenderLayer } from './layers.js';
-import { initDraggableItems, initDraggableStickers } from './ui.js';
+import { initDraggableItems, initDraggableStickers, initLayerToggles } from './ui.js';
 
 const fallbackOverlays = ['palaiseau-roads', 'walking-network', 'mobility-infrastructure', 'bus-lanes', 'amenities', 'telecom-floorplan'];
 
@@ -9,7 +9,8 @@ const fallbackConfig = {
         id: 'default-project',
         name: 'Default',
         location: 'Palaiseau',
-        mapId: 'palaiseau-outdoor'
+        mapId: 'palaiseau-outdoor',
+        rearProjection: false
     },
     maps: [
         {
@@ -142,6 +143,10 @@ function setActiveStyleButton(styleUrl, styles) {
 async function initApp() {
     const setupConfig = await loadSetupConfig();
 
+    if (setupConfig.project.rearProjection) {
+        document.body.style.transform = 'scaleX(-1)';
+    }
+
     mapboxgl.accessToken = CONFIG.accessToken;
 
     const map = new mapboxgl.Map({
@@ -157,7 +162,6 @@ async function initApp() {
     let currentActiveOverlayIds = new Set(setupConfig.map.overlays || []);
 
     map.on('style.load', () => {
-        console.log("Style loaded event fired!");
         
         add3DBuildings(map);
 
@@ -207,14 +211,24 @@ async function initApp() {
     });
     document.getElementById('main_container').appendChild(debugDot);
 
-    async function checkPosition() {
-        try {
-            const response = await fetch('http://localhost:5000/api/position');
-            if (!response.ok) return; 
+        async function checkPosition() {
 
-            const data = await response.json();
 
-            if (data.valid) {
+            try {
+
+                const response = await fetch('http://localhost:5000/api/position');
+
+                if (!response.ok) {
+                    return; 
+                }
+
+    
+
+                const data = await response.json();
+
+    
+
+                if (data.valid) {
                 const clampedX = Math.max(0, Math.min(1, data.x));
                 const clampedY = Math.max(0, Math.min(1, data.y));
 
@@ -240,12 +254,13 @@ async function initApp() {
                 debugDot.style.display = 'none';
             }
         } catch (error) {
+            console.error("CheckPosition error:", error);
         }
     }
 
     setInterval(checkPosition, 100);
+    initLayerToggles(map);
     initDraggableItems(map);
-    initDraggableStickers(map);
 
     const draw = new MapboxDraw({
         displayControlsDefault: false
@@ -395,13 +410,24 @@ async function initApp() {
         questions = flattenQuestions(fallbackConfig.questionFlow);
     }
     let currentQuestionIndex = 0;
+    const responseState = new Map();
+
+    initDraggableStickers(map, () => questions[currentQuestionIndex]?.id);
 
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
+    const finishBtn = document.getElementById('finish-btn');
     const questionText = document.querySelector('.question-text');
     const questionOptions = document.getElementById('question-options');
     const dotsContainer = document.querySelector('.progress-dots');
+    const previousAnswersBtn = document.getElementById('btn-previous-answers');
+    const previousAnswersPanel = document.getElementById('previous-answers-panel');
+    const previousAnswersSummary = document.getElementById('previous-answers-summary');
+    const previousAnswersList = document.getElementById('previous-answers-list');
     let dots = [];
+    let previousResponses = [];
+    let previousResponsesLoaded = false;
+    let showPreviousAnswers = false;
 
     function renderDots() {
         if (!dotsContainer) return;
@@ -419,6 +445,21 @@ async function initApp() {
         dots = dotsContainer.querySelectorAll('.dot');
     }
 
+    function toggleChoiceAnswer(question, option) {
+        if (question.type === 'multi-choice') {
+            const current = responseState.get(question.id);
+            const next = new Set(Array.isArray(current) ? current : []);
+            if (next.has(option)) {
+                next.delete(option);
+            } else {
+                next.add(option);
+            }
+            responseState.set(question.id, Array.from(next));
+        } else {
+            responseState.set(question.id, option);
+        }
+    }
+
     function renderQuestionOptions(question) {
         if (!questionOptions) return;
         const options = Array.isArray(question?.options) ? question.options : [];
@@ -434,10 +475,376 @@ async function initApp() {
         options.forEach(option => {
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'question-option w-full text-left px-3 py-2 rounded-md bg-white/5 border border-white/10 text-white/85 text-xs font-medium tracking-wide transition-all duration-200 hover:bg-white/10 hover:border-white/25';
+            const stored = responseState.get(question.id);
+            const isSelected = question.type === 'multi-choice'
+                ? Array.isArray(stored) && stored.includes(option)
+                : stored === option;
+            button.className = `question-option w-full text-left px-3 py-2 rounded-md border text-xs font-medium tracking-wide transition-all duration-200 ${isSelected ? 'bg-white/15 border-white/40 text-white' : 'bg-white/5 border-white/10 text-white/85 hover:bg-white/10 hover:border-white/25'}`;
             button.textContent = option;
+            button.addEventListener('click', () => {
+                toggleChoiceAnswer(question, option);
+                renderQuestionOptions(question);
+            });
             questionOptions.appendChild(button);
         });
+    }
+
+    function formatSavedAt(value) {
+        if (!value) return 'Unknown time';
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) return value;
+        return parsed.toLocaleString();
+    }
+
+    async function fetchPreviousResponses() {
+        const projectId = setupConfig.project.id;
+        if (!projectId) return [];
+        try {
+            const response = await fetch(`/api/responses?project=${encodeURIComponent(projectId)}`);
+            if (!response.ok) return [];
+            const data = await response.json();
+            return Array.isArray(data.responses) ? data.responses : [];
+        } catch (error) {
+            console.error('Error loading previous responses:', error);
+            return [];
+        }
+    }
+
+    function getPreviousAnswersForQuestion(questionId) {
+        return previousResponses
+            .map(response => {
+                const answer = Array.isArray(response.answers)
+                    ? response.answers.find(item => item.questionId === questionId)
+                    : null;
+                if (!answer || answer.answer == null) return null;
+                return { response, answer };
+            })
+            .filter(Boolean);
+    }
+
+    function renderPreviousAnswers(question) {
+        if (!previousAnswersPanel || !previousAnswersList || !previousAnswersSummary) return;
+        if (!showPreviousAnswers) {
+            previousAnswersPanel.classList.add('hidden');
+            return;
+        }
+
+        previousAnswersPanel.classList.remove('hidden');
+        previousAnswersList.innerHTML = '';
+
+        const entries = getPreviousAnswersForQuestion(question.id);
+        previousAnswersSummary.textContent = entries.length ? `Responses: ${entries.length}` : 'No previous answers yet';
+
+        if (!entries.length) return;
+
+        if (['single-choice', 'multi-choice'].includes(question.type)) {
+            const counts = new Map();
+            entries.forEach(({ answer }) => {
+                const value = answer.answer;
+                if (question.type === 'multi-choice') {
+                    if (Array.isArray(value)) {
+                        value.forEach(option => {
+                            counts.set(option, (counts.get(option) || 0) + 1);
+                        });
+                    }
+                } else if (typeof value === 'string') {
+                    counts.set(value, (counts.get(value) || 0) + 1);
+                }
+            });
+
+            if (!counts.size) {
+                const item = document.createElement('div');
+                item.className = 'text-white/70';
+                item.textContent = 'No saved choices.';
+                previousAnswersList.appendChild(item);
+                return;
+            }
+
+            Array.from(counts.entries())
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([option, count]) => {
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center justify-between rounded border border-white/10 bg-white/5 px-2 py-1';
+                    item.innerHTML = `<span>${option}</span><span class="text-white/70">${count}</span>`;
+                    previousAnswersList.appendChild(item);
+                });
+            return;
+        }
+
+        if (question.type === 'sticker' || question.type === 'drawing') {
+            entries.forEach(({ response, answer }) => {
+                const features = answer.answer?.features;
+                const count = Array.isArray(features) ? features.length : 0;
+                const item = document.createElement('div');
+                item.className = 'rounded border border-white/10 bg-white/5 px-2 py-1';
+                item.textContent = `${formatSavedAt(response.savedAt)} • ${count} item${count === 1 ? '' : 's'}`;
+                previousAnswersList.appendChild(item);
+            });
+            return;
+        }
+
+        entries.forEach(({ response, answer }) => {
+            const item = document.createElement('div');
+            item.className = 'rounded border border-white/10 bg-white/5 px-2 py-1';
+            item.textContent = `${formatSavedAt(response.savedAt)} • ${String(answer.answer)}`;
+            previousAnswersList.appendChild(item);
+        });
+    }
+
+    const previousLayerIds = {
+        pointsSource: 'previous-answers-points',
+        pointsLayer: 'previous-answers-points-layer',
+        linesSource: 'previous-answers-lines',
+        linesLayer: 'previous-answers-lines-layer',
+        polygonsSource: 'previous-answers-polygons',
+        polygonsFill: 'previous-answers-polygons-fill',
+        polygonsOutline: 'previous-answers-polygons-outline'
+    };
+
+    function removeLayerIfExists(id) {
+        if (map.getLayer(id)) {
+            map.removeLayer(id);
+        }
+    }
+
+    function removeSourceIfExists(id) {
+        if (map.getSource(id)) {
+            map.removeSource(id);
+        }
+    }
+
+    function clearPreviousAnswerLayers() {
+        removeLayerIfExists(previousLayerIds.pointsLayer);
+        removeLayerIfExists(previousLayerIds.linesLayer);
+        removeLayerIfExists(previousLayerIds.polygonsOutline);
+        removeLayerIfExists(previousLayerIds.polygonsFill);
+        removeSourceIfExists(previousLayerIds.pointsSource);
+        removeSourceIfExists(previousLayerIds.linesSource);
+        removeSourceIfExists(previousLayerIds.polygonsSource);
+    }
+
+    function ensurePreviousAnswerLayers(pointData, lineData, polygonData) {
+        if (!map.getSource(previousLayerIds.pointsSource)) {
+            map.addSource(previousLayerIds.pointsSource, { type: 'geojson', data: pointData });
+            map.addLayer({
+                id: previousLayerIds.pointsLayer,
+                type: 'circle',
+                source: previousLayerIds.pointsSource,
+                paint: {
+                    'circle-radius': 5,
+                    'circle-color': ['coalesce', ['get', 'color'], '#9aa5b1'],
+                    'circle-opacity': 0.6,
+                    'circle-stroke-color': '#ffffff',
+                    'circle-stroke-width': 1
+                }
+            });
+        } else {
+            map.getSource(previousLayerIds.pointsSource).setData(pointData);
+        }
+
+        if (!map.getSource(previousLayerIds.linesSource)) {
+            map.addSource(previousLayerIds.linesSource, { type: 'geojson', data: lineData });
+            map.addLayer({
+                id: previousLayerIds.linesLayer,
+                type: 'line',
+                source: previousLayerIds.linesSource,
+                paint: {
+                    'line-color': '#f5d76e',
+                    'line-width': 2,
+                    'line-opacity': 0.6,
+                    'line-dasharray': [1.5, 1.5]
+                }
+            });
+        } else {
+            map.getSource(previousLayerIds.linesSource).setData(lineData);
+        }
+
+        if (!map.getSource(previousLayerIds.polygonsSource)) {
+            map.addSource(previousLayerIds.polygonsSource, { type: 'geojson', data: polygonData });
+            map.addLayer({
+                id: previousLayerIds.polygonsFill,
+                type: 'fill',
+                source: previousLayerIds.polygonsSource,
+                paint: {
+                    'fill-color': '#f5d76e',
+                    'fill-opacity': 0.15
+                }
+            });
+            map.addLayer({
+                id: previousLayerIds.polygonsOutline,
+                type: 'line',
+                source: previousLayerIds.polygonsSource,
+                paint: {
+                    'line-color': '#f5d76e',
+                    'line-width': 2,
+                    'line-opacity': 0.5
+                }
+            });
+        } else {
+            map.getSource(previousLayerIds.polygonsSource).setData(polygonData);
+        }
+    }
+
+    function renderPreviousAnswersOnMap(question) {
+        if (!showPreviousAnswers) {
+            clearPreviousAnswerLayers();
+            return;
+        }
+        if (!map.isStyleLoaded()) return;
+
+        const entries = getPreviousAnswersForQuestion(question.id);
+        const pointFeatures = [];
+        const lineFeatures = [];
+        const polygonFeatures = [];
+
+        entries.forEach(({ answer }) => {
+            const features = answer.answer?.features;
+            if (!Array.isArray(features)) return;
+            features.forEach(feature => {
+                const geomType = feature?.geometry?.type;
+                if (!geomType) return;
+                if (geomType === 'Point' || geomType === 'MultiPoint') {
+                    pointFeatures.push(feature);
+                } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
+                    lineFeatures.push(feature);
+                } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+                    polygonFeatures.push(feature);
+                }
+            });
+        });
+
+        ensurePreviousAnswerLayers(
+            { type: 'FeatureCollection', features: pointFeatures },
+            { type: 'FeatureCollection', features: lineFeatures },
+            { type: 'FeatureCollection', features: polygonFeatures }
+        );
+    }
+
+    async function togglePreviousAnswers() {
+        showPreviousAnswers = !showPreviousAnswers;
+        if (previousAnswersBtn) {
+            previousAnswersBtn.classList.toggle('active', showPreviousAnswers);
+            previousAnswersBtn.setAttribute('aria-pressed', showPreviousAnswers ? 'true' : 'false');
+            previousAnswersBtn.textContent = showPreviousAnswers ? 'Hide Previous Answers' : 'Show Previous Answers';
+        }
+
+        if (showPreviousAnswers && !previousResponsesLoaded) {
+            if (previousAnswersBtn) previousAnswersBtn.disabled = true;
+            previousResponses = await fetchPreviousResponses();
+            previousResponsesLoaded = true;
+            if (previousAnswersBtn) previousAnswersBtn.disabled = false;
+        }
+
+        if (questions.length) {
+            renderPreviousAnswers(questions[currentQuestionIndex]);
+            renderPreviousAnswersOnMap(questions[currentQuestionIndex]);
+        } else {
+            renderPreviousAnswers({ id: null, type: null });
+            clearPreviousAnswerLayers();
+        }
+    }
+    function getStickersForQuestion(questionId) {
+        const stickers = Array.from(document.querySelectorAll('.draggable-sticker'));
+        if (!stickers.length) return [];
+        const matching = questionId ? stickers.filter(sticker => sticker.dataset.questionId === questionId) : [];
+        return matching.length ? matching : stickers;
+    }
+
+    function getStickerCoords(sticker) {
+        const lng = parseFloat(sticker.dataset.lng);
+        const lat = parseFloat(sticker.dataset.lat);
+        if (Number.isFinite(lng) && Number.isFinite(lat)) {
+            return [lng, lat];
+        }
+
+        const rect = sticker.getBoundingClientRect();
+        const mapRect = map.getContainer().getBoundingClientRect();
+        const center = [rect.left + rect.width / 2 - mapRect.left, rect.top + rect.height / 2 - mapRect.top];
+        const coords = map.unproject(center);
+        return [coords.lng, coords.lat];
+    }
+
+    function buildStickerFeatures(question, questionIndex) {
+        const stickers = getStickersForQuestion(question.id);
+        if (!stickers.length) return [];
+        return stickers.map(sticker => {
+            const [lng, lat] = getStickerCoords(sticker);
+            return {
+                type: 'Feature',
+                geometry: {
+                    type: 'Point',
+                    coordinates: [lng, lat]
+                },
+                properties: {
+                    id: sticker.dataset.typeId,
+                    color: sticker.dataset.color,
+                    questionId: question.id,
+                    storageKey: question.storageKey || question.id,
+                    questionIndex: questionIndex,
+                    questionText: question.text,
+                    groupId: question.groupId,
+                    projectId: setupConfig.project.id,
+                    timestamp: new Date().toISOString()
+                }
+            };
+        });
+    }
+
+    function buildResponsesPayload() {
+        return {
+            projectId: setupConfig.project.id,
+            projectName: setupConfig.project.name,
+            savedAt: new Date().toISOString(),
+            answers: questions.map((question, index) => {
+                let answer = null;
+                if (['single-choice', 'multi-choice'].includes(question.type)) {
+                    const stored = responseState.get(question.id);
+                    answer = question.type === 'multi-choice'
+                        ? (Array.isArray(stored) ? stored : [])
+                        : (stored ?? null);
+                } else if (question.type === 'sticker') {
+                    answer = {
+                        type: 'FeatureCollection',
+                        features: buildStickerFeatures(question, index)
+                    };
+                } else if (question.type === 'drawing') {
+                    answer = draw.getAll();
+                }
+
+                return {
+                    questionId: question.id,
+                    questionText: question.text,
+                    type: question.type,
+                    responseShape: question.responseShape,
+                    answer: answer
+                };
+            })
+        };
+    }
+
+    async function saveResponses() {
+        const payload = buildResponsesPayload();
+        const filename = `${setupConfig.project.id || 'project'}_responses_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+
+        try {
+            const response = await fetch('/api/save_responses', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    responses: payload,
+                    filename: filename,
+                    projectId: setupConfig.project.id
+                })
+            });
+
+            if (!response.ok) {
+                console.error('Failed to save responses to server');
+            }
+        } catch (error) {
+            console.error('Error saving responses to server:', error);
+        }
     }
 
     function updateQuestion() {
@@ -449,6 +856,9 @@ async function initApp() {
             }
             prevBtn.disabled = true;
             nextBtn.disabled = true;
+            if (finishBtn) finishBtn.classList.add('hidden');
+            renderPreviousAnswers({ id: null, type: null });
+            clearPreviousAnswerLayers();
             return;
         }
 
@@ -487,6 +897,11 @@ async function initApp() {
 
         prevBtn.disabled = currentQuestionIndex === 0;
         nextBtn.disabled = currentQuestionIndex === questions.length - 1;
+        const isLastQuestion = currentQuestionIndex === questions.length - 1;
+        if (nextBtn) nextBtn.classList.toggle('hidden', isLastQuestion);
+        if (finishBtn) finishBtn.classList.toggle('hidden', !isLastQuestion);
+        renderPreviousAnswers(q);
+        renderPreviousAnswersOnMap(q);
     }
 
     prevBtn.addEventListener('click', () => {
@@ -499,67 +914,34 @@ async function initApp() {
 
     nextBtn.addEventListener('click', async () => {
         if (!questions.length) return;
-        const stickers = document.querySelectorAll('.draggable-sticker');
-        const question = questions[currentQuestionIndex];
-        if (stickers.length > 0) {
-            const features = Array.from(stickers).map(sticker => {
-                const rect = sticker.getBoundingClientRect();
-                const center = [rect.left + rect.width / 2, rect.top + rect.height / 2];
-                const coords = map.unproject(center);
-                
-                return {
-                    type: 'Feature',
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [coords.lng, coords.lat]
-                    },
-                    properties: {
-                        id: sticker.dataset.typeId,
-                        color: sticker.dataset.color,
-                        questionId: question.id,
-                        storageKey: question.storageKey || question.id,
-                        questionIndex: currentQuestionIndex,
-                        questionText: question.text,
-                        groupId: question.groupId,
-                        projectId: setupConfig.project.id,
-                        timestamp: new Date().toISOString()
-                    }
-                };
-            });
-
-            const geojson = {
-                type: 'FeatureCollection',
-                features: features
-            };
-
-            const filename = `${setupConfig.project.id || 'project'}_${question.storageKey || question.id}_q${currentQuestionIndex}_${new Date().toISOString().replace(/[:.]/g, '-')}.geojson`;
-            
-            try {
-                const response = await fetch('/api/save_geojson', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        geojson: geojson,
-                        filename: filename,
-                        projectId: setupConfig.project.id
-                    })
-                });
-
-                if (!response.ok) {
-                    console.error('Failed to save GeoJSON to server');
-                }
-            } catch (error) {
-                console.error('Error saving GeoJSON to server:', error);
-            }
-        }
-
         if (currentQuestionIndex < questions.length - 1) {
             currentQuestionIndex++;
             updateQuestion();
         }
     });
+
+    if (previousAnswersBtn) {
+        previousAnswersBtn.addEventListener('click', togglePreviousAnswers);
+    }
+
+    if (finishBtn) {
+        finishBtn.addEventListener('click', async () => {
+            if (!questions.length) return;
+            finishBtn.disabled = true;
+            try {
+                await saveResponses();
+                if (showPreviousAnswers) {
+                    previousResponses = await fetchPreviousResponses();
+                    previousResponsesLoaded = true;
+                }
+                window.alert('Thanks for completing the survey (Please return tokens to their places)');
+                currentQuestionIndex = 0;
+                updateQuestion();
+            } finally {
+                finishBtn.disabled = false;
+            }
+        });
+    }
 }
 
 initApp();

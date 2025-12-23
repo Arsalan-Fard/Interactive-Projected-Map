@@ -6,33 +6,35 @@
     <title>Session Setup | Tangible Map</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        bg: {
-                            primary: '#0a0d14',
-                            secondary: '#141820',
-                            tertiary: '#1c2128',
+        if (typeof tailwind !== 'undefined') {
+            tailwind.config = {
+                darkMode: 'class',
+                theme: {
+                    extend: {
+                        colors: {
+                            bg: {
+                                primary: '#0a0d14',
+                                secondary: '#141820',
+                                tertiary: '#1c2128',
+                            },
+                            border: {
+                                subtle: '#2d333d',
+                                focus: '#3d4450',
+                            },
+                            accent: {
+                                primary: '#3b82f6',
+                                success: '#10b981',
+                                danger: '#ef4444',
+                            },
+                            text: {
+                                primary: '#e6edf3',
+                                secondary: '#8b949e',
+                                muted: '#6e7681',
+                            }
                         },
-                        border: {
-                            subtle: '#2d333d',
-                            focus: '#3d4450',
-                        },
-                        accent: {
-                            primary: '#3b82f6',
-                            success: '#10b981',
-                            danger: '#ef4444',
-                        },
-                        text: {
-                            primary: '#e6edf3',
-                            secondary: '#8b949e',
-                            muted: '#6e7681',
+                        fontFamily: {
+                            sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica Neue', 'sans-serif'],
                         }
-                    },
-                    fontFamily: {
-                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica Neue', 'sans-serif'],
                     }
                 }
             }
@@ -91,6 +93,13 @@
                     <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
                         <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Project ID</label>
                         <input id="project-id" type="text" placeholder="Auto-generated from name" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
+                    </div>
+                    <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                        <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Rear Projection</label>
+                        <div class="flex items-center">
+                            <input id="project-rear-projection" type="checkbox" class="w-5 h-5 bg-bg-tertiary border border-border-subtle rounded cursor-pointer accent-accent-primary">
+                            <span class="ml-2 text-xs text-text-muted">Flip screen horizontally (mirror view)</span>
+                        </div>
                     </div>
                 </div>
             </section>

@@ -65,50 +65,60 @@ async function getRoute(map) {
     }
 }
 
-// Helper function to make a sticker draggable after it's been placed
-function makeStickerDraggable(sticker) {
-    sticker.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        let isDragging = true;
-
-        const moveHandler = (ev) => {
-            if (!isDragging) return;
-            sticker.style.left = ev.pageX + 'px';
-            sticker.style.top = ev.pageY + 'px';
-        };
-
-        const upHandler = () => {
-            isDragging = false;
-            document.removeEventListener('mousemove', moveHandler);
-            document.removeEventListener('mouseup', upHandler);
-        };
-
-        document.addEventListener('mousemove', moveHandler);
-        document.addEventListener('mouseup', upHandler);
+function createStickerMarker(map, lngLat, color, typeId, questionId) {
+    const sticker = document.createElement('div');
+    Object.assign(sticker.style, {
+        width: '20px',
+        height: '20px',
+        backgroundColor: color,
+        borderRadius: '50%',
+        border: '2px solid white',
+        cursor: 'move',
+        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
+        userSelect: 'none'
     });
 
-    // Add right-click to remove individual sticker
+    sticker.dataset.color = color;
+    sticker.dataset.typeId = typeId;
+    if (questionId) {
+        sticker.dataset.questionId = questionId;
+    }
+    sticker.classList.add('draggable-sticker');
+
+    const marker = new mapboxgl.Marker({ element: sticker, draggable: true })
+        .setLngLat(lngLat)
+        .addTo(map);
+
+    sticker._marker = marker;
+
+    const syncPosition = () => {
+        const pos = marker.getLngLat();
+        sticker.dataset.lng = pos.lng;
+        sticker.dataset.lat = pos.lat;
+    };
+
+    syncPosition();
+    marker.on('dragend', syncPosition);
+
     sticker.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        sticker.remove();
+        marker.remove();
         console.log(`Removed sticker with color: ${sticker.dataset.color}`);
     });
 }
 
-export function initDraggableStickers(map) {
+export function initDraggableStickers(map, getQuestionId) {
     const stickerButtons = document.querySelectorAll('.point-btn');
 
     stickerButtons.forEach(btn => {
         btn.addEventListener('mousedown', (e) => {
             e.preventDefault();
 
-            // Create a clone of the sticker
-            const sticker = document.createElement('div');
+            // Create a drag ghost
+            const ghost = document.createElement('div');
             const color = btn.dataset.color;
 
-            Object.assign(sticker.style, {
+            Object.assign(ghost.style, {
                 position: 'absolute',
                 left: e.pageX + 'px',
                 top: e.pageY + 'px',
@@ -124,33 +134,37 @@ export function initDraggableStickers(map) {
                 userSelect: 'none'
             });
 
-            sticker.dataset.color = color;
-            sticker.dataset.typeId = btn.id;
-            sticker.classList.add('draggable-sticker');
-            document.body.appendChild(sticker);
+            document.body.appendChild(ghost);
 
             let isDragging = true;
 
             const moveHandler = (ev) => {
                 if (!isDragging) return;
-                sticker.style.left = ev.pageX + 'px';
-                sticker.style.top = ev.pageY + 'px';
+                ghost.style.left = ev.pageX + 'px';
+                ghost.style.top = ev.pageY + 'px';
             };
 
-            const upHandler = () => {
+            const upHandler = (ev) => {
                 isDragging = false;
                 document.removeEventListener('mousemove', moveHandler);
                 document.removeEventListener('mouseup', upHandler);
 
-                // Add to map at dropped position
-                const rect = sticker.getBoundingClientRect();
-                const center = [rect.left + rect.width / 2, rect.top + rect.height / 2];
-                const coords = map.unproject(center);
+                ghost.remove();
 
+                const mapRect = map.getContainer().getBoundingClientRect();
+                const point = {
+                    x: ev.clientX - mapRect.left,
+                    y: ev.clientY - mapRect.top
+                };
+
+                if (point.x < 0 || point.y < 0 || point.x > mapRect.width || point.y > mapRect.height) {
+                    return;
+                }
+
+                const coords = map.unproject([point.x, point.y]);
                 console.log(`Sticker placed at: [${coords.lng}, ${coords.lat}] with color: ${color}`);
-
-                // Make the placed sticker draggable
-                makeStickerDraggable(sticker);
+                const questionId = typeof getQuestionId === 'function' ? getQuestionId() : null;
+                createStickerMarker(map, coords, color, btn.id, questionId);
             };
 
             document.addEventListener('mousemove', moveHandler);
@@ -164,7 +178,11 @@ export function initDraggableStickers(map) {
             const allStickers = document.querySelectorAll('.draggable-sticker');
             allStickers.forEach(sticker => {
                 if (sticker.dataset.color === btn.dataset.color) {
-                    sticker.remove();
+                    if (sticker._marker && typeof sticker._marker.remove === 'function') {
+                        sticker._marker.remove();
+                    } else {
+                        sticker.remove();
+                    }
                 }
             });
             console.log(`Removed all stickers with color: ${btn.dataset.color}`);
@@ -172,23 +190,32 @@ export function initDraggableStickers(map) {
     });
 }
 
+export function initLayerToggles(map) {
+    const layerMap = {
+        'btn-layer-bus': 'bus-lanes-layer',
+        'btn-layer-bike': 'mobility-infrastructure-layer',
+        'btn-layer-walk': 'walking-network-layer',
+        'btn-layer-roads': 'palaiseau-roads-layer'
+    };
+
+    Object.keys(layerMap).forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                const layerId = layerMap[btnId];
+                const isActive = btn.classList.toggle('active');
+                
+                if (map.getLayer(layerId)) {
+                    map.setLayoutProperty(layerId, 'visibility', isActive ? 'visible' : 'none');
+                }
+            });
+        }
+    });
+}
+
 export function initDraggableItems(map) {
     const sources = document.querySelectorAll('.draggable-source');
     const placeholders = new WeakMap();
-    
-    const layerMap = {
-        'Bus': 'bus-lanes-layer',
-        'Bicycle': 'mobility-infrastructure-layer',
-        'Walk': 'walking-network-layer',
-        'Roads': 'palaiseau-roads-layer'
-    };
-
-    const setLayerVisibility = (btnText, visible) => {
-        const layerId = layerMap[btnText];
-        if (layerId && map.getLayer(layerId)) {
-            map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
-        }
-    };
 
     sources.forEach(btn => {
         btn.addEventListener('mousedown', (e) => {
@@ -225,9 +252,6 @@ export function initDraggableItems(map) {
                     userSelect: 'none',
                     transition: 'none'
                 });
-
-                // Activate layer when detached
-                setLayerVisibility(btn.textContent, true);
             } else {
                 e.preventDefault();
             }
@@ -279,9 +303,6 @@ export function initDraggableItems(map) {
                     placeholder.parentNode.replaceChild(btn, placeholder);
                     placeholders.delete(btn);
 
-                    // Deactivate layer when reset
-                    setLayerVisibility(btn.textContent, false);
-                    
                     // Reset A/B Points
                     if (btn.textContent === 'A') {
                         pointA = null;

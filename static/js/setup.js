@@ -3,7 +3,8 @@ const defaultState = {
         name: 'Pilot 01',
         location: 'Palaiseau Campus',
         id: 'project-palaiseau',
-        mapId: 'palaiseau-outdoor'
+        mapId: 'palaiseau-outdoor',
+        rearProjection: false
     },
     overlays: [
         { id: 'palaiseau-roads', label: 'Road network', file: '/static/data/palaiseau_roads.geojson', type: 'line', note: 'OSM roads for the outdoor view' },
@@ -92,6 +93,7 @@ const els = {
     projectLocation: document.getElementById('project-location'),
     projectId: document.getElementById('project-id'),
     projectPill: document.getElementById('project-pill'),
+    projectRearProjection: document.getElementById('project-rear-projection'),
     mapList: document.getElementById('map-list'),
     mapStyle: document.getElementById('map-style'),
     mapCenter: document.getElementById('map-center'),
@@ -261,6 +263,9 @@ function renderProject() {
     els.projectLocation.value = state.project.location || '';
     els.projectId.value = state.project.id || '';
     els.projectPill.textContent = state.project.id || 'Project';
+    if (els.projectRearProjection) {
+        els.projectRearProjection.checked = !!state.project.rearProjection;
+    }
 }
 
 function renderProjectDropdown() {
@@ -770,6 +775,11 @@ function initEvents() {
     els.projectId.addEventListener('input', e => {
         state.project.id = slugify(e.target.value || 'project');
         els.projectPill.textContent = state.project.id;
+        markSaved('Unsaved changes');
+    });
+
+    els.projectRearProjection?.addEventListener('change', e => {
+        state.project.rearProjection = e.target.checked;
         markSaved('Unsaved changes');
     });
 
