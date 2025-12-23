@@ -272,41 +272,66 @@ async function initApp() {
                                         }
                                     }
                     
-                                    if (data.valid && corners) {
-                                        // Use Backend Normalized Coordinates (0.0 - 1.0)
-                                        const u = data.x;
-                                        const v = data.y;
+                if (data.valid && corners) {
+                    // Use Backend Normalized Coordinates (0.0 - 1.0)
+                    const u = data.x;
+                    const v = data.y;
+
+                    // Maptastic Corners: 0:TL, 1:TR, 2:BR, 3:BL
+                    const x0 = corners[0][0], y0 = corners[0][1];
+                    const x1 = corners[1][0], y1 = corners[1][1];
+                    const x2 = corners[2][0], y2 = corners[2][1];
+                    const x3 = corners[3][0], y3 = corners[3][1];
+
+                    // Perspective Transform (Homography) from Unit Square
+                    // Maps (0,0)->(x0,y0), (1,0)->(x1,y1), (1,1)->(x2,y2), (0,1)->(x3,y3)
                     
-                                        // Maptastic Corners: 0:TL, 1:TR, 2:BR, 3:BL
-                                        const tl = corners[0];
-                                        const tr = corners[1];
-                                        const br = corners[2];
-                                        const bl = corners[3];
+                    let projX, projY;
                     
-                                        // Bilinear Interpolation
-                                        // 1. Interpolate along top and bottom edges (X-axis)
-                                        const topX = tl[0] + (tr[0] - tl[0]) * u;
-                                        const topY = tl[1] + (tr[1] - tl[1]) * u;
+                    const dx3 = x0 - x1 + x2 - x3;
+                    const dy3 = y0 - y1 + y2 - y3;
+
+                    if (Math.abs(dx3) < 1e-6 && Math.abs(dy3) < 1e-6) {
+                        // Affine (Parallelogram)
+                        projX = x0 + (x1 - x0) * u + (x3 - x0) * v;
+                        projY = y0 + (y1 - y0) * u + (y3 - y0) * v;
+                    } else {
+                        // Projective (Trapezoid/General Quad)
+                        const dx1 = x1 - x2;
+                        const dy1 = y1 - y2;
+                        const dx2 = x3 - x2;
+                        const dy2 = y3 - y2;
+
+                        const det = dx1 * dy2 - dx2 * dy1;
+                        const a13 = (dx3 * dy2 - dx2 * dy3) / det;
+                        const a23 = (dx1 * dy3 - dx3 * dy1) / det;
+
+                        const a11 = x1 - x0 + a13 * x1;
+                        const a21 = x3 - x0 + a23 * x3;
+                        const a12 = y1 - y0 + a13 * y1;
+                        const a22 = y3 - y0 + a23 * y3;
+
+                        const den = (a13 * u + a23 * v + 1);
+                        projX = (a11 * u + a21 * v + x0) / den;
+                        projY = (a12 * u + a22 * v + y0) / den;
+                    }
                     
-                                        const botX = bl[0] + (br[0] - bl[0]) * u;
-                                        const botY = bl[1] + (br[1] - bl[1]) * u;
-                    
-                                        // 2. Interpolate vertically between the two points found above (Y-axis)
-                                        screenX = topX + (botX - topX) * v;
-                                        screenY = topY + (botY - topY) * v;
-                    
-                                        // Update debug lines to show the projection
-                                        const cornerList = [tl, tr, br, bl];
-                                        cornerList.forEach((corner, index) => {
-                                            const line = debugLines[index];
-                                            line.setAttribute("x1", screenX);
-                                            line.setAttribute("y1", screenY);
-                                            line.setAttribute("x2", corner[0]);
-                                            line.setAttribute("y2", corner[1]);
-                                            line.style.display = 'block';
-                                        });
-                    
-                                    } else if (data.valid && !corners) {
+                    screenX = projX;
+                    screenY = projY;
+
+                    // Update debug lines
+                    const cornerList = [corners[0], corners[1], corners[2], corners[3]];
+                    cornerList.forEach((corner, index) => {
+                        const line = debugLines[index];
+                        line.setAttribute("x1", screenX);
+                        line.setAttribute("y1", screenY);
+                        line.setAttribute("x2", corner[0]);
+                        line.setAttribute("y2", corner[1]);
+                        line.style.display = 'block';
+                    });
+
+                } else if (data.valid && !corners) {
+
                                         // Fallback if Maptastic isn't ready or found
                                         screenX = data.x * window.innerWidth;
                                         screenY = data.y * window.innerHeight;
@@ -323,29 +348,70 @@ async function initApp() {
                                         debugDot.style.display = 'none';
                                     }
                     
-                                    if (data.valid && data.id === 5) {                        const element = document.elementFromPoint(screenX, screenY);
-    
-                        if (element) {
-                            const button = element.closest('button');
-                            const layerButtons = ['btn-layer-bus', 'btn-layer-bike', 'btn-layer-walk', 'btn-layer-roads'];
-    
-                            if (button) {
-                                if (layerButtons.includes(button.id)) {
-                                    const btnRect = button.getBoundingClientRect();
-                                    const isRightHalf = screenX > (btnRect.left + btnRect.width / 2);
-                                    const isActive = button.classList.contains('active');
-    
-                                    if (isRightHalf && !isActive) {
-                                        button.click(); // Activate
-                                    } else if (!isRightHalf && isActive) {
-                                        button.click(); // Deactivate
-                                    }
-                                } else if (styles[button.id] && !button.classList.contains('active')) {
-                                    button.click(); // Standard activation for map styles
+                if (data.valid && data.id === 5) {
+                    const element = document.elementFromPoint(screenX, screenY);
+
+                    // --- MAP STYLES QUADRANT LOGIC ---
+                    const mapStylesSection = document.querySelector('#left-sidebar .toolbar-section:first-child .section-content');
+                    const sidebar = document.getElementById('left-sidebar');
+                    
+                    if (mapStylesSection && sidebar) {
+                        const styleRect = mapStylesSection.getBoundingClientRect();
+                        const sidebarRect = sidebar.getBoundingClientRect();
+                        
+                        // Relaxed bounds: 
+                        // Horizontal: Must be within sidebar width (plus small margin)
+                        // Vertical: Must be above the bottom of the Map Styles content (plus small margin)
+                        // This allows being "outside" individual buttons but prevents conflict with sections below.
+                        const margin = 20;
+                        
+                        const inHorz = screenX >= (sidebarRect.left - margin) && screenX <= (sidebarRect.right + margin);
+                        const inVert = screenY <= (styleRect.bottom + margin); // Open top, bounded bottom
+                        
+                        if (inHorz && inVert) {
+                            const centerX = styleRect.left + styleRect.width / 2;
+                            const centerY = styleRect.top + styleRect.height / 2;
+                            
+                            let targetBtnId = null;
+                            
+                            if (screenY < centerY) {
+                                // Top Row
+                                if (screenX < centerX) targetBtnId = 'btn-light';     // Top-Left
+                                else targetBtnId = 'btn-dark';                       // Top-Right
+                            } else {
+                                // Bottom Row
+                                if (screenX < centerX) targetBtnId = 'btn-streets';   // Bottom-Left
+                                else targetBtnId = 'btn-satellite';                  // Bottom-Right
+                            }
+                            
+                            if (targetBtnId) {
+                                const btn = document.getElementById(targetBtnId);
+                                if (btn && !btn.classList.contains('active')) {
+                                    btn.click();
                                 }
                             }
                         }
                     }
+
+                    if (element) {
+                        const button = element.closest('button');
+                        const layerButtons = ['btn-layer-bus', 'btn-layer-bike', 'btn-layer-walk', 'btn-layer-roads'];
+
+                        if (button) {
+                            if (layerButtons.includes(button.id)) {
+                                const btnRect = button.getBoundingClientRect();
+                                const isRightHalf = screenX > (btnRect.left + btnRect.width / 2);
+                                const isActive = button.classList.contains('active');
+
+                                if (isRightHalf && !isActive) {
+                                    button.click(); // Activate
+                                } else if (!isRightHalf && isActive) {
+                                    button.click(); // Deactivate
+                                }
+                            } 
+                        }
+                    }
+                }
                 } else {
                     debugDot.style.display = 'none';
                 }
