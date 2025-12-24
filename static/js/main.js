@@ -216,22 +216,38 @@ async function initApp() {
         });
         document.body.appendChild(debugDot);
     
-        // Create SVG overlay for debug lines
-        const debugSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        Object.assign(debugSvg.style, {
-            position: 'absolute',
-            top: '0',
-            left: '0',
-            width: '100%',
-            height: '100%',
-            zIndex: '9998', // Below dot, above map
-            pointerEvents: 'none',
-            overflow: 'visible'
-        });
-        document.body.appendChild(debugSvg);
-    
-        const debugLines = [1, 2, 3, 4].map(i => {
-            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            // Create SVG overlay for debug lines
+            const debugSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            Object.assign(debugSvg.style, {
+                position: 'absolute',
+                top: '0',
+                left: '0',
+                width: '100%',
+                height: '100%',
+                zIndex: '9998', // Below dot, above map
+                pointerEvents: 'none',
+                overflow: 'visible'
+            });
+            document.body.appendChild(debugSvg);
+        
+            // Create Black Hole Mask for tracked tag
+            const blackHole = document.createElement('div');
+            Object.assign(blackHole.style, {
+                position: 'absolute',
+                width: '60px', // Slightly larger than the tag to ensure coverage
+                height: '60px',
+                backgroundColor: 'black',
+                borderRadius: '50%',
+                zIndex: '9997', // Below debug lines, above map
+                pointerEvents: 'none',
+                transform: 'translate(-50%, -50%)',
+                display: 'none',
+                left: '0%',
+                top: '0%'
+            });
+            document.body.appendChild(blackHole);
+        
+            const debugLines = [1, 2, 3, 4].map(i => {            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
             line.setAttribute("stroke", "blue");
             line.setAttribute("stroke-width", "2");
             line.setAttribute("opacity", "0.5");
@@ -340,16 +356,26 @@ async function initApp() {
                                         debugLines.forEach(l => l.style.display = 'none');
                                     }
                     
-                                    if (data.valid) {
-                                        debugDot.style.left = `${screenX}px`;
-                                        debugDot.style.top = `${screenY}px`;
-                                        debugDot.style.display = 'block';
-                                    } else {
-                                        debugDot.style.display = 'none';
-                                    }
-                    
-                if (data.valid && data.id === 5) {
-                    const element = document.elementFromPoint(screenX, screenY);
+                                                    if (data.valid) {
+                                                        debugDot.style.left = `${screenX}px`;
+                                                        debugDot.style.top = `${screenY}px`;
+                                                        debugDot.style.display = 'block';
+                                    
+                                                        // Update Black Hole Mask
+                                                        // Only show if we are tracking a movable tag (5 or 6)
+                                                        if (data.id === 5 || data.id === 6) {
+                                                            blackHole.style.left = `${screenX}px`;
+                                                            blackHole.style.top = `${screenY}px`;
+                                                            blackHole.style.display = 'block';
+                                                        } else {
+                                                            blackHole.style.display = 'none';
+                                                        }
+                                                    } else {
+                                                        debugDot.style.display = 'none';
+                                                        blackHole.style.display = 'none';
+                                                    }
+                                    
+                                                    if (data.valid && data.id === 5) {                    const element = document.elementFromPoint(screenX, screenY);
 
                     // --- MAP STYLES QUADRANT LOGIC ---
                     const mapStylesSection = document.querySelector('#left-sidebar .toolbar-section:first-child .section-content');
