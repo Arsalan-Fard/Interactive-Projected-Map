@@ -24,3 +24,4 @@ This project implements an interactive map system with physical AprilTag markers
 - [x] BlackHole: the part of the screen that's showing the tag should be black to avoid occlusion.
 - [ ] Erase
 - [ ] Smooth Drawing
+- [x] Flip screen for rear projection

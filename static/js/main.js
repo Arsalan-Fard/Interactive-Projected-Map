@@ -306,49 +306,107 @@ async function initApp() {
                     // Using 'valid' is safer as it implies good tracking.
                     // Alternatively, check data.detected_ids.includes(5) || ...
                     
-                    const hasTag = data.valid && (data.id === 5 || data.id === 6);
+                                const hasTag = data.valid && (data.id === 5 || data.id === 6);
                     
-                    if (hasTag) {
-                        lastSeenTime = now;
-                        if (isSearchMode) {
-                            isSearchMode = false;
-                            searchOverlay.style.display = 'none';
-                        }
-                    }
-        
-                    // State Machine for Search Mode
-                    if (!hasTag && now > cooldownEndTime) {
-                        const timeSinceLastSeen = now - lastSeenTime;
-                        
-                        if (!isSearchMode) {
-                            // We are seeing the map, checking if we should go black
-                            if (timeSinceLastSeen > SEARCH_DELAY) {
-                                isSearchMode = true;
-                                searchStartTime = now;
-                                searchOverlay.style.display = 'flex';
-                                searchOverlay.textContent = "Tag not found. Searching...";
-                            }
-                        } else {
-                            // We are currently black
-                            const timeInSearch = now - searchStartTime;
-                            if (timeInSearch > BLACK_SCREEN_DURATION) {
-                                // Time's up, give the user a break
-                                isSearchMode = false;
-                                searchOverlay.style.display = 'none';
-                                cooldownEndTime = now + COOLDOWN_DURATION;
-                                // Reset last seen so we don't immediately trigger again after cooldown
-                                lastSeenTime = now; 
-                            }
-                        }
-                    } else if (now < cooldownEndTime) {
-                         // In cooldown, ensure overlay is hidden
-                         if (isSearchMode) {
-                             isSearchMode = false;
-                             searchOverlay.style.display = 'none';
-                         }
-                    }
-        
-                    const debugIds = document.getElementById('debug-ids');                if (debugIds) {
+                                
+                    
+                                if (hasTag) {
+                    
+                                    lastSeenTime = now;
+                    
+                                    if (isSearchMode) {
+                    
+                                        isSearchMode = false;
+                    
+                                        searchOverlay.style.display = 'none';
+                    
+                                    }
+                    
+                                }
+                    
+                    
+                    
+                                // State Machine for Search Mode (Only if TUI Mode is enabled)
+                    
+                                if (setupConfig.project.tuiMode) {
+                    
+                                    if (!hasTag && now > cooldownEndTime) {
+                    
+                                        const timeSinceLastSeen = now - lastSeenTime;
+                    
+                                        
+                    
+                                        if (!isSearchMode) {
+                    
+                                            // We are seeing the map, checking if we should go black
+                    
+                                            if (timeSinceLastSeen > SEARCH_DELAY) {
+                    
+                                                isSearchMode = true;
+                    
+                                                searchStartTime = now;
+                    
+                                                searchOverlay.style.display = 'flex';
+                    
+                                                searchOverlay.textContent = "Tag not found. Searching...";
+                    
+                                            }
+                    
+                                        } else {
+                    
+                                            // We are currently black
+                    
+                                            const timeInSearch = now - searchStartTime;
+                    
+                                            if (timeInSearch > BLACK_SCREEN_DURATION) {
+                    
+                                                // Time's up, give the user a break
+                    
+                                                isSearchMode = false;
+                    
+                                                searchOverlay.style.display = 'none';
+                    
+                                                cooldownEndTime = now + COOLDOWN_DURATION;
+                    
+                                                // Reset last seen so we don't immediately trigger again after cooldown
+                    
+                                                lastSeenTime = now; 
+                    
+                                            }
+                    
+                                        }
+                    
+                                    } else if (now < cooldownEndTime) {
+                    
+                                         // In cooldown, ensure overlay is hidden
+                    
+                                         if (isSearchMode) {
+                    
+                                             isSearchMode = false;
+                    
+                                             searchOverlay.style.display = 'none';
+                    
+                                         }
+                    
+                                    }
+                    
+                                } else {
+                    
+                                    // If TUI mode is disabled, ensure search overlay is hidden
+                    
+                                    if (isSearchMode) {
+                    
+                                        isSearchMode = false;
+                    
+                                        searchOverlay.style.display = 'none';
+                    
+                                    }
+                    
+                                }
+                    
+                    
+                    
+                                const debugIds = document.getElementById('debug-ids');                if (debugIds) {
                     const idsList = data.detected_ids ? data.detected_ids.join(', ') : '-';
                     debugIds.textContent = `IDs: ${idsList}`;
                 }
@@ -434,24 +492,24 @@ async function initApp() {
                                         debugLines.forEach(l => l.style.display = 'none');
                                     }
                     
-                                                    if (data.valid) {
-                                                        debugDot.style.left = `${screenX}px`;
-                                                        debugDot.style.top = `${screenY}px`;
-                                                        debugDot.style.display = 'block';
-                                    
-                                                        // Update Black Hole Mask
-                                                        // Only show if we are tracking a movable tag (5 or 6)
-                                                        if (data.id === 5 || data.id === 6) {
-                                                            blackHole.style.left = `${screenX}px`;
-                                                            blackHole.style.top = `${screenY}px`;
-                                                            blackHole.style.display = 'block';
-                                                        } else {
-                                                            blackHole.style.display = 'none';
-                                                        }
-                                                    } else {
-                                                        debugDot.style.display = 'none';
-                                                        blackHole.style.display = 'none';
-                                                    }
+                                    if (data.valid) {
+                                        debugDot.style.left = `${screenX}px`;
+                                        debugDot.style.top = `${screenY}px`;
+                                        debugDot.style.display = 'block';
+                    
+                                        // Update Black Hole Mask
+                                        // Only show if we are tracking a movable tag (5 or 6) AND TUI mode is enabled
+                                        if (setupConfig.project.tuiMode && (data.id === 5 || data.id === 6)) {
+                                            blackHole.style.left = `${screenX}px`;
+                                            blackHole.style.top = `${screenY}px`;
+                                            blackHole.style.display = 'block';
+                                        } else {
+                                            blackHole.style.display = 'none';
+                                        }
+                                    } else {
+                                        debugDot.style.display = 'none';
+                                        blackHole.style.display = 'none';
+                                    }
                                     
                                                     if (data.valid && data.id === 5) {                    const element = document.elementFromPoint(screenX, screenY);
 

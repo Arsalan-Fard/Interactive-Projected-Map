@@ -2,18 +2,6 @@
     display: none !important;
 }
 
-/* TUI Mode: Hide text in sidebar buttons */
-body.tui-mode #left-sidebar .section-content button,
-body.tui-mode #left-sidebar .section-content .draggable-source {
-    color: transparent !important;
-    font-size: 0 !important;
-}
-
-body.tui-mode #left-sidebar .section-content button::before,
-body.tui-mode #left-sidebar .section-content .draggable-source::before {
-    display: none;
-}
-
 
 
 #main_container {
