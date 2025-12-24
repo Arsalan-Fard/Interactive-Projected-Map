@@ -231,23 +231,44 @@ async function initApp() {
             document.body.appendChild(debugSvg);
         
             // Create Black Hole Mask for tracked tag
-            const blackHole = document.createElement('div');
-            Object.assign(blackHole.style, {
-                position: 'absolute',
-                width: '60px', // Slightly larger than the tag to ensure coverage
-                height: '60px',
-                backgroundColor: 'black',
-                borderRadius: '50%',
-                zIndex: '9997', // Below debug lines, above map
-                pointerEvents: 'none',
-                transform: 'translate(-50%, -50%)',
-                display: 'none',
-                left: '0%',
-                top: '0%'
-            });
-            document.body.appendChild(blackHole);
-        
-            const debugLines = [1, 2, 3, 4].map(i => {            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                const blackHole = document.createElement('div');
+                Object.assign(blackHole.style, {
+                    position: 'absolute',
+                    width: '60px', // Slightly larger than the tag to ensure coverage
+                    height: '60px',
+                    backgroundColor: 'black',
+                    borderRadius: '50%',
+                    zIndex: '9997', // Below debug lines, above map
+                    pointerEvents: 'none',
+                    transform: 'translate(-50%, -50%)',
+                    display: 'none',
+                    left: '0%',
+                    top: '0%'
+                });
+                document.body.appendChild(blackHole);
+            
+                // Create Search Mode Overlay (Full Black Screen)
+                const searchOverlay = document.createElement('div');
+                Object.assign(searchOverlay.style, {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    width: '100vw',
+                    height: '100vh',
+                    backgroundColor: 'black',
+                    zIndex: '10000', // Very high z-index to cover everything
+                    display: 'none',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontSize: '24px',
+                    fontFamily: 'monospace',
+                    pointerEvents: 'none' // Let clicks pass through if needed, though hidden
+                });
+                searchOverlay.textContent = "Searching for tags...";
+                document.body.appendChild(searchOverlay);
+            
+                const debugLines = [1, 2, 3, 4].map(i => {            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
             line.setAttribute("stroke", "blue");
             line.setAttribute("stroke-width", "2");
             line.setAttribute("opacity", "0.5");
@@ -256,21 +277,78 @@ async function initApp() {
             return line;
         });
     
-        async function checkPosition() {
-    
-    
-            try {
-    
-                const response = await fetch('http://localhost:5000/api/position');
-    
-                if (!response.ok) {
-                    return; 
-                }
-    
-                const data = await response.json();
-    
-                const debugIds = document.getElementById('debug-ids');
-                if (debugIds) {
+            let lastSeenTime = Date.now();
+            let isSearchMode = false;
+            let searchStartTime = 0;
+            let cooldownEndTime = 0;
+        
+            const SEARCH_DELAY = 1000;       // Wait 1s before going black
+            const BLACK_SCREEN_DURATION = 1000; // Stay black for 1s
+            const COOLDOWN_DURATION = 2000;  // Show map for 2s before trying again
+        
+            async function checkPosition() {
+        
+        
+                try {
+                    const now = Date.now();
+                    const response = await fetch('http://localhost:5000/api/position');
+        
+                    if (!response.ok) {
+                        return; 
+                    }
+        
+                    const data = await response.json();
+        
+                    // Check if ANY trackable tag (5 or 6) is detected
+                    // The backend sends 'valid' = true if it's tracking one of them.
+                    // But we also want to know if *either* is in the raw detected list, 
+                    // even if not currently "locked" as the primary tracked one.
+                    // Using 'valid' is safer as it implies good tracking.
+                    // Alternatively, check data.detected_ids.includes(5) || ...
+                    
+                    const hasTag = data.valid && (data.id === 5 || data.id === 6);
+                    
+                    if (hasTag) {
+                        lastSeenTime = now;
+                        if (isSearchMode) {
+                            isSearchMode = false;
+                            searchOverlay.style.display = 'none';
+                        }
+                    }
+        
+                    // State Machine for Search Mode
+                    if (!hasTag && now > cooldownEndTime) {
+                        const timeSinceLastSeen = now - lastSeenTime;
+                        
+                        if (!isSearchMode) {
+                            // We are seeing the map, checking if we should go black
+                            if (timeSinceLastSeen > SEARCH_DELAY) {
+                                isSearchMode = true;
+                                searchStartTime = now;
+                                searchOverlay.style.display = 'flex';
+                                searchOverlay.textContent = "Tag not found. Searching...";
+                            }
+                        } else {
+                            // We are currently black
+                            const timeInSearch = now - searchStartTime;
+                            if (timeInSearch > BLACK_SCREEN_DURATION) {
+                                // Time's up, give the user a break
+                                isSearchMode = false;
+                                searchOverlay.style.display = 'none';
+                                cooldownEndTime = now + COOLDOWN_DURATION;
+                                // Reset last seen so we don't immediately trigger again after cooldown
+                                lastSeenTime = now; 
+                            }
+                        }
+                    } else if (now < cooldownEndTime) {
+                         // In cooldown, ensure overlay is hidden
+                         if (isSearchMode) {
+                             isSearchMode = false;
+                             searchOverlay.style.display = 'none';
+                         }
+                    }
+        
+                    const debugIds = document.getElementById('debug-ids');                if (debugIds) {
                     const idsList = data.detected_ids ? data.detected_ids.join(', ') : '-';
                     debugIds.textContent = `IDs: ${idsList}`;
                 }
