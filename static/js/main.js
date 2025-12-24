@@ -553,8 +553,9 @@ async function initApp() {
                 } else if (Date.now() - tag6LostStart > 3000) {
                     if (tagDrawingCoordinates.length > 0) {
                         if (tagDrawingCoordinates.length > 1) {
+                            const featureId = String(Date.now());
                             const feature = {
-                                id: String(Date.now()),
+                                id: featureId,
                                 type: 'Feature',
                                 properties: {},
                                 geometry: {
@@ -562,8 +563,14 @@ async function initApp() {
                                     coordinates: tagDrawingCoordinates
                                 }
                             };
-                            draw.add(feature);
+                            if (draw) {
+                                draw.add(feature);
+                                console.log("Feature added to mapbox-draw. Total features:", draw.getAll().features.length);
+                            } else {
+                                console.error("Mapbox Draw instance not found!");
+                            }
                         }
+                        // Reset
                         tagDrawingCoordinates = [];
                         updateTagDrawingLayer();
                     }
@@ -579,14 +586,13 @@ async function initApp() {
         }
     }
 
-    setInterval(checkPosition, 100);
-    initLayerToggles(map);
-    initDraggableItems(map);
-
     const draw = new MapboxDraw({
         displayControlsDefault: false
     });
     map.addControl(draw);
+
+    // Start the detection loop AFTER draw is initialized
+    setInterval(checkPosition, 100);
 
     const drawBtn = document.getElementById('btn-draw');
     const surfaceBtn = document.getElementById('btn-surface');
