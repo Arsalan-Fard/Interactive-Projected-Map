@@ -1,6 +1,6 @@
 import { CONFIG } from './config.js';
 import { add3DBuildings, loadAndRenderLayer } from './layers.js';
-import { initDraggableItems, initDraggableStickers, initLayerToggles } from './ui.js';
+import { initDraggableItems, initDraggableStickers, initLayerToggles, getMapCoordsFromScreen } from './ui.js';
 
 const fallbackOverlays = ['palaiseau-roads', 'walking-network', 'mobility-infrastructure', 'bus-lanes', 'amenities', 'telecom-floorplan'];
 
@@ -526,11 +526,8 @@ async function initApp() {
                     if (screenX > leftBound && screenX < rightBound) {
                         tag6LostStart = null;
                         if (Date.now() - lastTagClickTime > 200) {
-                            const canvas = map.getCanvas();
-                            const rect = canvas.getBoundingClientRect();
-                            const pointX = screenX - rect.left;
-                            const pointY = screenY - rect.top;
-                            const lngLat = map.unproject([pointX, pointY]);
+                            const lngLat = getMapCoordsFromScreen(map, screenX, screenY);
+                            if (!lngLat) return;
 
                             tagDrawingCoordinates.push([lngLat.lng, lngLat.lat]);
                             updateTagDrawingLayer();
@@ -586,8 +583,68 @@ async function initApp() {
         }
     }
 
+    function getClientPointFromEvent(e) {
+        const source = e?.originalEvent || e;
+        if (source?.touches && source.touches.length) {
+            return { x: source.touches[0].clientX, y: source.touches[0].clientY };
+        }
+        if (source?.changedTouches && source.changedTouches.length) {
+            return { x: source.changedTouches[0].clientX, y: source.changedTouches[0].clientY };
+        }
+        if (typeof source?.clientX === 'number' && typeof source?.clientY === 'number') {
+            return { x: source.clientX, y: source.clientY };
+        }
+        return null;
+    }
+
+    function adjustDrawEvent(e) {
+        const client = getClientPointFromEvent(e);
+        if (!client) return e;
+        const coords = getMapCoordsFromScreen(map, client.x, client.y);
+        if (!coords) return e;
+        e.lngLat = coords;
+        e.point = map.project(coords);
+        return e;
+    }
+
+    function wrapDrawMode(mode) {
+        const wrapped = { ...mode };
+        const handlers = [
+            'onMouseDown',
+            'onMouseMove',
+            'onMouseUp',
+            'onClick',
+            'onTap',
+            'onTouchStart',
+            'onTouchMove',
+            'onTouchEnd'
+        ];
+
+        handlers.forEach(handler => {
+            if (typeof mode[handler] === 'function') {
+                wrapped[handler] = function (state, e) {
+                    return mode[handler].call(this, state, adjustDrawEvent(e));
+                };
+            }
+        });
+
+        return wrapped;
+    }
+
+    function buildDrawModes() {
+        if (!MapboxDraw?.modes) return null;
+        const baseModes = MapboxDraw.modes;
+        const wrappedModes = {};
+        Object.keys(baseModes).forEach(key => {
+            wrappedModes[key] = wrapDrawMode(baseModes[key]);
+        });
+        return wrappedModes;
+    }
+
+    const drawModes = buildDrawModes();
     const draw = new MapboxDraw({
-        displayControlsDefault: false
+        displayControlsDefault: false,
+        ...(drawModes ? { modes: drawModes } : {})
     });
     map.addControl(draw);
 
@@ -1086,10 +1143,15 @@ async function initApp() {
         }
 
         const rect = sticker.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const coords = getMapCoordsFromScreen(map, centerX, centerY);
+        if (coords) return [coords.lng, coords.lat];
+
         const mapRect = map.getContainer().getBoundingClientRect();
-        const center = [rect.left + rect.width / 2 - mapRect.left, rect.top + rect.height / 2 - mapRect.top];
-        const coords = map.unproject(center);
-        return [coords.lng, coords.lat];
+        const center = [centerX - mapRect.left, centerY - mapRect.top];
+        const fallback = map.unproject(center);
+        return [fallback.lng, fallback.lat];
     }
 
     function buildStickerFeatures(question, questionIndex) {
