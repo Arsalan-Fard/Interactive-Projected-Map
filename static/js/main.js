@@ -200,255 +200,207 @@ async function initApp() {
     });
     setActiveStyleButton(setupConfig.map.style, styles);
 
-        const debugDot = document.createElement('div');
-        Object.assign(debugDot.style, {
+    const debugDot = document.createElement('div');
+    Object.assign(debugDot.style, {
+        position: 'absolute',
+        width: '20px',
+        height: '20px',
+        backgroundColor: 'red',
+        borderRadius: '50%',
+        zIndex: '9999',
+        pointerEvents: 'none',
+        transform: 'translate(-50%, -50%)',
+        display: 'none',
+        left: '0%',
+        top: '0%'
+    });
+    document.body.appendChild(debugDot);
+
+    // Create Black Hole Masks for tracked tags (5 and 6)
+    function createBlackHole(id) {
+        const bh = document.createElement('div');
+        Object.assign(bh.style, {
             position: 'absolute',
-            width: '20px',
-            height: '20px',
-            backgroundColor: 'red',
+            width: '60px',
+            height: '60px',
+            backgroundColor: 'black',
             borderRadius: '50%',
-            zIndex: '9999',
+            zIndex: '9997', // Above map
             pointerEvents: 'none',
-            transform: 'translate(-50%, -50%)', 
-            display: 'none', 
+            transform: 'translate(-50%, -50%)',
+            display: 'none',
             left: '0%',
             top: '0%'
         });
-        document.body.appendChild(debugDot);
-    
-            // Create SVG overlay for debug lines
-            const debugSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            Object.assign(debugSvg.style, {
-                position: 'absolute',
-                top: '0',
-                left: '0',
-                width: '100%',
-                height: '100%',
-                zIndex: '9998', // Below dot, above map
-                pointerEvents: 'none',
-                overflow: 'visible'
-            });
-            document.body.appendChild(debugSvg);
-        
-            // Create Black Hole Mask for tracked tag
-                const blackHole = document.createElement('div');
-                Object.assign(blackHole.style, {
-                    position: 'absolute',
-                    width: '60px', // Slightly larger than the tag to ensure coverage
-                    height: '60px',
-                    backgroundColor: 'black',
-                    borderRadius: '50%',
-                    zIndex: '9997', // Below debug lines, above map
-                    pointerEvents: 'none',
-                    transform: 'translate(-50%, -50%)',
-                    display: 'none',
-                    left: '0%',
-                    top: '0%'
-                });
-                document.body.appendChild(blackHole);
-            
-                // Create Search Mode Overlay (Full Black Screen)
-                const searchOverlay = document.createElement('div');
-                Object.assign(searchOverlay.style, {
-                    position: 'fixed',
-                    top: '0',
-                    left: '0',
-                    width: '100vw',
-                    height: '100vh',
-                    backgroundColor: 'black',
-                    zIndex: '10000', // Very high z-index to cover everything
-                    display: 'none',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: '24px',
-                    fontFamily: 'monospace',
-                    pointerEvents: 'none' // Let clicks pass through if needed, though hidden
-                });
-                searchOverlay.textContent = "Searching for tags...";
-                document.body.appendChild(searchOverlay);
-            
-                const debugLines = [1, 2, 3, 4].map(i => {            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            line.setAttribute("stroke", "blue");
-            line.setAttribute("stroke-width", "2");
-            line.setAttribute("opacity", "0.5");
-            line.style.display = 'none';
-            debugSvg.appendChild(line);
-            return line;
-        });
-    
-            let lastSeenTime = Date.now();
-            let isSearchMode = false;
-            let searchStartTime = 0;
-            let cooldownEndTime = 0;
-        
-            const SEARCH_DELAY = 1000;       // Wait 1s before going black
-            const BLACK_SCREEN_DURATION = 1000; // Stay black for 1s
-            const COOLDOWN_DURATION = 2000;  // Show map for 2s before trying again
-        
-            async function checkPosition() {
-        
-        
-                try {
-                    const now = Date.now();
-                    const response = await fetch('http://localhost:5000/api/position');
-        
-                    if (!response.ok) {
-                        return; 
-                    }
-        
-                    const data = await response.json();
-        
-                    // Check if ANY trackable tag (5 or 6) is detected
-                    // The backend sends 'valid' = true if it's tracking one of them.
-                    // But we also want to know if *either* is in the raw detected list, 
-                    // even if not currently "locked" as the primary tracked one.
-                    // Using 'valid' is safer as it implies good tracking.
-                    // Alternatively, check data.detected_ids.includes(5) || ...
-                    
-                                const hasTag = data.valid && (data.id === 5 || data.id === 6);
-                    
-                                
-                    
-                                if (hasTag) {
-                    
-                                    lastSeenTime = now;
-                    
-                                    if (isSearchMode) {
-                    
-                                        isSearchMode = false;
-                    
-                                        searchOverlay.style.display = 'none';
-                    
-                                    }
-                    
-                                }
-                    
-                    
-                    
-                                // State Machine for Search Mode (Only if TUI Mode is enabled)
-                    
-                                if (setupConfig.project.tuiMode) {
-                    
-                                    if (!hasTag && now > cooldownEndTime) {
-                    
-                                        const timeSinceLastSeen = now - lastSeenTime;
-                    
-                                        
-                    
-                                        if (!isSearchMode) {
-                    
-                                            // We are seeing the map, checking if we should go black
-                    
-                                            if (timeSinceLastSeen > SEARCH_DELAY) {
-                    
-                                                isSearchMode = true;
-                    
-                                                searchStartTime = now;
-                    
-                                                searchOverlay.style.display = 'flex';
-                    
-                                                searchOverlay.textContent = "Tag not found. Searching...";
-                    
-                                            }
-                    
-                                        } else {
-                    
-                                            // We are currently black
-                    
-                                            const timeInSearch = now - searchStartTime;
-                    
-                                            if (timeInSearch > BLACK_SCREEN_DURATION) {
-                    
-                                                // Time's up, give the user a break
-                    
-                                                isSearchMode = false;
-                    
-                                                searchOverlay.style.display = 'none';
-                    
-                                                cooldownEndTime = now + COOLDOWN_DURATION;
-                    
-                                                // Reset last seen so we don't immediately trigger again after cooldown
-                    
-                                                lastSeenTime = now; 
-                    
-                                            }
-                    
-                                        }
-                    
-                                    } else if (now < cooldownEndTime) {
-                    
-                                         // In cooldown, ensure overlay is hidden
-                    
-                                         if (isSearchMode) {
-                    
-                                             isSearchMode = false;
-                    
-                                             searchOverlay.style.display = 'none';
-                    
-                                         }
-                    
-                                    }
-                    
-                                } else {
-                    
-                                    // If TUI mode is disabled, ensure search overlay is hidden
-                    
-                                    if (isSearchMode) {
-                    
-                                        isSearchMode = false;
-                    
-                                        searchOverlay.style.display = 'none';
-                    
-                                    }
-                    
-                                }
-                    
-                    
-                    
-                                const debugIds = document.getElementById('debug-ids');                if (debugIds) {
-                    const idsList = data.detected_ids ? data.detected_ids.join(', ') : '-';
-                    debugIds.textContent = `IDs: ${idsList}`;
-                }
-    
-                if (data.valid) {
-                    let screenX, screenY;
-    
-                    // Try to get Maptastic coordinates
-                    let corners = null;
-                                    if (window.maptastic) {
-                                        const layout = window.maptastic.getLayout();
-                                        const layer = layout.find(l => l.id === 'main_container');
-                                        if (layer && layer.targetPoints) {
-                                            corners = layer.targetPoints; // [ [x,y], [x,y], [x,y], [x,y] ] (TL, TR, BR, BL)
-                                        }
-                                    }
-                    
-                if (data.valid && corners) {
-                    // Use Backend Normalized Coordinates (0.0 - 1.0)
-                    const u = data.x;
-                    const v = data.y;
+        bh.id = `black-hole-${id}`;
+        document.body.appendChild(bh);
+        return bh;
+    }
 
-                    // Maptastic Corners: 0:TL, 1:TR, 2:BR, 3:BL
+    const blackHole5 = createBlackHole(5);
+    const blackHole6 = createBlackHole(6);
+
+    // Create Search Mode Overlay (Full Black Screen)
+    const searchOverlay = document.createElement('div');
+    Object.assign(searchOverlay.style, {
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'black',
+        zIndex: '10000', // Very high z-index to cover everything
+        display: 'none',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontSize: '24px',
+        fontFamily: 'monospace',
+        pointerEvents: 'none' // Let clicks pass through if needed, though hidden
+    });
+    searchOverlay.textContent = "Searching for tags...";
+    document.body.appendChild(searchOverlay);
+
+    let lastSeenTime = Date.now();
+    let isSearchMode = false;
+    let searchStartTime = 0;
+    let cooldownEndTime = 0;
+
+    let lastTagClickTime = 0;
+    let tag6LostStart = null;
+    let tagDrawingCoordinates = [];
+
+    function updateTagDrawingLayer() {
+        if (!map.isStyleLoaded()) return;
+        const source = map.getSource('tag-drawing-source');
+        const data = {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+                type: 'LineString',
+                coordinates: tagDrawingCoordinates
+            }
+        };
+
+        if (source) {
+            source.setData(data);
+        } else {
+            map.addSource('tag-drawing-source', { type: 'geojson', data: data });
+            map.addLayer({
+                id: 'tag-drawing-line',
+                type: 'line',
+                source: 'tag-drawing-source',
+                layout: {
+                    'line-cap': 'round',
+                    'line-join': 'round'
+                },
+                paint: {
+                    'line-color': '#FF0000',
+                    'line-width': 4,
+                    'line-opacity': 0.8
+                }
+            });
+        }
+    }
+
+    const SEARCH_DELAY = 1000;       // Wait 1s before going black
+    const BLACK_SCREEN_DURATION = 1000; // Stay black for 1s
+    const COOLDOWN_DURATION = 2000;  // Show map for 2s before trying again
+
+    async function checkPosition() {
+        try {
+            const now = Date.now();
+            const response = await fetch('http://localhost:5000/api/position');
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+
+            // data.tags is now a dictionary: { "5": {x, y, id}, "6": {x, y, id} }
+            const detectedTags = data.tags || {};
+            const tagIds = Object.keys(detectedTags).map(Number);
+            const hasTag = tagIds.includes(5) || tagIds.includes(6);
+
+            if (hasTag) {
+                lastSeenTime = now;
+                if (isSearchMode) {
+                    isSearchMode = false;
+                    searchOverlay.style.display = 'none';
+                }
+            }
+
+            // State Machine for Search Mode (Only if TUI Mode is enabled)
+            if (setupConfig.project.tuiMode) {
+                if (!hasTag && now > cooldownEndTime) {
+                    const timeSinceLastSeen = now - lastSeenTime;
+                    if (!isSearchMode) {
+                        if (timeSinceLastSeen > SEARCH_DELAY) {
+                            isSearchMode = true;
+                            searchStartTime = now;
+                            searchOverlay.style.display = 'flex';
+                            searchOverlay.textContent = "Tag not found. Searching...";
+                        }
+                    } else {
+                        const timeInSearch = now - searchStartTime;
+                        if (timeInSearch > BLACK_SCREEN_DURATION) {
+                            isSearchMode = false;
+                            searchOverlay.style.display = 'none';
+                            cooldownEndTime = now + COOLDOWN_DURATION;
+                            lastSeenTime = now;
+                        }
+                    }
+                } else if (now < cooldownEndTime) {
+                    if (isSearchMode) {
+                        isSearchMode = false;
+                        searchOverlay.style.display = 'none';
+                    }
+                }
+            } else {
+                if (isSearchMode) {
+                    isSearchMode = false;
+                    searchOverlay.style.display = 'none';
+                }
+            }
+
+            const debugIds = document.getElementById('debug-ids');
+            if (debugIds) {
+                const idsList = data.detected_ids ? data.detected_ids.join(', ') : '-';
+                debugIds.textContent = `IDs: ${idsList}`;
+            }
+
+            // Helper to project normalized (0-1) coordinates to screen pixels
+            function getScreenCoordinates(nx, ny) {
+                let corners = null;
+                if (window.maptastic) {
+                    const layout = window.maptastic.getLayout();
+                    const layer = layout.find(l => l.id === 'main_container');
+                    if (layer && layer.targetPoints) {
+                        corners = layer.targetPoints; // [TL, TR, BR, BL]
+                    }
+                }
+
+                if (corners) {
+                    const u = nx;
+                    const v = ny;
+
                     const x0 = corners[0][0], y0 = corners[0][1];
                     const x1 = corners[1][0], y1 = corners[1][1];
                     const x2 = corners[2][0], y2 = corners[2][1];
                     const x3 = corners[3][0], y3 = corners[3][1];
 
-                    // Perspective Transform (Homography) from Unit Square
-                    // Maps (0,0)->(x0,y0), (1,0)->(x1,y1), (1,1)->(x2,y2), (0,1)->(x3,y3)
-                    
                     let projX, projY;
-                    
+
                     const dx3 = x0 - x1 + x2 - x3;
                     const dy3 = y0 - y1 + y2 - y3;
 
                     if (Math.abs(dx3) < 1e-6 && Math.abs(dy3) < 1e-6) {
-                        // Affine (Parallelogram)
+                        // Affine
                         projX = x0 + (x1 - x0) * u + (x3 - x0) * v;
                         projY = y0 + (y1 - y0) * u + (y3 - y0) * v;
                     } else {
-                        // Projective (Trapezoid/General Quad)
+                        // Projective
                         const dx1 = x1 - x2;
                         const dy1 = y1 - y2;
                         const dx2 = x3 - x2;
@@ -467,85 +419,72 @@ async function initApp() {
                         projX = (a11 * u + a21 * v + x0) / den;
                         projY = (a12 * u + a22 * v + y0) / den;
                     }
-                    
-                    screenX = projX;
-                    screenY = projY;
+                    return { x: projX, y: projY, projected: true, corners: corners };
+                } else {
+                    return { x: nx * window.innerWidth, y: ny * window.innerHeight, projected: false, corners: null };
+                }
+            }
 
-                    // Update debug lines
-                    const cornerList = [corners[0], corners[1], corners[2], corners[3]];
-                    cornerList.forEach((corner, index) => {
-                        const line = debugLines[index];
-                        line.setAttribute("x1", screenX);
-                        line.setAttribute("y1", screenY);
-                        line.setAttribute("x2", corner[0]);
-                        line.setAttribute("y2", corner[1]);
-                        line.style.display = 'block';
-                    });
+            // Process detected tags
+            let debugDotVisible = false;
+            
+            // Flags to track if we updated black holes this frame
+            let updatedBlackHole5 = false;
+            let updatedBlackHole6 = false;
 
-                } else if (data.valid && !corners) {
+            for (const key in detectedTags) {
+                const tag = detectedTags[key];
+                const tagId = tag.id;
+                const coords = getScreenCoordinates(tag.x, tag.y);
+                const screenX = coords.x;
+                const screenY = coords.y;
 
-                                        // Fallback if Maptastic isn't ready or found
-                                        screenX = data.x * window.innerWidth;
-                                        screenY = data.y * window.innerHeight;
-                                        debugLines.forEach(l => l.style.display = 'none');
-                                    } else {
-                                        debugLines.forEach(l => l.style.display = 'none');
-                                    }
-                    
-                                    if (data.valid) {
-                                        debugDot.style.left = `${screenX}px`;
-                                        debugDot.style.top = `${screenY}px`;
-                                        debugDot.style.display = 'block';
-                    
-                                        // Update Black Hole Mask
-                                        // Only show if we are tracking a movable tag (5 or 6) AND TUI mode is enabled
-                                        if (setupConfig.project.tuiMode && (data.id === 5 || data.id === 6)) {
-                                            blackHole.style.left = `${screenX}px`;
-                                            blackHole.style.top = `${screenY}px`;
-                                            blackHole.style.display = 'block';
-                                        } else {
-                                            blackHole.style.display = 'none';
-                                        }
-                                    } else {
-                                        debugDot.style.display = 'none';
-                                        blackHole.style.display = 'none';
-                                    }
-                                    
-                                                    if (data.valid && data.id === 5) {                    const element = document.elementFromPoint(screenX, screenY);
+                // Show Debug Dot for at least one tag
+                debugDot.style.left = `${screenX}px`;
+                debugDot.style.top = `${screenY}px`;
+                debugDotVisible = true;
 
-                    // --- MAP STYLES QUADRANT LOGIC ---
-                    const mapStylesSection = document.querySelector('#left-sidebar .toolbar-section:first-child .section-content');
-                    const sidebar = document.getElementById('left-sidebar');
-                    
+                if (setupConfig.project.tuiMode) {
+                    if (tagId === 5) {
+                        blackHole5.style.left = `${screenX}px`;
+                        blackHole5.style.top = `${screenY}px`;
+                        blackHole5.style.display = 'block';
+                        updatedBlackHole5 = true;
+                    } else if (tagId === 6) {
+                        blackHole6.style.left = `${screenX}px`;
+                        blackHole6.style.top = `${screenY}px`;
+                        blackHole6.style.display = 'block';
+                        updatedBlackHole6 = true;
+                    }
+                }
+
+                // --- Tag 5 Logic (Map Styles) ---
+                if (tagId === 5) {
+                    const element = document.elementFromPoint(screenX, screenY);
+                    const mapStylesSection = document.querySelector('#right-sidebar .toolbar-section:first-child .section-content');
+                    const sidebar = document.getElementById('right-sidebar');
+
                     if (mapStylesSection && sidebar) {
                         const styleRect = mapStylesSection.getBoundingClientRect();
                         const sidebarRect = sidebar.getBoundingClientRect();
-                        
-                        // Relaxed bounds: 
-                        // Horizontal: Must be within sidebar width (plus small margin)
-                        // Vertical: Must be above the bottom of the Map Styles content (plus small margin)
-                        // This allows being "outside" individual buttons but prevents conflict with sections below.
                         const margin = 20;
-                        
+
                         const inHorz = screenX >= (sidebarRect.left - margin) && screenX <= (sidebarRect.right + margin);
-                        const inVert = screenY <= (styleRect.bottom + margin); // Open top, bounded bottom
-                        
+                        const inVert = screenY <= (styleRect.bottom + margin); 
+
                         if (inHorz && inVert) {
                             const centerX = styleRect.left + styleRect.width / 2;
                             const centerY = styleRect.top + styleRect.height / 2;
-                            
                             let targetBtnId = null;
-                            
+
                             if (screenY < centerY) {
-                                // Top Row
-                                if (screenX < centerX) targetBtnId = 'btn-light';     // Top-Left
-                                else targetBtnId = 'btn-dark';                       // Top-Right
+                                if (screenX < centerX) targetBtnId = 'btn-light';
+                                else targetBtnId = 'btn-dark';
                             } else {
-                                // Bottom Row
-                                if (screenX < centerX) targetBtnId = 'btn-streets';   // Bottom-Left
-                                else targetBtnId = 'btn-satellite';                  // Bottom-Right
+                                if (screenX < centerX) targetBtnId = 'btn-streets';
+                                else targetBtnId = 'btn-satellite';
                             }
-                            
+
                             if (targetBtnId) {
                                 const btn = document.getElementById(targetBtnId);
                                 if (btn && !btn.classList.contains('active')) {
@@ -558,29 +497,87 @@ async function initApp() {
                     if (element) {
                         const button = element.closest('button');
                         const layerButtons = ['btn-layer-bus', 'btn-layer-bike', 'btn-layer-walk', 'btn-layer-roads'];
-
-                        if (button) {
-                            if (layerButtons.includes(button.id)) {
-                                const btnRect = button.getBoundingClientRect();
-                                const isRightHalf = screenX > (btnRect.left + btnRect.width / 2);
-                                const isActive = button.classList.contains('active');
-
-                                if (isRightHalf && !isActive) {
-                                    button.click(); // Activate
-                                } else if (!isRightHalf && isActive) {
-                                    button.click(); // Deactivate
-                                }
-                            } 
+                        if (button && layerButtons.includes(button.id)) {
+                            const btnRect = button.getBoundingClientRect();
+                            const isRightHalf = screenX > (btnRect.left + btnRect.width / 2);
+                            const isActive = button.classList.contains('active');
+                            if (isRightHalf && !isActive) button.click();
+                            else if (!isRightHalf && isActive) button.click();
                         }
                     }
                 }
-                } else {
-                    debugDot.style.display = 'none';
+
+                // --- Tag 6 Logic (Drawing) ---
+                if (tagId === 6) {
+                    const leftSidebar = document.getElementById('left-sidebar');
+                    const rightSidebar = document.getElementById('right-sidebar');
+                    let leftBound = 0;
+                    let rightBound = window.innerWidth;
+
+                    if (leftSidebar) {
+                        const rect = leftSidebar.getBoundingClientRect();
+                        leftBound = rect.right;
+                    }
+                    if (rightSidebar) {
+                        const rect = rightSidebar.getBoundingClientRect();
+                        rightBound = rect.left;
+                    }
+
+                    if (screenX > leftBound && screenX < rightBound) {
+                        tag6LostStart = null;
+                        if (Date.now() - lastTagClickTime > 200) {
+                            const canvas = map.getCanvas();
+                            const rect = canvas.getBoundingClientRect();
+                            const pointX = screenX - rect.left;
+                            const pointY = screenY - rect.top;
+                            const lngLat = map.unproject([pointX, pointY]);
+
+                            tagDrawingCoordinates.push([lngLat.lng, lngLat.lat]);
+                            updateTagDrawingLayer();
+                            lastTagClickTime = Date.now();
+                        }
+                    }
                 }
-            } catch (error) {
-                console.error("CheckPosition error:", error);
             }
+
+            debugDot.style.display = debugDotVisible ? 'block' : 'none';
+            
+            // Hide black holes if not updated (tag lost) or not in TUI mode
+            if (!updatedBlackHole5) blackHole5.style.display = 'none';
+            if (!updatedBlackHole6) blackHole6.style.display = 'none';
+
+            // Tag 6 Lost Logic (Independent check)
+            if (!detectedTags["6"]) {
+                if (!tag6LostStart) {
+                    tag6LostStart = Date.now();
+                } else if (Date.now() - tag6LostStart > 3000) {
+                    if (tagDrawingCoordinates.length > 0) {
+                        if (tagDrawingCoordinates.length > 1) {
+                            const feature = {
+                                id: String(Date.now()),
+                                type: 'Feature',
+                                properties: {},
+                                geometry: {
+                                    type: 'LineString',
+                                    coordinates: tagDrawingCoordinates
+                                }
+                            };
+                            draw.add(feature);
+                        }
+                        tagDrawingCoordinates = [];
+                        updateTagDrawingLayer();
+                    }
+                    tag6LostStart = null;
+                }
+            } else {
+                // Tag 6 is present, reset lost timer
+                 tag6LostStart = null;
+            }
+
+        } catch (error) {
+            console.error("CheckPosition error:", error);
         }
+    }
 
     setInterval(checkPosition, 100);
     initLayerToggles(map);
@@ -621,6 +618,7 @@ async function initApp() {
     }
 
     map.on('draw.modechange', (e) => {
+        console.log('Draw mode changed to:', e.mode);
         syncDrawButtons(e.mode);
     });
 

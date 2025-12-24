@@ -13,7 +13,7 @@ from flask_cors import CORS
 
 position_lock = threading.Lock()
 # relative position (0.0 to 1.0) inside the map formed by ids 1,2,3,4
-current_position = {"x": 0.0, "y": 0.0, "valid": False, "detected_ids": []}
+current_position = {"tags": {}, "detected_ids": []}
 
 app = Flask(__name__)
 CORS(app)  
@@ -118,8 +118,7 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
         centers = {}
         all_corners_dict = {}
         
-        found_position = False
-        px, py = 0.0, 0.0
+        found_tags = {}
 
         if ids is not None and len(ids) > 0:
             aruco.drawDetectedMarkers(frame, corners, ids)
@@ -149,87 +148,79 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
                     cv2.LINE_AA,
                 )
 
-
-            
             boundary_ids = [1, 2, 3, 4]
-            trackable_ids = [5, 6] # Prioritize 5, then 6
-            tracked_id = None
-
-            for tid in trackable_ids:
-                if tid in all_corners_dict:
-                    tracked_id = tid
-                    break
-
-            if tracked_id is not None:
-                corners_tracked = all_corners_dict[tracked_id]
+            trackable_ids = [5, 6] 
+            
+            # Identify closest boundary corners (naive approach: just uses center of 1-4 if available)
+            # Actually, the original code used a complex "find_closest_corner" relative to a SINGLE tracked ID.
+            # To support multiple tracked IDs, we need a stable reference frame.
+            # For simplicity, let's assume the corners 1,2,3,4 ARE the reference frame themselves.
+            # We'll use the "inner" corners of 1,2,3,4 if possible, or just their centers.
+            # Let's stick to using centers of 1,2,3,4 to define the map, OR 
+            # if we want to be precise, we need to pick specific corners of 1,2,3,4 that form the rect.
+            # The previous code logic: "closest_boundary_corners" depended on "tracked_id".
+            # That implies the reference frame shifted depending on where the tag was? That seems wrong.
+            # It likely tried to find the "inner" corners of the boundary tags.
+            # Let's simplify: Use the CENTER of tags 1, 2, 3, 4 to define the perspective.
+            
+            if all(cid in centers for cid in boundary_ids):
+                # We have all 4 boundary markers.
+                # Let's try to find the "inner" corners of these markers to maximize map area,
+                # OR just use their centers. Using centers is robust.
+                # Previous code used 'find_closest_corner' against the tracked tag, which is dynamic.
+                # A static map definition is better.
+                # Let's try to find the corners of 1,2,3,4 that are closest to the CENTER of the group.
                 
-                # Store the closest corners of boundary markers to the tracked marker
-                closest_boundary_corners = {}
+                # Centroid of the 4 boundary centers
+                group_cx = sum(centers[cid][0] for cid in boundary_ids) / 4.0
+                group_cy = sum(centers[cid][1] for cid in boundary_ids) / 4.0
+                group_center = np.array([group_cx, group_cy])
                 
-                # Draw distances to boundary corners
-                y_offset = 40
-                for corner_id in boundary_ids:
-                    if corner_id in all_corners_dict:
-                        target_corners = all_corners_dict[corner_id]
+                map_src_pts = []
+                for cid in boundary_ids:
+                    # Find corner of tag 'cid' closest to group_center
+                    c_corners = all_corners_dict[cid]
+                    best_corner = None
+                    min_d = float('inf')
+                    for pt in c_corners:
+                         d = np.linalg.norm(pt - group_center)
+                         if d < min_d:
+                             min_d = d
+                             best_corner = pt
+                    map_src_pts.append(best_corner)
+
+                src_pts = np.array(map_src_pts, dtype="float32")
+
+                dst_pts = np.array([
+                    [0, 0], # 1: Top-Left
+                    [1, 0], # 2: Top-Right
+                    [1, 1], # 3: Bottom-Right
+                    [0, 1]  # 4: Bottom-Left
+                ], dtype="float32")
+
+                M = cv2.getPerspectiveTransform(src_pts, dst_pts)
+                
+                # Now transform all detected trackable IDs
+                for tid in trackable_ids:
+                    if tid in centers:
+                        tracked_center = np.array(centers[tid], dtype="float32")
+                        pts = np.array([[tracked_center]], dtype="float32")
+                        pts_transformed = cv2.perspectiveTransform(pts, M)
                         
-                        # Find closest corners between tracked marker and this boundary marker
-                        p_tracked_best, pt_best, min_dist = find_closest_corner(corners_tracked, target_corners)
+                        px = pts_transformed[0][0][0]
+                        py = pts_transformed[0][0][1]
                         
-                        # Store the closest corner of the boundary marker to the tracked marker
-                        closest_boundary_corners[corner_id] = pt_best
-                
-                # DEBUG: Print status
-                found_boundaries = list(closest_boundary_corners.keys())
-                missing_boundaries = [bid for bid in boundary_ids if bid not in closest_boundary_corners]
-                
-                if missing_boundaries:
-                     print(f"Tracking ID {tracked_id}. Missing boundaries: {missing_boundaries}. Found: {found_boundaries}")
-                else:
-                     # print(f"Tracking ID {tracked_id}. All boundaries found.")
-                     pass
+                        found_tags[str(tid)] = {
+                            "x": float(px),
+                            "y": float(py),
+                            "id": tid
+                        }
 
-                # Calculate Perspective Transform if all boundary markers are present
-                if all(cid in closest_boundary_corners for cid in boundary_ids):
-                    src_pts = np.array([
-                        closest_boundary_corners[1],
-                        closest_boundary_corners[2],
-                        closest_boundary_corners[3],
-                        closest_boundary_corners[4]
-                    ], dtype="float32")
-
-                    dst_pts = np.array([
-                        [0, 0],
-                        [1, 0],
-                        [1, 1],
-                        [0, 1]
-                    ], dtype="float32")
-
-                    M = cv2.getPerspectiveTransform(src_pts, dst_pts)
-
-                    tracked_center = np.array(centers[tracked_id], dtype="float32")
-                    
-                    pts = np.array([[tracked_center]], dtype="float32")
-                    pts_transformed = cv2.perspectiveTransform(pts, M)
-                    
-                    px = pts_transformed[0][0][0]
-                    py = pts_transformed[0][0][1]
-                    
-                    found_position = True
-                    
-                    # Calculate distances to each corner
-                    d1 = np.linalg.norm(tracked_center - closest_boundary_corners[1])
-                    d2 = np.linalg.norm(tracked_center - closest_boundary_corners[2])
-                    d3 = np.linalg.norm(tracked_center - closest_boundary_corners[3])
-                    d4 = np.linalg.norm(tracked_center - closest_boundary_corners[4])
-                                        
-                    for corner_id in boundary_ids:
-                        if corner_id in closest_boundary_corners:
-                            cv2.line(frame, centers[tracked_id], 
-                                     (int(closest_boundary_corners[corner_id][0]), int(closest_boundary_corners[corner_id][1])), 
-                                     (255, 0, 0), 2)
+                        # Draw line to center for visual debug
+                        cv2.line(frame, (int(group_cx), int(group_cy)), centers[tid], (255, 255, 0), 1)
 
             else:
-                 # print("No trackable tag (5 or 6) found.")
+                 # print("Missing boundary tags (need 1, 2, 3, 4)")
                  pass
 
         else:
@@ -245,20 +236,7 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
             )
 
         with position_lock:
-            if found_position:
-                current_position["x"] = float(px)
-                current_position["y"] = float(py)
-                current_position["distances"] = {
-                    "d1": float(d1),
-                    "d2": float(d2),
-                    "d3": float(d3),
-                    "d4": float(d4)
-                }
-                current_position["id"] = tracked_id
-                current_position["valid"] = True
-            else:
-                current_position["valid"] = False
-            
+            current_position["tags"] = found_tags
             # Update detected IDs list
             current_position["detected_ids"] = [int(i) for i in ids.flatten()] if ids is not None else []
 
