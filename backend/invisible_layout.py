@@ -66,17 +66,17 @@ class AprilTagOverlay(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     
-    ids = [1, 2, 3, 4, 5, 6]
+    ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     windows = []
     base_dir = os.path.dirname(os.path.abspath(__file__))
     tags_dir = os.path.join(base_dir, '../generated_tags')
     
     for i, tag_id in enumerate(ids):
-        filename = f"tag25h9_id{tag_id:02d}.png"
+        filename = f"tag36h11_id{tag_id:02d}.png"
         file_path = os.path.join(tags_dir, filename)
         
         if os.path.exists(file_path):
-            tag_size = 50 if tag_id in [4, 5] else 80
+            tag_size = 40 if tag_id in [5, 6, 7, 8, 9, 10, 11] else 60
             window = AprilTagOverlay(file_path, tag_id, tag_size)
             
             screen_geom = app.primaryScreen().geometry()

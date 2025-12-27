@@ -1,4 +1,4 @@
-"""Webcam/Phone AprilTag (25h9) detector using OpenCV's aruco module with Flask API."""
+"""Webcam/Phone AprilTag (36h11) detector using OpenCV's aruco module with Flask API."""
 import sys
 import threading
 import logging
@@ -32,7 +32,7 @@ def run_flask_server():
     app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False)
 
 def build_detector():
-    dictionary = aruco.getPredefinedDictionary(aruco.DICT_APRILTAG_25h9)
+    dictionary = aruco.getPredefinedDictionary(aruco.DICT_APRILTAG_36h11)
 
     if hasattr(aruco, "ArucoDetector"):
         print(1)
@@ -70,7 +70,7 @@ def find_closest_corner(corners_a, corners_b):
 
 
 def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[tuple]):
-    window_name = "AprilTag 25h9 Detector"
+    window_name = "AprilTag 36h11 Detector"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(window_name, 1280, 720)
 

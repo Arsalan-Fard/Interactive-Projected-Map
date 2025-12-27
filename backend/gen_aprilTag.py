@@ -1,11 +1,11 @@
-# Generates 5 printable AprilTags (tag25h9 family) as PNG files.
+# Generates 5 printable AprilTags (tag36h11 family) as PNG files.
 
 import numpy as np
 from moms_apriltag import TagGenerator2  
 from PIL import Image
 
-TAG_FAMILY = "tag25h9"
-TAG_IDS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]     # which tags to generate
+TAG_FAMILY = "tag36h11" #"tag25h9"
+TAG_IDS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]     # which tags to generate
 INNER_SIZE_PX = 1000          # size of the tag itself (without margin)
 MARGIN_RATIO = 0.2           # margin around the tag (25% of tag size)
 

@@ -26,3 +26,4 @@ This project implements an interactive map system with physical AprilTag markers
 - [ ] Smooth Drawing
 - [x] Flip screen for rear projection
 - [ ] Map DOM interactions to Maptastic 
+- [ ] switching between mapbox and OSM
