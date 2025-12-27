@@ -797,6 +797,8 @@ async function initApp() {
     let currentQuestionIndex = 0;
     const responseState = new Map();
 
+    initLayerToggles(map, currentActiveOverlayIds);
+    initDraggableItems(map);
     initDraggableStickers(map, () => questions[currentQuestionIndex]?.id);
 
     const prevBtn = document.getElementById('prev-btn');

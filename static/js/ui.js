@@ -306,7 +306,7 @@ export function initDraggableStickers(map, getQuestionId) {
     });
 }
 
-export function initLayerToggles(map) {
+export function initLayerToggles(map, activeOverlayIds) {
     const layerMap = {
         'btn-layer-bus': 'bus-lanes-layer',
         'btn-layer-bike': 'mobility-infrastructure-layer',
@@ -317,8 +317,17 @@ export function initLayerToggles(map) {
     Object.keys(layerMap).forEach(btnId => {
         const btn = document.getElementById(btnId);
         if (btn) {
+            const layerId = layerMap[btnId];
+
+            // Set initial state
+            if (activeOverlayIds) {
+                const configId = layerId.replace(/-layer$/, '');
+                if (activeOverlayIds.has(configId)) {
+                    btn.classList.add('active');
+                }
+            }
+
             btn.addEventListener('click', () => {
-                const layerId = layerMap[btnId];
                 const isActive = btn.classList.toggle('active');
                 
                 if (map.getLayer(layerId)) {
