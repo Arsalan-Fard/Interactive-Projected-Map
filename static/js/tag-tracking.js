@@ -1,4 +1,4 @@
-import { getMapCoordsFromScreen } from './ui.js';
+import { getMapCoordsFromScreen, setShortestPathButtonPosition, resetShortestPathButton } from './ui.js';
 
 const SEARCH_DELAY = 1000; // Wait 1s before going black
 const BLACK_SCREEN_DURATION = 1000; // Stay black for 1s
@@ -72,6 +72,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
     const debugDot = createDebugDot();
     const blackHole5 = createBlackHole(5);
     const blackHole6 = createBlackHole(6);
+    const blackHole11 = createBlackHole(11);
     const searchOverlay = createSearchOverlay();
 
     let lastSeenTime = Date.now();
@@ -127,10 +128,10 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
             const data = await response.json();
 
-            // data.tags is now a dictionary: { "5": {x, y, id}, "6": {x, y, id} }
+            // data.tags is a dictionary keyed by tag id with normalized positions.
             const detectedTags = data.tags || {};
             const tagIds = Object.keys(detectedTags).map(Number);
-            const hasTag = tagIds.includes(5) || tagIds.includes(6);
+            const hasTag = tagIds.includes(5) || tagIds.includes(6) || tagIds.includes(7) || tagIds.includes(8) || tagIds.includes(11);
 
             if (hasTag) {
                 lastSeenTime = now;
@@ -235,11 +236,25 @@ export function initTagTracking({ map, setupConfig, draw }) {
             }
 
             // Process detected tags
+            const leftSidebar = document.getElementById('left-sidebar');
+            const rightSidebar = document.getElementById('right-sidebar');
+            let leftBound = 0;
+            let rightBound = window.innerWidth;
+            if (leftSidebar) {
+                leftBound = leftSidebar.getBoundingClientRect().right;
+            }
+            if (rightSidebar) {
+                rightBound = rightSidebar.getBoundingClientRect().left;
+            }
+
             let debugDotVisible = false;
 
             // Flags to track if we updated black holes this frame
             let updatedBlackHole5 = false;
             let updatedBlackHole6 = false;
+            let updatedBlackHole11 = false;
+            let tag7OutsideMap = false;
+            let tag8OutsideMap = false;
 
             for (const key in detectedTags) {
                 const tag = detectedTags[key];
@@ -264,6 +279,11 @@ export function initTagTracking({ map, setupConfig, draw }) {
                         blackHole6.style.top = `${screenY}px`;
                         blackHole6.style.display = 'block';
                         updatedBlackHole6 = true;
+                    } else if (tagId === 11) {
+                        blackHole11.style.left = `${screenX}px`;
+                        blackHole11.style.top = `${screenY}px`;
+                        blackHole11.style.display = 'block';
+                        updatedBlackHole11 = true;
                     }
                 }
 
@@ -318,20 +338,6 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
                 // --- Tag 6 Logic (Drawing) ---
                 if (tagId === 6) {
-                    const leftSidebar = document.getElementById('left-sidebar');
-                    const rightSidebar = document.getElementById('right-sidebar');
-                    let leftBound = 0;
-                    let rightBound = window.innerWidth;
-
-                    if (leftSidebar) {
-                        const rect = leftSidebar.getBoundingClientRect();
-                        leftBound = rect.right;
-                    }
-                    if (rightSidebar) {
-                        const rect = rightSidebar.getBoundingClientRect();
-                        rightBound = rect.left;
-                    }
-
                     if (screenX > leftBound && screenX < rightBound) {
                         tag6LostStart = null;
                         if (Date.now() - lastTagClickTime > 200) {
@@ -344,6 +350,53 @@ export function initTagTracking({ map, setupConfig, draw }) {
                         }
                     }
                 }
+
+                // --- Tag 7/8 Logic (Shortest Path A/B) ---
+                if (tagId === 7 || tagId === 8) {
+                    if (screenX > leftBound && screenX < rightBound) {
+                        const label = tagId === 7 ? 'A' : 'B';
+                        setShortestPathButtonPosition(map, label, screenX, screenY);
+                    } else if (tagId === 7) {
+                        tag7OutsideMap = true;
+                    } else {
+                        tag8OutsideMap = true;
+                    }
+                }
+
+                // --- Tag 11 Logic (Layers Section) ---
+                if (tagId === 11) {
+                    const roadsBtn = document.getElementById('btn-layer-roads');
+                    // Find the Layers section using one of its buttons
+                    const referenceBtn = document.getElementById('btn-layer-bus');
+                    const layersSection = referenceBtn ? referenceBtn.closest('.toolbar-section') : null;
+                    console.log('here');
+                    if (layersSection && roadsBtn) {
+                        const rect = layersSection.getBoundingClientRect();
+                        
+                        // Check if tag is inside the Layers section
+                        const isInside = (
+                            screenX >= rect.left &&
+                            screenX <= rect.right &&
+                            screenY >= rect.top &&
+                            screenY <= rect.bottom
+                        );
+
+                        const isActive = roadsBtn.classList.contains('active');
+
+                        if (isInside) {
+                            if (!isActive) roadsBtn.click();
+                        } else {
+                            if (isActive) roadsBtn.click();
+                        }
+                    }
+                }
+            }
+
+            if (tag7OutsideMap) {
+                resetShortestPathButton(map, 'A');
+            }
+            if (tag8OutsideMap) {
+                resetShortestPathButton(map, 'B');
             }
 
             debugDot.style.display = debugDotVisible ? 'block' : 'none';
@@ -351,6 +404,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
             // Hide black holes if not updated (tag lost) or not in TUI mode
             if (!updatedBlackHole5) blackHole5.style.display = 'none';
             if (!updatedBlackHole6) blackHole6.style.display = 'none';
+            if (!updatedBlackHole11) blackHole11.style.display = 'none';
 
             // Tag 6 Lost Logic (Independent check)
             if (!detectedTags['6']) {

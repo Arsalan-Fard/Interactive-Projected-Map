@@ -149,7 +149,7 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
                 )
 
             boundary_ids = [1, 2, 3, 4]
-            trackable_ids = [5, 6] 
+            trackable_ids = [5, 6, 7, 8, 11]
             
             # Identify closest boundary corners (naive approach: just uses center of 1-4 if available)
             # Actually, the original code used a complex "find_closest_corner" relative to a SINGLE tracked ID.

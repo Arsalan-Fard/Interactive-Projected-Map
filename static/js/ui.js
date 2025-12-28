@@ -2,6 +2,26 @@ import { CONFIG } from './config.js';
 
 let pointA = null;
 let pointB = null;
+const draggablePlaceholders = new WeakMap();
+const shortestPathButtons = { A: null, B: null };
+const FLOATING_BUTTON_STYLE = {
+    position: 'absolute',
+    width: 'auto',
+    height: 'auto',
+    padding: '8px 12px',
+    background: 'rgba(0, 0, 0, 0.8)',
+    color: 'white',
+    border: '1px solid white',
+    cursor: 'move',
+    zIndex: '1000',
+    fontFamily: 'sans-serif',
+    fontSize: '14px',
+    transform: 'translate(-50%, -50%)',
+    userSelect: 'none',
+    transition: 'none'
+};
+const ROUTE_UPDATE_INTERVAL = 250;
+let lastRouteUpdate = 0;
 
 async function getRoute(map) {
     if (!pointA || !pointB) {
@@ -63,6 +83,57 @@ async function getRoute(map) {
     } catch (error) {
         console.error("Error fetching route:", error);
     }
+}
+
+function getShortestPathButton(label) {
+    if (shortestPathButtons[label] && document.contains(shortestPathButtons[label])) {
+        return shortestPathButtons[label];
+    }
+    const buttons = document.querySelectorAll('.draggable-source');
+    const found = Array.from(buttons).find(btn => btn.textContent.trim() === label) || null;
+    shortestPathButtons[label] = found;
+    return found;
+}
+
+function isFloatingButton(btn) {
+    return btn && btn.parentElement === document.body;
+}
+
+function floatDraggableButton(btn, clientX, clientY) {
+    if (!btn) return;
+    if (!isFloatingButton(btn)) {
+        const placeholder = document.createElement('div');
+        placeholder.style.flex = '1';
+        placeholder.style.height = '100%';
+        placeholder.style.visibility = 'hidden';
+
+        draggablePlaceholders.set(btn, placeholder);
+        btn.parentNode.insertBefore(placeholder, btn);
+        document.body.appendChild(btn);
+        Object.assign(btn.style, FLOATING_BUTTON_STYLE);
+    }
+
+    btn.style.left = `${clientX}px`;
+    btn.style.top = `${clientY}px`;
+}
+
+function resetDraggableButton(btn) {
+    if (!isFloatingButton(btn)) return;
+    const placeholder = draggablePlaceholders.get(btn);
+    if (placeholder && placeholder.parentNode) {
+        btn.style.cssText = '';
+        placeholder.parentNode.replaceChild(btn, placeholder);
+        draggablePlaceholders.delete(btn);
+    } else {
+        btn.style.cssText = '';
+    }
+}
+
+function maybeUpdateRoute(map) {
+    const now = Date.now();
+    if (now - lastRouteUpdate < ROUTE_UPDATE_INTERVAL) return;
+    lastRouteUpdate = now;
+    getRoute(map);
 }
 
 function getMaptasticLayer(id) {
@@ -162,6 +233,45 @@ function getMapPointFromScreen(map, clientX, clientY) {
 export function getMapCoordsFromScreen(map, clientX, clientY) {
     const point = getMapPointFromScreen(map, clientX, clientY);
     return point ? map.unproject([point.x, point.y]) : null;
+}
+
+export function setShortestPathButtonPosition(map, label, clientX, clientY) {
+    const btn = getShortestPathButton(label);
+    if (!btn) return false;
+    const coords = getMapCoordsFromScreen(map, clientX, clientY);
+    if (!coords) return false;
+
+    floatDraggableButton(btn, clientX, clientY);
+
+    if (label === 'A') {
+        pointA = coords;
+    } else if (label === 'B') {
+        pointB = coords;
+    } else {
+        return false;
+    }
+
+    maybeUpdateRoute(map);
+    return true;
+}
+
+export function resetShortestPathButton(map, label) {
+    const btn = getShortestPathButton(label);
+    if (!btn) return;
+    resetDraggableButton(btn);
+
+    let changed = false;
+    if (label === 'A') {
+        changed = pointA !== null;
+        pointA = null;
+    } else if (label === 'B') {
+        changed = pointB !== null;
+        pointB = null;
+    }
+
+    if (changed) {
+        getRoute(map);
+    }
 }
 
 function createStickerMarker(map, lngLat, color, typeId, questionId) {
@@ -340,53 +450,18 @@ export function initLayerToggles(map, activeOverlayIds) {
 
 export function initDraggableItems(map) {
     const sources = document.querySelectorAll('.draggable-source');
-    const placeholders = new WeakMap();
 
     sources.forEach(btn => {
         btn.addEventListener('mousedown', (e) => {
-            const isFloating = btn.parentElement === document.body;
-            
-            if (!isFloating) {
-                e.preventDefault(); 
-                
-                const placeholder = document.createElement('div');
-                placeholder.style.flex = '1';
-                placeholder.style.height = '100%'; 
-                placeholder.style.visibility = 'hidden'; 
-                
-                placeholders.set(btn, placeholder);
-                btn.parentNode.insertBefore(placeholder, btn);
-                
-                document.body.appendChild(btn);
-                
-                Object.assign(btn.style, {
-                    position: 'absolute',
-                    left: e.pageX + 'px',
-                    top: e.pageY + 'px',
-                    width: 'auto', 
-                    height: 'auto',
-                    padding: '8px 12px',
-                    background: 'rgba(0, 0, 0, 0.8)',
-                    color: 'white',
-                    border: '1px solid white',
-                    cursor: 'move',
-                    zIndex: '1000',
-                    fontFamily: 'sans-serif',
-                    fontSize: '14px',
-                    transform: 'translate(-50%, -50%)', 
-                    userSelect: 'none',
-                    transition: 'none'
-                });
-            } else {
-                e.preventDefault();
-            }
+            e.preventDefault();
+            floatDraggableButton(btn, e.clientX, e.clientY);
             
             let isDragging = true;
             
             const moveHandler = (ev) => {
                 if (!isDragging) return;
-                btn.style.left = ev.pageX + 'px';
-                btn.style.top = ev.pageY + 'px';
+                btn.style.left = ev.clientX + 'px';
+                btn.style.top = ev.clientY + 'px';
             };
             
             const upHandler = () => {
@@ -417,26 +492,21 @@ export function initDraggableItems(map) {
         });
 
         btn.addEventListener('dblclick', (e) => {
-            const isFloating = btn.parentElement === document.body;
+            const isFloating = isFloatingButton(btn);
             
             if (isFloating) {
                 e.preventDefault();
                 e.stopPropagation();
                 
-                const placeholder = placeholders.get(btn);
-                if (placeholder && placeholder.parentNode) {
-                    btn.style.cssText = '';
-                    placeholder.parentNode.replaceChild(btn, placeholder);
-                    placeholders.delete(btn);
+                resetDraggableButton(btn);
 
-                    // Reset A/B Points
-                    if (btn.textContent === 'A') {
-                        pointA = null;
-                        getRoute(map);
-                    } else if (btn.textContent === 'B') {
-                        pointB = null;
-                        getRoute(map);
-                    }
+                // Reset A/B Points
+                if (btn.textContent === 'A') {
+                    pointA = null;
+                    getRoute(map);
+                } else if (btn.textContent === 'B') {
+                    pointB = null;
+                    getRoute(map);
                 }
             }
         });
