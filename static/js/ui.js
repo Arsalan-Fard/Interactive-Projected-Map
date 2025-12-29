@@ -612,3 +612,71 @@ export function initDraggableItems(map) {
         });
     });
 }
+
+export function initReachDraggables(map, options = {}) {
+    const { onDrop, onReset, buttons } = options;
+    const reachButtons = Array.isArray(buttons) && buttons.length > 0
+        ? buttons
+        : [
+            { id: 'btn-isochrone', mode: 'walk' },
+            { id: 'btn-isochrone-bike', mode: 'bike' }
+        ];
+
+    reachButtons.forEach(({ id, mode }) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+
+        btn.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            floatDraggableButton(btn, e.clientX, e.clientY);
+
+            let isDragging = true;
+            let didMove = false;
+
+            const moveHandler = (ev) => {
+                if (!isDragging) return;
+                didMove = true;
+                btn.style.left = ev.clientX + 'px';
+                btn.style.top = ev.clientY + 'px';
+            };
+
+            const upHandler = (ev) => {
+                if (!isDragging) return;
+                isDragging = false;
+                document.removeEventListener('mousemove', moveHandler);
+                document.removeEventListener('mouseup', upHandler);
+
+                if (didMove) {
+                    btn.dataset.dragged = '1';
+                    setTimeout(() => {
+                        delete btn.dataset.dragged;
+                    }, 0);
+                }
+
+                const rect = btn.getBoundingClientRect();
+                const center = [rect.left + rect.width / 2, rect.top + rect.height / 2];
+                const coords = getMapCoordsFromScreen(map, center[0], center[1]);
+                if (!coords) return;
+
+                if (typeof onDrop === 'function') {
+                    onDrop(mode, coords);
+                }
+            };
+
+            document.addEventListener('mousemove', moveHandler);
+            document.addEventListener('mouseup', upHandler);
+        });
+
+        btn.addEventListener('dblclick', (e) => {
+            const isFloating = isFloatingButton(btn);
+            if (!isFloating) return;
+            e.preventDefault();
+            e.stopPropagation();
+            resetDraggableButton(btn);
+            if (typeof onReset === 'function') {
+                onReset(mode);
+            }
+        });
+    });
+}

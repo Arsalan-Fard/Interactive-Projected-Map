@@ -1,5 +1,5 @@
 import { add3DBuildings, loadAndRenderLayer } from './layers.js';
-import { initDraggableItems, initLayerToggles, getMapCoordsFromScreen, applyTagConfigVisibility } from './ui.js';
+import { initDraggableItems, initLayerToggles, getMapCoordsFromScreen, applyTagConfigVisibility, initReachDraggables } from './ui.js';
 import { initSurvey } from './survey.js';
 import { initTagTracking } from './tag-tracking.js';
 import { fallbackConfig, loadSetupConfig } from './config-loader.js';
@@ -156,12 +156,18 @@ async function initApp() {
 
     const btnWalk = document.getElementById('btn-isochrone');
     const btnBike = document.getElementById('btn-isochrone-bike');
+    const btnCar = document.getElementById('btn-isochrone-car');
+
+    const reachButtons = { walk: btnWalk, bike: btnBike, car: btnCar };
+    const isochroneSettings = {
+        walk: { distance: 1200, color: '#5b94c6' },
+        bike: { distance: 3750, color: '#9b59b6' }
+    };
 
     let activeIsochroneMode = null; // 'walk' or 'bike'
 
     function resetIsochroneUI() {
-        if (btnWalk) btnWalk.classList.remove('active');
-        if (btnBike) btnBike.classList.remove('active');
+        Object.values(reachButtons).forEach(btn => btn && btn.classList.remove('active'));
         activeIsochroneMode = null;
         if (map.getSource('isochrone')) {
             map.setLayoutProperty('isochrone-fill', 'visibility', 'none');
@@ -169,35 +175,19 @@ async function initApp() {
         }
     }
 
-    if (btnWalk) {
-        btnWalk.addEventListener('click', () => {
-            const wasActive = btnWalk.classList.contains('active');
-            resetIsochroneUI();
-            if (!wasActive) {
-                btnWalk.classList.add('active');
-                activeIsochroneMode = 'walk';
-            }
-        });
+    function setActiveIsochroneMode(mode) {
+        Object.values(reachButtons).forEach(btn => btn && btn.classList.remove('active'));
+        if (!reachButtons[mode]) {
+            activeIsochroneMode = null;
+            return;
+        }
+        reachButtons[mode].classList.add('active');
+        activeIsochroneMode = mode;
     }
 
-    if (btnBike) {
-        btnBike.addEventListener('click', () => {
-            const wasActive = btnBike.classList.contains('active');
-            resetIsochroneUI();
-            if (!wasActive) {
-                btnBike.classList.add('active');
-                activeIsochroneMode = 'bike';
-            }
-        });
-    }
-
-    map.on('click', async (e) => {
-        if (!activeIsochroneMode) return;
-
-        const center = e.lngLat;
-        // Walk: ~1.2km (4-5km/h), Bike: ~3.75km (15km/h)
-        const distance = activeIsochroneMode === 'walk' ? 1200 : 3750;
-        const color = activeIsochroneMode === 'walk' ? '#5b94c6' : '#9b59b6';
+    async function updateIsochrone(center, mode) {
+        const settings = isochroneSettings[mode];
+        if (!settings) return;
 
         try {
             map.getCanvas().style.cursor = 'wait';
@@ -208,8 +198,8 @@ async function initApp() {
                 body: JSON.stringify({
                     lat: center.lat,
                     lon: center.lng,
-                    distance: distance,
-                    mode: activeIsochroneMode
+                    distance: settings.distance,
+                    mode
                 })
             });
 
@@ -221,8 +211,8 @@ async function initApp() {
 
             if (map.getSource('isochrone')) {
                 map.getSource('isochrone').setData(geojson);
-                map.setPaintProperty('isochrone-fill', 'fill-color', color);
-                map.setPaintProperty('isochrone-line', 'line-color', color);
+                map.setPaintProperty('isochrone-fill', 'fill-color', settings.color);
+                map.setPaintProperty('isochrone-line', 'line-color', settings.color);
                 map.setLayoutProperty('isochrone-fill', 'visibility', 'visible');
                 map.setLayoutProperty('isochrone-line', 'visibility', 'visible');
             } else {
@@ -237,7 +227,7 @@ async function initApp() {
                     source: 'isochrone',
                     layout: {},
                     paint: {
-                        'fill-color': color,
+                        'fill-color': settings.color,
                         'fill-opacity': 0.3
                     }
                 });
@@ -248,7 +238,7 @@ async function initApp() {
                     source: 'isochrone',
                     layout: {},
                     paint: {
-                        'line-color': color,
+                        'line-color': settings.color,
                         'line-width': 2
                     }
                 });
@@ -257,6 +247,52 @@ async function initApp() {
             console.error("Isochrone error:", err);
             map.getCanvas().style.cursor = '';
         }
+    }
+
+    if (btnWalk) {
+        btnWalk.addEventListener('click', () => {
+            if (btnWalk.dataset.dragged) {
+                delete btnWalk.dataset.dragged;
+                return;
+            }
+            const wasActive = activeIsochroneMode === 'walk';
+            if (wasActive) {
+                resetIsochroneUI();
+            } else {
+                setActiveIsochroneMode('walk');
+            }
+        });
+    }
+
+    if (btnBike) {
+        btnBike.addEventListener('click', () => {
+            if (btnBike.dataset.dragged) {
+                delete btnBike.dataset.dragged;
+                return;
+            }
+            const wasActive = activeIsochroneMode === 'bike';
+            if (wasActive) {
+                resetIsochroneUI();
+            } else {
+                setActiveIsochroneMode('bike');
+            }
+        });
+    }
+
+    initReachDraggables(map, {
+        onDrop: (mode, coords) => {
+            if (!isochroneSettings[mode]) return;
+            setActiveIsochroneMode(mode);
+            updateIsochrone(coords, mode);
+        },
+        onReset: () => {
+            resetIsochroneUI();
+        }
+    });
+
+    map.on('click', async (e) => {
+        if (!activeIsochroneMode) return;
+        updateIsochrone(e.lngLat, activeIsochroneMode);
     });
 
     initLayerToggles(map, overlayState.current);
