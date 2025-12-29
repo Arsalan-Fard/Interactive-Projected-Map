@@ -1,3 +1,17 @@
+const DEFAULT_STICKER_COLORS = [
+    '#FF6B6B',
+    '#4ECDC4',
+    '#45B7D1',
+    '#FFA07A',
+    '#98D8C8',
+    '#F7DC6F',
+    '#BB8FCE',
+    '#85C1E2',
+    '#F8B739',
+    '#E74C3C'
+];
+const MAX_STICKER_COUNT = DEFAULT_STICKER_COLORS.length;
+
 const defaultState = {
     project: {
         name: 'Pilot 01',
@@ -6,7 +20,11 @@ const defaultState = {
         mapId: 'palaiseau-outdoor',
         rearProjection: false,
         tuiMode: false,
-        tagConfig: null
+        tagConfig: null,
+        stickerConfig: {
+            count: MAX_STICKER_COUNT,
+            colors: [...DEFAULT_STICKER_COLORS]
+        }
     },
     overlays: [
         { id: 'palaiseau-roads', label: 'Road network', file: '/static/data/palaiseau_roads.geojson', type: 'line', note: 'OSM roads for the outdoor view' },
@@ -97,6 +115,8 @@ const els = {
     projectPill: document.getElementById('project-pill'),
     projectRearProjection: document.getElementById('project-rear-projection'),
     projectTuiMode: document.getElementById('project-tui-mode'),
+    stickerCount: document.getElementById('sticker-count'),
+    stickerColors: document.getElementById('sticker-colors'),
     tagConfig: document.getElementById('tag-config'),
     mapList: document.getElementById('map-list'),
     mapStyle: document.getElementById('map-style'),
@@ -199,6 +219,38 @@ function normalizeTagConfig() {
     };
 }
 
+function clampStickerCount(value) {
+    if (!Number.isFinite(value)) return 1;
+    return Math.max(1, Math.min(MAX_STICKER_COUNT, value));
+}
+
+function normalizeStickerConfig() {
+    if (!state.project) return;
+    const existing = state.project.stickerConfig || {};
+    let count = Number.isInteger(existing.count) ? existing.count : null;
+
+    if (!count) {
+        if (Array.isArray(existing.colors) && existing.colors.length > 0) {
+            count = existing.colors.length;
+        } else {
+            count = MAX_STICKER_COUNT;
+        }
+    }
+
+    count = clampStickerCount(count);
+    const colors = Array.isArray(existing.colors) ? existing.colors.slice(0, MAX_STICKER_COUNT) : [];
+
+    while (colors.length < count) {
+        const fallback = DEFAULT_STICKER_COLORS[colors.length] || '#cccccc';
+        colors.push(fallback);
+    }
+
+    state.project.stickerConfig = {
+        count,
+        colors: colors.slice(0, count)
+    };
+}
+
 function parseCenter(value) {
     const parts = value.split(',').map(v => parseFloat(v.trim()));
     if (parts.length === 2 && parts.every(v => Number.isFinite(v))) {
@@ -240,6 +292,7 @@ function mergeState(serverConfig) {
     }
 
     normalizeTagConfig();
+    normalizeStickerConfig();
 }
 
 async function loadProjectsList() {
@@ -337,6 +390,7 @@ function renderProject() {
     if (els.projectTuiMode) {
         els.projectTuiMode.checked = !!state.project.tuiMode;
     }
+    renderStickerConfig();
     renderTagConfig();
 }
 
@@ -359,6 +413,60 @@ function renderProjectDropdown() {
     } else if (currentValue) {
         els.projectDropdown.value = currentValue;
     }
+}
+
+function updateStickerCount(nextCount) {
+    normalizeStickerConfig();
+    const config = state.project.stickerConfig || {};
+    const count = clampStickerCount(nextCount);
+    const colors = Array.isArray(config.colors) ? config.colors.slice(0, count) : [];
+    while (colors.length < count) {
+        const fallback = DEFAULT_STICKER_COLORS[colors.length] || '#cccccc';
+        colors.push(fallback);
+    }
+    state.project.stickerConfig = { count, colors };
+}
+
+function renderStickerConfig() {
+    if (!els.stickerCount || !els.stickerColors) return;
+    normalizeStickerConfig();
+    const config = state.project.stickerConfig || { count: 0, colors: [] };
+    const count = clampStickerCount(config.count);
+    const colors = Array.isArray(config.colors) ? config.colors.slice(0, count) : [];
+
+    els.stickerCount.value = count;
+    els.stickerColors.innerHTML = '';
+
+    colors.forEach((color, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative';
+
+        const swatch = document.createElement('button');
+        swatch.type = 'button';
+        swatch.className = 'w-9 h-9 rounded-full border border-border-subtle shadow-inner cursor-pointer transition-transform duration-200 hover:scale-105';
+        swatch.style.backgroundColor = color;
+        swatch.title = `Sticker ${index + 1} color`;
+
+        const picker = document.createElement('input');
+        picker.type = 'color';
+        picker.value = color;
+        picker.className = 'absolute opacity-0 pointer-events-none w-0 h-0';
+
+        swatch.addEventListener('click', () => {
+            picker.click();
+        });
+
+        picker.addEventListener('input', () => {
+            const nextColor = picker.value;
+            state.project.stickerConfig.colors[index] = nextColor;
+            swatch.style.backgroundColor = nextColor;
+            markSaved('Unsaved changes');
+        });
+
+        wrapper.appendChild(swatch);
+        wrapper.appendChild(picker);
+        els.stickerColors.appendChild(wrapper);
+    });
 }
 
 function renderTagConfig() {
@@ -1166,6 +1274,18 @@ function initEvents() {
 
     els.projectTuiMode?.addEventListener('change', e => {
         state.project.tuiMode = e.target.checked;
+        markSaved('Unsaved changes');
+    });
+
+    els.stickerCount?.addEventListener('input', e => {
+        const raw = Number.parseInt(e.target.value, 10);
+        if (!Number.isFinite(raw)) return;
+        const nextCount = clampStickerCount(raw);
+        if (nextCount !== raw) {
+            e.target.value = nextCount;
+        }
+        updateStickerCount(nextCount);
+        renderStickerConfig();
         markSaved('Unsaved changes');
     });
 

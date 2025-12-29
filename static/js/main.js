@@ -5,6 +5,26 @@ import { initTagTracking } from './tag-tracking.js';
 import { fallbackConfig, loadSetupConfig } from './config-loader.js';
 import { initMap } from './map-setup.js';
 
+function applyStickerConfig(setupConfig) {
+    const config = setupConfig?.project?.stickerConfig;
+    if (!config) return;
+    const colors = Array.isArray(config.colors) ? config.colors : [];
+    const rawCount = Number.isInteger(config.count) ? config.count : colors.length;
+    const count = Math.max(0, rawCount);
+
+    const buttons = Array.from(document.querySelectorAll('.point-btn'));
+    buttons.forEach((btn, index) => {
+        if (index < count) {
+            const color = colors[index] || btn.dataset.color || '#ffffff';
+            btn.style.display = '';
+            btn.dataset.color = color;
+            btn.style.backgroundColor = color;
+        } else {
+            btn.style.display = 'none';
+        }
+    });
+}
+
 async function initApp() {
     const setupConfig = await loadSetupConfig();
 
@@ -17,6 +37,7 @@ async function initApp() {
     }
 
     applyTagConfigVisibility(setupConfig);
+    applyStickerConfig(setupConfig);
 
     async function refreshTagConfig() {
         try {

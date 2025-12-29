@@ -85,6 +85,15 @@
           }
         ]
       }
+    },
+    "stickerConfig": {
+      "count": 4,
+      "colors": [
+        "#FF6B6B",
+        "#4ECDC4",
+        "#c2ced1",
+        "#FFA07A"
+      ]
     }
   },
   "maps": [
