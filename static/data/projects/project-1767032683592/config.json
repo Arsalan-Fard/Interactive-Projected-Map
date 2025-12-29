@@ -1,31 +1,31 @@
 {
   "project": {
-    "name": "Tester",
-    "location": "IPP",
-    "id": "project-1767029813580",
+    "name": "Testt",
+    "location": "",
+    "id": "project-1767032683592",
     "mapId": "palaiseau-outdoor",
     "rearProjection": false,
-    "tuiMode": false,
+    "tuiMode": true,
     "tagConfig": {
       "layers": {
         "items": [
           {
             "id": "palaiseau-roads",
             "label": "Road network",
-            "enabled": true,
+            "enabled": false,
             "tagId": null
           },
           {
             "id": "walking-network",
             "label": "Walking network",
             "enabled": true,
-            "tagId": null
+            "tagId": 10
           },
           {
             "id": "mobility-infrastructure",
             "label": "Bike network",
             "enabled": true,
-            "tagId": null
+            "tagId": 9
           },
           {
             "id": "bus-lanes",
@@ -58,7 +58,7 @@
           {
             "id": "bike",
             "label": "Cycling",
-            "enabled": false,
+            "enabled": true,
             "tagId": null
           },
           {
@@ -74,13 +74,13 @@
           {
             "id": "A",
             "label": "Point A",
-            "enabled": false,
+            "enabled": true,
             "tagId": null
           },
           {
             "id": "B",
             "label": "Point B",
-            "enabled": false,
+            "enabled": true,
             "tagId": null
           }
         ]

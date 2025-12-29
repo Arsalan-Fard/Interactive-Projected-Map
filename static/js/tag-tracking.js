@@ -70,9 +70,20 @@ export function initTagTracking({ map, setupConfig, draw }) {
     if (!map) return null;
 
     const debugDot = createDebugDot();
-    const blackHole5 = createBlackHole(5);
-    const blackHole6 = createBlackHole(6);
-    const blackHole11 = createBlackHole(11);
+    const blackHoles = {}; // Map to store black hole elements by ID
+
+    function getBlackHole(id) {
+        if (!blackHoles[id]) {
+            blackHoles[id] = createBlackHole(id);
+        }
+        return blackHoles[id];
+    }
+
+    // Initialize special black holes
+    getBlackHole(5);
+    getBlackHole(6);
+    getBlackHole(11); // Keep 11 initialized for consistency if used
+
     const searchOverlay = createSearchOverlay();
 
     let lastSeenTime = Date.now();
@@ -131,7 +142,17 @@ export function initTagTracking({ map, setupConfig, draw }) {
             // data.tags is a dictionary keyed by tag id with normalized positions.
             const detectedTags = data.tags || {};
             const tagIds = Object.keys(detectedTags).map(Number);
-            const hasTag = tagIds.includes(5) || tagIds.includes(6) || tagIds.includes(7) || tagIds.includes(8) || tagIds.includes(11);
+            
+            // Check if any significant tag is present to reset search mode
+            // We include dynamic layer tags in this check
+            let layerTags = [];
+            if (setupConfig?.project?.tagConfig?.layers?.items) {
+                 layerTags = setupConfig.project.tagConfig.layers.items
+                    .map(item => item.tagId)
+                    .filter(id => id !== null && id !== undefined);
+            }
+            
+            const hasTag = tagIds.includes(5) || tagIds.includes(6) || tagIds.includes(7) || tagIds.includes(8) || tagIds.some(id => layerTags.includes(id));
 
             if (hasTag) {
                 lastSeenTime = now;
@@ -249,10 +270,8 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
             let debugDotVisible = false;
 
-            // Flags to track if we updated black holes this frame
-            let updatedBlackHole5 = false;
-            let updatedBlackHole6 = false;
-            let updatedBlackHole11 = false;
+            // Track updated black holes for this frame
+            const updatedBlackHoles = new Set();
             let tag7OutsideMap = false;
             let tag8OutsideMap = false;
 
@@ -269,21 +288,16 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 debugDotVisible = true;
 
                 if (setupConfig.project.tuiMode) {
-                    if (tagId === 5) {
-                        blackHole5.style.left = `${screenX}px`;
-                        blackHole5.style.top = `${screenY}px`;
-                        blackHole5.style.display = 'block';
-                        updatedBlackHole5 = true;
-                    } else if (tagId === 6) {
-                        blackHole6.style.left = `${screenX}px`;
-                        blackHole6.style.top = `${screenY}px`;
-                        blackHole6.style.display = 'block';
-                        updatedBlackHole6 = true;
-                    } else if (tagId === 11) {
-                        blackHole11.style.left = `${screenX}px`;
-                        blackHole11.style.top = `${screenY}px`;
-                        blackHole11.style.display = 'block';
-                        updatedBlackHole11 = true;
+                    // Update generic black hole for any detected tag (if needed by logic)
+                    // We only strictly need it for 5, 6, and layer tags.
+                    const isLayerTag = layerTags.includes(tagId);
+                    
+                    if (tagId === 5 || tagId === 6 || isLayerTag) {
+                        const bh = getBlackHole(tagId);
+                        bh.style.left = `${screenX}px`;
+                        bh.style.top = `${screenY}px`;
+                        bh.style.display = 'block';
+                        updatedBlackHoles.add(tagId);
                     }
                 }
 
@@ -363,32 +377,62 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     }
                 }
 
-                // --- Tag 11 Logic (Layers Section) ---
-                if (tagId === 11) {
-                    const roadsBtn = document.getElementById('btn-layer-roads');
-                    // Find the Layers section using one of its buttons
-                    const referenceBtn = document.getElementById('btn-layer-bus');
-                    const layersSection = referenceBtn ? referenceBtn.closest('.toolbar-section') : null;
-                    console.log('here');
-                    if (layersSection && roadsBtn) {
-                        const rect = layersSection.getBoundingClientRect();
-                        
-                        // Check if tag is inside the Layers section
-                        const isInside = (
-                            screenX >= rect.left &&
-                            screenX <= rect.right &&
-                            screenY >= rect.top &&
-                            screenY <= rect.bottom
-                        );
+                // --- Dynamic Layer Logic ---
+                // Debug log to see what we are working with
+                console.log('Detected Tag:', tagId, 'Config:', setupConfig?.project?.tagConfig);
 
-                        const isActive = roadsBtn.classList.contains('active');
+                if (setupConfig?.project?.tagConfig?.layers?.items) {
+                     setupConfig.project.tagConfig.layers.items.forEach(layerItem => {
+                        // console.log('Checking layer item:', layerItem, 'against tagId:', tagId);
+                        if (layerItem.tagId === tagId) {
+                            console.log('Match found! Layer:', layerItem.id, 'Tag:', tagId);
+                            const buttonMap = {
+                                'palaiseau-roads': 'btn-layer-roads',
+                                'walking-network': 'btn-layer-walk',
+                                'mobility-infrastructure': 'btn-layer-bike',
+                                'bus-lanes': 'btn-layer-bus'
+                            };
 
-                        if (isInside) {
-                            if (!isActive) roadsBtn.click();
-                        } else {
-                            if (isActive) roadsBtn.click();
+                            const btnId = buttonMap[layerItem.id];
+                            if (!btnId) {
+                                console.warn('No button mapped for layer:', layerItem.id);
+                                return;
+                            }
+
+                            const btn = document.getElementById(btnId);
+                            const layersSection = document.getElementById('toolbar-layers');
+
+                            if (layersSection && btn) {
+                                const rect = layersSection.getBoundingClientRect();
+                                const isInside = (
+                                    screenX >= rect.left &&
+                                    screenX <= rect.right &&
+                                    screenY >= rect.top &&
+                                    screenY <= rect.bottom
+                                );
+
+                                console.log(`Tag ${tagId} at (${screenX}, ${screenY}). Box: [${rect.left}, ${rect.right}, ${rect.top}, ${rect.bottom}]. Inside? ${isInside}`);
+
+                                const isActive = btn.classList.contains('active');
+
+                                if (isInside) {
+                                    if (!isActive) {
+                                        console.log('Activating button for', layerItem.id);
+                                        btn.click();
+                                    }
+                                } else {
+                                    if (isActive) {
+                                        console.log('Deactivating button for', layerItem.id);
+                                        btn.click();
+                                    }
+                                }
+                            } else {
+                                console.error('Layers section or button not found in DOM');
+                            }
                         }
-                    }
+                     });
+                } else {
+                    console.log('No layer config found in setupConfig');
                 }
             }
 
@@ -401,10 +445,13 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
             debugDot.style.display = debugDotVisible ? 'block' : 'none';
 
-            // Hide black holes if not updated (tag lost) or not in TUI mode
-            if (!updatedBlackHole5) blackHole5.style.display = 'none';
-            if (!updatedBlackHole6) blackHole6.style.display = 'none';
-            if (!updatedBlackHole11) blackHole11.style.display = 'none';
+            // Hide black holes that were not updated this frame
+            Object.keys(blackHoles).forEach(id => {
+                const numId = parseInt(id, 10);
+                if (!updatedBlackHoles.has(numId)) {
+                    blackHoles[id].style.display = 'none';
+                }
+            });
 
             // Tag 6 Lost Logic (Independent check)
             if (!detectedTags['6']) {

@@ -149,7 +149,7 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
                 )
 
             boundary_ids = [1, 2, 3, 4]
-            trackable_ids = [5, 6, 7, 8, 11]
+            # trackable_ids = [5, 6, 7, 8, 11] # REMOVED: Allow all other tags
             
             # Identify closest boundary corners (naive approach: just uses center of 1-4 if available)
             # Actually, the original code used a complex "find_closest_corner" relative to a SINGLE tracked ID.
@@ -200,24 +200,27 @@ def detect_and_display(cap: cv2.VideoCapture, detector, legacy_params: Optional[
 
                 M = cv2.getPerspectiveTransform(src_pts, dst_pts)
                 
-                # Now transform all detected trackable IDs
-                for tid in trackable_ids:
-                    if tid in centers:
-                        tracked_center = np.array(centers[tid], dtype="float32")
-                        pts = np.array([[tracked_center]], dtype="float32")
-                        pts_transformed = cv2.perspectiveTransform(pts, M)
+                # Now transform all other detected IDs
+                for tid_np in centers:
+                    tid = int(tid_np) # Ensure native python int
+                    if tid in boundary_ids:
+                        continue
                         
-                        px = pts_transformed[0][0][0]
-                        py = pts_transformed[0][0][1]
-                        
-                        found_tags[str(tid)] = {
-                            "x": float(px),
-                            "y": float(py),
-                            "id": tid
-                        }
+                    tracked_center = np.array(centers[tid_np], dtype="float32")
+                    pts = np.array([[tracked_center]], dtype="float32")
+                    pts_transformed = cv2.perspectiveTransform(pts, M)
+                    
+                    px = pts_transformed[0][0][0]
+                    py = pts_transformed[0][0][1]
+                    
+                    found_tags[str(tid)] = {
+                        "x": float(px),
+                        "y": float(py),
+                        "id": tid
+                    }
 
-                        # Draw line to center for visual debug
-                        cv2.line(frame, (int(group_cx), int(group_cy)), centers[tid], (255, 255, 0), 1)
+                    # Draw line to center for visual debug
+                    cv2.line(frame, (int(group_cx), int(group_cy)), centers[tid_np], (255, 255, 0), 1)
 
             else:
                  # print("Missing boundary tags (need 1, 2, 3, 4)")
