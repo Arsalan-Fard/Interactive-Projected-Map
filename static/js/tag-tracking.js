@@ -390,7 +390,9 @@ export function initTagTracking({ map, setupConfig, draw }) {
                                 'palaiseau-roads': 'btn-layer-roads',
                                 'walking-network': 'btn-layer-walk',
                                 'mobility-infrastructure': 'btn-layer-bike',
-                                'bus-lanes': 'btn-layer-bus'
+                                'bus-lanes': 'btn-layer-bus',
+                                'amenities': 'btn-layer-amenities',
+                                'telecom-floorplan': 'btn-layer-floorplan'
                             };
 
                             const btnId = buttonMap[layerItem.id];

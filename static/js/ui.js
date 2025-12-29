@@ -418,20 +418,32 @@ export function initDraggableStickers(map, getQuestionId) {
 
 export function initLayerToggles(map, activeOverlayIds) {
     const layerMap = {
-        'btn-layer-bus': 'bus-lanes-layer',
-        'btn-layer-bike': 'mobility-infrastructure-layer',
-        'btn-layer-walk': 'walking-network-layer',
-        'btn-layer-roads': 'palaiseau-roads-layer'
+        'btn-layer-bus': ['bus-lanes-layer'],
+        'btn-layer-bike': ['mobility-infrastructure-layer'],
+        'btn-layer-walk': ['walking-network-layer'],
+        'btn-layer-roads': ['palaiseau-roads-layer'],
+        'btn-layer-amenities': ['amenities-circle-layer', 'amenities-label-layer'],
+        'btn-layer-floorplan': ['telecom-floorplan-layer']
     };
 
     Object.keys(layerMap).forEach(btnId => {
         const btn = document.getElementById(btnId);
         if (btn) {
-            const layerId = layerMap[btnId];
+            const layerIds = layerMap[btnId];
+            
+            // Map button ID back to config ID for initial state check
+            const configIdMap = {
+                'btn-layer-bus': 'bus-lanes',
+                'btn-layer-bike': 'mobility-infrastructure',
+                'btn-layer-walk': 'walking-network',
+                'btn-layer-roads': 'palaiseau-roads',
+                'btn-layer-amenities': 'amenities',
+                'btn-layer-floorplan': 'telecom-floorplan'
+            };
+            const configId = configIdMap[btnId];
 
             // Set initial state
-            if (activeOverlayIds) {
-                const configId = layerId.replace(/-layer$/, '');
+            if (activeOverlayIds && configId) {
                 if (activeOverlayIds.has(configId)) {
                     btn.classList.add('active');
                 }
@@ -440,9 +452,11 @@ export function initLayerToggles(map, activeOverlayIds) {
             btn.addEventListener('click', () => {
                 const isActive = btn.classList.toggle('active');
                 
-                if (map.getLayer(layerId)) {
-                    map.setLayoutProperty(layerId, 'visibility', isActive ? 'visible' : 'none');
-                }
+                layerIds.forEach(id => {
+                    if (map.getLayer(id)) {
+                        map.setLayoutProperty(id, 'visibility', isActive ? 'visible' : 'none');
+                    }
+                });
             });
         }
     });
@@ -471,7 +485,9 @@ export function applyTagConfigVisibility(setupConfig) {
         'bus-lanes': 'btn-layer-bus',
         'mobility-infrastructure': 'btn-layer-bike',
         'walking-network': 'btn-layer-walk',
-        'palaiseau-roads': 'btn-layer-roads'
+        'palaiseau-roads': 'btn-layer-roads',
+        'amenities': 'btn-layer-amenities',
+        'telecom-floorplan': 'btn-layer-floorplan'
     };
 
     const layerItems = tagConfig.layers?.items;
