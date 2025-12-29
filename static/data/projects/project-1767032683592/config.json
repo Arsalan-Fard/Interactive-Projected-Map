@@ -75,13 +75,13 @@
             "id": "A",
             "label": "Point A",
             "enabled": true,
-            "tagId": null
+            "tagId": 11
           },
           {
             "id": "B",
             "label": "Point B",
             "enabled": true,
-            "tagId": null
+            "tagId": 8
           }
         ]
       }

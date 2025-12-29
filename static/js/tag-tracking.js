@@ -144,15 +144,35 @@ export function initTagTracking({ map, setupConfig, draw }) {
             const tagIds = Object.keys(detectedTags).map(Number);
             
             // Check if any significant tag is present to reset search mode
-            // We include dynamic layer tags in this check
+            // We include dynamic layer + shortest-path tags in this check
             let layerTags = [];
             if (setupConfig?.project?.tagConfig?.layers?.items) {
                  layerTags = setupConfig.project.tagConfig.layers.items
                     .map(item => item.tagId)
-                    .filter(id => id !== null && id !== undefined);
+                    .filter(id => Number.isInteger(id));
             }
-            
-            const hasTag = tagIds.includes(5) || tagIds.includes(6) || tagIds.includes(7) || tagIds.includes(8) || tagIds.some(id => layerTags.includes(id));
+
+            const shortestItems = setupConfig?.project?.tagConfig?.shortestPath?.items;
+            const shortestTagIds = new Set();
+            let shortestTagA = null;
+            let shortestTagB = null;
+            if (Array.isArray(shortestItems)) {
+                shortestItems.forEach(item => {
+                    if (!item || item.enabled === false) return;
+                    if (!Number.isInteger(item.tagId)) return;
+                    if (item.id === 'A') {
+                        shortestTagA = item.tagId;
+                        shortestTagIds.add(item.tagId);
+                    } else if (item.id === 'B') {
+                        shortestTagB = item.tagId;
+                        shortestTagIds.add(item.tagId);
+                    }
+                });
+            }
+
+            const hasTag = tagIds.includes(5)
+                || tagIds.includes(6)
+                || tagIds.some(id => layerTags.includes(id) || shortestTagIds.has(id));
 
             if (hasTag) {
                 lastSeenTime = now;
@@ -272,8 +292,8 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
             // Track updated black holes for this frame
             const updatedBlackHoles = new Set();
-            let tag7OutsideMap = false;
-            let tag8OutsideMap = false;
+            let tagAOutsideMap = false;
+            let tagBOutsideMap = false;
 
             for (const key in detectedTags) {
                 const tag = detectedTags[key];
@@ -365,15 +385,15 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     }
                 }
 
-                // --- Tag 7/8 Logic (Shortest Path A/B) ---
-                if (tagId === 7 || tagId === 8) {
+                // --- Shortest Path A/B Logic ---
+                const shortestLabel = tagId === shortestTagA ? 'A' : (tagId === shortestTagB ? 'B' : null);
+                if (shortestLabel) {
                     if (screenX > leftBound && screenX < rightBound) {
-                        const label = tagId === 7 ? 'A' : 'B';
-                        setShortestPathButtonPosition(map, label, screenX, screenY);
-                    } else if (tagId === 7) {
-                        tag7OutsideMap = true;
+                        setShortestPathButtonPosition(map, shortestLabel, screenX, screenY);
+                    } else if (shortestLabel === 'A') {
+                        tagAOutsideMap = true;
                     } else {
-                        tag8OutsideMap = true;
+                        tagBOutsideMap = true;
                     }
                 }
 
@@ -438,10 +458,10 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 }
             }
 
-            if (tag7OutsideMap) {
+            if (tagAOutsideMap) {
                 resetShortestPathButton(map, 'A');
             }
-            if (tag8OutsideMap) {
+            if (tagBOutsideMap) {
                 resetShortestPathButton(map, 'B');
             }
 
