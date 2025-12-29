@@ -290,6 +290,24 @@ async function initApp() {
         }
     });
 
+    window.addEventListener('reach-drop', (event) => {
+        const detail = event?.detail || {};
+        const mode = detail.mode;
+        const coords = detail.coords;
+        if (!mode || !coords) return;
+        if (!isochroneSettings[mode]) return;
+        setActiveIsochroneMode(mode);
+        updateIsochrone(coords, mode);
+    });
+
+    window.addEventListener('reach-reset', (event) => {
+        const detail = event?.detail || {};
+        const mode = detail.mode;
+        if (!mode) return;
+        if (activeIsochroneMode !== mode) return;
+        resetIsochroneUI();
+    });
+
     map.on('click', async (e) => {
         if (!activeIsochroneMode) return;
         updateIsochrone(e.lngLat, activeIsochroneMode);

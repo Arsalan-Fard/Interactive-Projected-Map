@@ -4,6 +4,7 @@ let pointA = null;
 let pointB = null;
 const draggablePlaceholders = new WeakMap();
 const shortestPathButtons = { A: null, B: null };
+const reachButtons = { walk: null, bike: null, car: null };
 const FLOATING_BUTTON_STYLE = {
     position: 'absolute',
     width: 'auto',
@@ -21,7 +22,9 @@ const FLOATING_BUTTON_STYLE = {
     transition: 'none'
 };
 const ROUTE_UPDATE_INTERVAL = 250;
+const REACH_UPDATE_INTERVAL = 500;
 let lastRouteUpdate = 0;
+const lastReachUpdate = new Map();
 
 async function getRoute(map) {
     if (!pointA || !pointB) {
@@ -253,6 +256,50 @@ export function setShortestPathButtonPosition(map, label, clientX, clientY) {
 
     maybeUpdateRoute(map);
     return true;
+}
+
+function getReachButton(mode) {
+    if (reachButtons[mode] && document.contains(reachButtons[mode])) {
+        return reachButtons[mode];
+    }
+    const idMap = {
+        walk: 'btn-isochrone',
+        bike: 'btn-isochrone-bike',
+        car: 'btn-isochrone-car'
+    };
+    const btn = document.getElementById(idMap[mode]) || null;
+    reachButtons[mode] = btn;
+    return btn;
+}
+
+function maybeUpdateReach(mode, coords) {
+    const now = Date.now();
+    const last = lastReachUpdate.get(mode) || 0;
+    if (now - last < REACH_UPDATE_INTERVAL) return;
+    lastReachUpdate.set(mode, now);
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('reach-drop', { detail: { mode, coords } }));
+    }
+}
+
+export function setReachButtonPosition(map, mode, clientX, clientY) {
+    const btn = getReachButton(mode);
+    if (!btn) return false;
+    const coords = getMapCoordsFromScreen(map, clientX, clientY);
+    if (!coords) return false;
+
+    floatDraggableButton(btn, clientX, clientY);
+    maybeUpdateReach(mode, coords);
+    return true;
+}
+
+export function resetReachButton(map, mode) {
+    const btn = getReachButton(mode);
+    if (!btn) return;
+    resetDraggableButton(btn);
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('reach-reset', { detail: { mode } }));
+    }
 }
 
 export function resetShortestPathButton(map, label) {

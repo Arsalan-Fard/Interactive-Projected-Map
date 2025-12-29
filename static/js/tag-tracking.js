@@ -1,4 +1,4 @@
-import { getMapCoordsFromScreen, setShortestPathButtonPosition, resetShortestPathButton } from './ui.js';
+import { getMapCoordsFromScreen, setShortestPathButtonPosition, resetShortestPathButton, setReachButtonPosition, resetReachButton } from './ui.js';
 
 const SEARCH_DELAY = 1000; // Wait 1s before going black
 const BLACK_SCREEN_DURATION = 1000; // Stay black for 1s
@@ -170,9 +170,22 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 });
             }
 
+            const reachItems = setupConfig?.project?.tagConfig?.reach15?.items;
+            const reachTagMap = new Map();
+            const reachTagIds = new Set();
+            if (Array.isArray(reachItems)) {
+                reachItems.forEach(item => {
+                    if (!item || item.enabled === false) return;
+                    if (!Number.isInteger(item.tagId)) return;
+                    if (!item.id) return;
+                    reachTagMap.set(item.tagId, item.id);
+                    reachTagIds.add(item.tagId);
+                });
+            }
+
             const hasTag = tagIds.includes(5)
                 || tagIds.includes(6)
-                || tagIds.some(id => layerTags.includes(id) || shortestTagIds.has(id));
+                || tagIds.some(id => layerTags.includes(id) || shortestTagIds.has(id) || reachTagIds.has(id));
 
             if (hasTag) {
                 lastSeenTime = now;
@@ -294,6 +307,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
             const updatedBlackHoles = new Set();
             let tagAOutsideMap = false;
             let tagBOutsideMap = false;
+            const reachOutsideMap = new Map();
 
             for (const key in detectedTags) {
                 const tag = detectedTags[key];
@@ -397,6 +411,16 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     }
                 }
 
+                // --- 15-Minute Reach Logic ---
+                const reachMode = reachTagMap.get(tagId);
+                if (reachMode) {
+                    if (screenX > leftBound && screenX < rightBound) {
+                        setReachButtonPosition(map, reachMode, screenX, screenY);
+                    } else {
+                        reachOutsideMap.set(reachMode, true);
+                    }
+                }
+
                 // --- Dynamic Layer Logic ---
                 // Debug log to see what we are working with
                 console.log('Detected Tag:', tagId, 'Config:', setupConfig?.project?.tagConfig);
@@ -463,6 +487,13 @@ export function initTagTracking({ map, setupConfig, draw }) {
             }
             if (tagBOutsideMap) {
                 resetShortestPathButton(map, 'B');
+            }
+            if (reachOutsideMap.size > 0) {
+                reachOutsideMap.forEach((isOutside, mode) => {
+                    if (isOutside) {
+                        resetReachButton(map, mode);
+                    }
+                });
             }
 
             debugDot.style.display = debugDotVisible ? 'block' : 'none';
