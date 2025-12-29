@@ -1,5 +1,5 @@
 import { add3DBuildings, loadAndRenderLayer } from './layers.js';
-import { initDraggableItems, initLayerToggles, getMapCoordsFromScreen } from './ui.js';
+import { initDraggableItems, initLayerToggles, getMapCoordsFromScreen, applyTagConfigVisibility } from './ui.js';
 import { initSurvey } from './survey.js';
 import { initTagTracking } from './tag-tracking.js';
 import { fallbackConfig, loadSetupConfig } from './config-loader.js';
@@ -15,6 +15,31 @@ async function initApp() {
     if (setupConfig.project.tuiMode) {
         document.body.classList.add('tui-mode');
     }
+
+    applyTagConfigVisibility(setupConfig);
+
+    async function refreshTagConfig() {
+        try {
+            const projectId = setupConfig.project?.id;
+            const url = projectId ? `/api/config?project=${encodeURIComponent(projectId)}` : '/api/config';
+            const response = await fetch(url);
+            if (!response.ok) return;
+            const latest = await response.json();
+            if (latest?.project?.tagConfig) {
+                setupConfig.project.tagConfig = latest.project.tagConfig;
+                applyTagConfigVisibility(setupConfig);
+            }
+        } catch (error) {
+            console.warn('Failed to refresh tag config', error);
+        }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            refreshTagConfig();
+        }
+    });
+    window.addEventListener('focus', refreshTagConfig);
 
     let survey = null;
     const { map, overlayState } = initMap({

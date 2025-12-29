@@ -1,11 +1,91 @@
 {
   "project": {
-    "name": "New Project",
-    "location": "",
-    "id": "project-1766501674815",
+    "name": "Tester",
+    "location": "IPP",
+    "id": "project-1767029813580",
     "mapId": "palaiseau-outdoor",
     "rearProjection": false,
-    "tuiMode": true
+    "tuiMode": false,
+    "tagConfig": {
+      "layers": {
+        "items": [
+          {
+            "id": "palaiseau-roads",
+            "label": "Road network",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "walking-network",
+            "label": "Walking network",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "mobility-infrastructure",
+            "label": "Bike network",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "bus-lanes",
+            "label": "Bus lanes",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "amenities",
+            "label": "Amenities",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "telecom-floorplan",
+            "label": "Telecom floorplan",
+            "enabled": true,
+            "tagId": null
+          }
+        ]
+      },
+      "reach15": {
+        "items": [
+          {
+            "id": "walk",
+            "label": "Walk",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "bike",
+            "label": "Cycling",
+            "enabled": false,
+            "tagId": null
+          },
+          {
+            "id": "car",
+            "label": "Car",
+            "enabled": false,
+            "tagId": null
+          }
+        ]
+      },
+      "shortestPath": {
+        "items": [
+          {
+            "id": "A",
+            "label": "Point A",
+            "enabled": false,
+            "tagId": null
+          },
+          {
+            "id": "B",
+            "label": "Point B",
+            "enabled": false,
+            "tagId": null
+          }
+        ]
+      }
+    }
   },
   "maps": [
     {

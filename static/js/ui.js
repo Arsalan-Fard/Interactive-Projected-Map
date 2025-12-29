@@ -448,6 +448,90 @@ export function initLayerToggles(map, activeOverlayIds) {
     });
 }
 
+function buildEnabledMap(items) {
+    const enabledById = new Map();
+    (items || []).forEach(item => {
+        if (!item || item.id === undefined || item.id === null) return;
+        enabledById.set(String(item.id), item.enabled !== false);
+    });
+    return enabledById;
+}
+
+function isItemEnabled(enabledById, id) {
+    const key = String(id);
+    if (!enabledById.has(key)) return true;
+    return enabledById.get(key);
+}
+
+export function applyTagConfigVisibility(setupConfig) {
+    const tagConfig = setupConfig?.project?.tagConfig;
+    if (!tagConfig) return;
+
+    const layerButtonMap = {
+        'bus-lanes': 'btn-layer-bus',
+        'mobility-infrastructure': 'btn-layer-bike',
+        'walking-network': 'btn-layer-walk',
+        'palaiseau-roads': 'btn-layer-roads'
+    };
+
+    const layerItems = tagConfig.layers?.items;
+    if (Array.isArray(layerItems) && layerItems.length > 0) {
+        const enabledById = buildEnabledMap(layerItems);
+        const layersSection = document.getElementById('toolbar-layers');
+        let anyVisible = false;
+        Object.entries(layerButtonMap).forEach(([layerId, btnId]) => {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            const enabled = isItemEnabled(enabledById, layerId);
+            btn.style.display = enabled ? '' : 'none';
+            btn.disabled = !enabled;
+            if (enabled) anyVisible = true;
+        });
+        if (layersSection) {
+            layersSection.style.display = anyVisible ? '' : 'none';
+        }
+    }
+
+    const reachItems = tagConfig.reach15?.items;
+    if (Array.isArray(reachItems) && reachItems.length > 0) {
+        const enabledById = buildEnabledMap(reachItems);
+        const reachButtonMap = {
+            walk: 'btn-isochrone',
+            bike: 'btn-isochrone-bike',
+            car: 'btn-isochrone-car'
+        };
+        const reachSection = document.getElementById('toolbar-reach');
+        let anyVisible = false;
+        Object.entries(reachButtonMap).forEach(([modeId, btnId]) => {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            const enabled = isItemEnabled(enabledById, modeId);
+            btn.style.display = enabled ? '' : 'none';
+            btn.disabled = !enabled;
+            if (enabled) anyVisible = true;
+        });
+        if (reachSection) {
+            reachSection.style.display = anyVisible ? '' : 'none';
+        }
+    }
+
+    const shortestItems = tagConfig.shortestPath?.items;
+    if (Array.isArray(shortestItems) && shortestItems.length > 0) {
+        const enabledById = buildEnabledMap(shortestItems);
+        const enabledA = isItemEnabled(enabledById, 'A');
+        const enabledB = isItemEnabled(enabledById, 'B');
+        const shouldShow = enabledA && enabledB;
+        const shortestSection = document.getElementById('toolbar-shortest-path');
+        if (shortestSection) {
+            shortestSection.style.display = shouldShow ? '' : 'none';
+        }
+        document.querySelectorAll('#toolbar-shortest-path .draggable-source').forEach(btn => {
+            btn.style.display = shouldShow ? '' : 'none';
+            btn.disabled = !shouldShow;
+        });
+    }
+}
+
 export function initDraggableItems(map) {
     const sources = document.querySelectorAll('.draggable-source');
 

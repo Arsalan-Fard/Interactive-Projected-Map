@@ -367,6 +367,11 @@ export const CONFIG = {{
 """
     return Response(js_content, mimetype='application/javascript')
 
+@app.route('/generated_tags/<path:filename>')
+def serve_generated_tags(filename):
+    tags_dir = os.path.join(app.root_path, 'generated_tags')
+    return send_from_directory(tags_dir, filename)
+
 # Static File Serving (Must come AFTER API routes)
 @app.route('/')
 def index():

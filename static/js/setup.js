@@ -5,7 +5,8 @@ const defaultState = {
         id: 'project-palaiseau',
         mapId: 'palaiseau-outdoor',
         rearProjection: false,
-        tuiMode: false
+        tuiMode: false,
+        tagConfig: null
     },
     overlays: [
         { id: 'palaiseau-roads', label: 'Road network', file: '/static/data/palaiseau_roads.geojson', type: 'line', note: 'OSM roads for the outdoor view' },
@@ -96,6 +97,7 @@ const els = {
     projectPill: document.getElementById('project-pill'),
     projectRearProjection: document.getElementById('project-rear-projection'),
     projectTuiMode: document.getElementById('project-tui-mode'),
+    tagConfig: document.getElementById('tag-config'),
     mapList: document.getElementById('map-list'),
     mapStyle: document.getElementById('map-style'),
     mapCenter: document.getElementById('map-center'),
@@ -129,12 +131,72 @@ const els = {
     addMapBtn: document.getElementById('add-map'),
 };
 
+const TAG_ID_OPTIONS = Array.from({ length: 12 }, (_, i) => i);
+const TAG_IMAGE_PREFIX = '/generated_tags/tag36h11_id';
+const DEFAULT_TAG_GROUPS = {
+    reach15: [
+        { id: 'walk', label: 'Walk', enabled: true, tagId: null },
+        { id: 'bike', label: 'Cycling', enabled: true, tagId: null },
+        { id: 'car', label: 'Car', enabled: false, tagId: null }
+    ],
+    shortestPath: [
+        { id: 'A', label: 'Point A', enabled: true, tagId: null },
+        { id: 'B', label: 'Point B', enabled: true, tagId: null }
+    ]
+};
+
 function slugify(text) {
     return text
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '')
         .slice(0, 40) || 'item';
+}
+
+function getTagImageSrc(tagId) {
+    if (!Number.isFinite(tagId)) return '';
+    const safeId = Math.max(0, Math.floor(tagId));
+    return `${TAG_IMAGE_PREFIX}${String(safeId).padStart(2, '0')}.png`;
+}
+
+function mergeTagItems(defaultItems, existingItems) {
+    const byId = new Map();
+    (existingItems || []).forEach(item => {
+        if (item && item.id) {
+            byId.set(item.id, item);
+        }
+    });
+    return defaultItems.map(item => {
+        const existing = byId.get(item.id) || {};
+        return {
+            id: item.id,
+            label: item.label,
+            enabled: existing.enabled ?? item.enabled ?? true,
+            tagId: Number.isInteger(existing.tagId)
+                ? existing.tagId
+                : (Number.isInteger(item.tagId) ? item.tagId : null)
+        };
+    });
+}
+
+function normalizeTagConfig() {
+    if (!state.project) return;
+    const existing = state.project.tagConfig || {};
+    const layerItems = (state.overlays || []).map(layer => {
+        const layerConfig = (existing.layers?.items || []).find(item => item.id === layer.id) || {};
+        return {
+            id: layer.id,
+            label: layer.label || layer.id,
+            enabled: layerConfig.enabled ?? true,
+            tagId: Number.isInteger(layerConfig.tagId) ? layerConfig.tagId : null
+        };
+    });
+
+    state.project.tagConfig = {
+        layers: { items: layerItems },
+        reach15: { items: mergeTagItems(DEFAULT_TAG_GROUPS.reach15, existing.reach15?.items) },
+        shortestPath: { items: mergeTagItems(DEFAULT_TAG_GROUPS.shortestPath, existing.shortestPath?.items) }
+    };
 }
 
 function parseCenter(value) {
@@ -176,6 +238,8 @@ function mergeState(serverConfig) {
     if (!state.project.mapId && state.maps.length) {
         state.project.mapId = state.maps[0].id;
     }
+
+    normalizeTagConfig();
 }
 
 async function loadProjectsList() {
@@ -236,6 +300,8 @@ function newProject() {
         state.project.mapId = state.maps[0].id;
     }
 
+    normalizeTagConfig();
+
     // Assign default map to all questions if missing
     if (state.maps.length > 0) {
         state.questions.forEach(q => {
@@ -271,6 +337,7 @@ function renderProject() {
     if (els.projectTuiMode) {
         els.projectTuiMode.checked = !!state.project.tuiMode;
     }
+    renderTagConfig();
 }
 
 function renderProjectDropdown() {
@@ -292,6 +359,161 @@ function renderProjectDropdown() {
     } else if (currentValue) {
         els.projectDropdown.value = currentValue;
     }
+}
+
+function renderTagConfig() {
+    if (!els.tagConfig) return;
+    normalizeTagConfig();
+    const config = state.project.tagConfig || {};
+    els.tagConfig.innerHTML = '';
+
+    const groups = [
+        {
+            key: 'layers',
+            title: 'Layers',
+            description: 'Toggle layers and assign tags for each overlay.'
+        },
+        {
+            key: 'reach15',
+            title: '15-Minute Reach',
+            description: 'Assign tags for walk, bike, or car reach tools.'
+        },
+        {
+            key: 'shortestPath',
+            title: 'Shortest Path',
+            description: 'Assign tags for points A and B.'
+        }
+    ];
+
+    groups.forEach(group => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'tag-group flex flex-col gap-3';
+
+        const header = document.createElement('div');
+        header.className = 'flex items-start justify-between';
+        header.innerHTML = `
+            <div>
+                <h4 class="text-xs font-semibold uppercase tracking-wider text-text-secondary m-0">${group.title}</h4>
+                <p class="text-[11px] text-text-muted m-0 mt-1">${group.description}</p>
+            </div>
+        `;
+
+        const list = document.createElement('div');
+        list.className = 'flex flex-col gap-3';
+
+        const items = config[group.key]?.items || [];
+        if (items.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'text-xs text-text-muted italic';
+            empty.textContent = 'No items available.';
+            list.appendChild(empty);
+        } else {
+            items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'tag-item flex flex-col lg:flex-row lg:items-center gap-3 p-3 bg-bg-tertiary border border-border-subtle rounded-md';
+
+                const labelWrap = document.createElement('div');
+                labelWrap.className = 'flex-1 min-w-0';
+                const label = document.createElement('div');
+                label.className = 'text-sm font-semibold text-text-primary';
+                label.textContent = item.label || item.id;
+                labelWrap.appendChild(label);
+
+                if (item.id) {
+                    const meta = document.createElement('div');
+                    meta.className = 'text-xs text-text-secondary';
+                    meta.textContent = item.id;
+                    labelWrap.appendChild(meta);
+                }
+
+                const toggleWrap = document.createElement('label');
+                toggleWrap.className = 'flex items-center gap-2 text-xs text-text-secondary';
+                const toggle = document.createElement('input');
+                toggle.type = 'checkbox';
+                toggle.className = 'w-4 h-4 bg-bg-secondary border border-border-subtle rounded cursor-pointer accent-accent-primary';
+                toggle.checked = item.enabled !== false;
+                toggleWrap.appendChild(toggle);
+                toggleWrap.appendChild(document.createTextNode('Active'));
+
+                const selectWrap = document.createElement('div');
+                selectWrap.className = 'flex items-center gap-2';
+                const select = document.createElement('select');
+                select.className = 'h-9 px-3 bg-bg-secondary border border-border-subtle rounded-md text-text-primary text-xs cursor-pointer transition-colors duration-200 hover:border-border-focus focus:outline-none focus:border-accent-primary';
+
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = 'Select tag ID';
+                select.appendChild(placeholder);
+
+                TAG_ID_OPTIONS.forEach(tagId => {
+                    const option = document.createElement('option');
+                    option.value = String(tagId);
+                    option.textContent = `ID ${tagId}`;
+                    select.appendChild(option);
+                });
+
+                if (Number.isInteger(item.tagId)) {
+                    select.value = String(item.tagId);
+                } else {
+                    select.value = '';
+                }
+
+                const preview = document.createElement('div');
+                preview.className = 'w-[56px] h-[56px] bg-bg-secondary border border-border-subtle rounded-md flex items-center justify-center overflow-hidden';
+                const img = document.createElement('img');
+                img.className = 'w-full h-full object-contain';
+                img.alt = item.label ? `${item.label} tag` : 'Tag preview';
+                const placeholderText = document.createElement('span');
+                placeholderText.className = 'text-[9px] text-text-muted uppercase tracking-wider';
+                placeholderText.textContent = 'No tag';
+
+                preview.appendChild(img);
+                preview.appendChild(placeholderText);
+
+                const updatePreview = () => {
+                    const tagValue = Number.isInteger(item.tagId) ? item.tagId : null;
+                    if (tagValue === null) {
+                        img.src = '';
+                        img.style.display = 'none';
+                        placeholderText.style.display = 'block';
+                    } else {
+                        img.src = getTagImageSrc(tagValue);
+                        img.style.display = 'block';
+                        placeholderText.style.display = 'none';
+                    }
+                    const disabled = !toggle.checked;
+                    select.disabled = disabled;
+                    preview.classList.toggle('opacity-40', disabled);
+                };
+
+                updatePreview();
+
+                toggle.addEventListener('change', () => {
+                    item.enabled = toggle.checked;
+                    markSaved('Unsaved changes');
+                    updatePreview();
+                });
+
+                select.addEventListener('change', () => {
+                    item.tagId = select.value === '' ? null : Number.parseInt(select.value, 10);
+                    markSaved('Unsaved changes');
+                    updatePreview();
+                });
+
+                selectWrap.appendChild(select);
+                selectWrap.appendChild(preview);
+
+                row.appendChild(labelWrap);
+                row.appendChild(toggleWrap);
+                row.appendChild(selectWrap);
+                list.appendChild(row);
+            });
+        }
+
+        wrapper.appendChild(header);
+        wrapper.appendChild(list);
+        els.tagConfig.appendChild(wrapper);
+    });
 }
 
 function renderMapCards() {
@@ -632,6 +854,7 @@ function buildAnswerTemplate() {
 }
 
 function buildPreviewConfig() {
+    normalizeTagConfig();
     const selectedMap = state.maps.find(m => m.id === state.project.mapId) || state.maps[0];
     const overlayDetails = state.overlays;
     const questionFlow = state.questions.map((q, index) => ({
