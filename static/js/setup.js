@@ -131,7 +131,7 @@ const els = {
     addMapBtn: document.getElementById('add-map'),
 };
 
-const TAG_ID_OPTIONS = Array.from({ length: 12 }, (_, i) => i);
+const TAG_ID_OPTIONS = Array.from({ length: 5 }, (_, i) => i + 7);
 const TAG_IMAGE_PREFIX = '/generated_tags/tag36h11_id';
 const DEFAULT_TAG_GROUPS = {
     reach15: [
@@ -366,6 +366,26 @@ function renderTagConfig() {
     normalizeTagConfig();
     const config = state.project.tagConfig || {};
     els.tagConfig.innerHTML = '';
+    const tagSelects = [];
+
+    const updateTagSelects = () => {
+        const counts = new Map();
+        tagSelects.forEach(select => {
+            const value = select.value;
+            if (!value) return;
+            counts.set(value, (counts.get(value) || 0) + 1);
+        });
+
+        tagSelects.forEach(select => {
+            const current = select.value;
+            Array.from(select.options).forEach(option => {
+                if (!option.value) return;
+                const count = counts.get(option.value) || 0;
+                const selectedElsewhere = option.value !== current && count > 0;
+                option.disabled = selectedElsewhere;
+            });
+        });
+    };
 
     const groups = [
         {
@@ -407,6 +427,136 @@ function renderTagConfig() {
             empty.className = 'text-xs text-text-muted italic';
             empty.textContent = 'No items available.';
             list.appendChild(empty);
+        } else if (group.key === 'shortestPath') {
+            const pairedItems = ['A', 'B']
+                .map(id => items.find(item => item.id === id))
+                .filter(Boolean);
+
+            if (pairedItems.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'text-xs text-text-muted italic';
+                empty.textContent = 'No items available.';
+                list.appendChild(empty);
+            } else {
+                const row = document.createElement('div');
+                row.className = 'tag-item flex flex-col lg:flex-row lg:items-center gap-3 p-3 bg-bg-tertiary border border-border-subtle rounded-md';
+
+                const labelWrap = document.createElement('div');
+                labelWrap.className = 'flex-1 min-w-0';
+                const label = document.createElement('div');
+                label.className = 'text-sm font-semibold text-text-primary';
+                label.textContent = 'Points A and B';
+                labelWrap.appendChild(label);
+
+                const meta = document.createElement('div');
+                meta.className = 'text-xs text-text-secondary';
+                meta.textContent = pairedItems.map(item => item.id).join(' / ');
+                labelWrap.appendChild(meta);
+
+                const toggleWrap = document.createElement('label');
+                toggleWrap.className = 'flex items-center gap-2 text-xs text-text-secondary';
+                const toggle = document.createElement('input');
+                toggle.type = 'checkbox';
+                toggle.className = 'w-4 h-4 bg-bg-secondary border border-border-subtle rounded cursor-pointer accent-accent-primary';
+                toggle.checked = pairedItems.every(item => item.enabled !== false);
+                toggleWrap.appendChild(toggle);
+                toggleWrap.appendChild(document.createTextNode('Active'));
+
+                const selectWrap = document.createElement('div');
+                selectWrap.className = 'flex flex-wrap items-center gap-3';
+
+                const previewUpdates = [];
+
+                const addTagSelector = (item, shortLabel) => {
+                    const controlWrap = document.createElement('div');
+                    controlWrap.className = 'flex items-center gap-2';
+
+                    const shortLabelEl = document.createElement('span');
+                    shortLabelEl.className = 'text-[10px] uppercase tracking-wider text-text-muted font-semibold';
+                    shortLabelEl.textContent = shortLabel;
+
+                    const select = document.createElement('select');
+                    select.className = 'h-9 px-3 bg-bg-secondary border border-border-subtle rounded-md text-text-primary text-xs cursor-pointer transition-colors duration-200 hover:border-border-focus focus:outline-none focus:border-accent-primary';
+
+                    const placeholder = document.createElement('option');
+                    placeholder.value = '';
+                    placeholder.textContent = 'Select tag ID';
+                    select.appendChild(placeholder);
+
+                    TAG_ID_OPTIONS.forEach(tagId => {
+                        const option = document.createElement('option');
+                        option.value = String(tagId);
+                        option.textContent = `ID ${tagId}`;
+                        select.appendChild(option);
+                    });
+
+                    if (Number.isInteger(item.tagId)) {
+                        select.value = String(item.tagId);
+                    } else {
+                        select.value = '';
+                    }
+                    tagSelects.push(select);
+
+                    const preview = document.createElement('div');
+                    preview.className = 'w-[56px] h-[56px] bg-bg-secondary border border-border-subtle rounded-md flex items-center justify-center overflow-hidden';
+                    const img = document.createElement('img');
+                    img.className = 'w-full h-full object-contain';
+                    img.alt = item.label ? `${item.label} tag` : 'Tag preview';
+                    const placeholderText = document.createElement('span');
+                    placeholderText.className = 'text-[9px] text-text-muted uppercase tracking-wider';
+                    placeholderText.textContent = 'No tag';
+
+                    preview.appendChild(img);
+                    preview.appendChild(placeholderText);
+
+                    const updatePreview = () => {
+                        const tagValue = Number.isInteger(item.tagId) ? item.tagId : null;
+                        if (tagValue === null) {
+                            img.src = '';
+                            img.style.display = 'none';
+                            placeholderText.style.display = 'block';
+                        } else {
+                            img.src = getTagImageSrc(tagValue);
+                            img.style.display = 'block';
+                            placeholderText.style.display = 'none';
+                        }
+                        const disabled = !toggle.checked;
+                        select.disabled = disabled;
+                        preview.classList.toggle('opacity-40', disabled);
+                    };
+
+                    updatePreview();
+                    previewUpdates.push(updatePreview);
+
+                    select.addEventListener('change', () => {
+                        item.tagId = select.value === '' ? null : Number.parseInt(select.value, 10);
+                        markSaved('Unsaved changes');
+                        updatePreview();
+                        updateTagSelects();
+                    });
+
+                    controlWrap.appendChild(shortLabelEl);
+                    controlWrap.appendChild(select);
+                    controlWrap.appendChild(preview);
+                    selectWrap.appendChild(controlWrap);
+                };
+
+                pairedItems.forEach(item => addTagSelector(item, item.id || item.label || 'Tag'));
+
+                toggle.addEventListener('change', () => {
+                    const enabled = toggle.checked;
+                    pairedItems.forEach(item => {
+                        item.enabled = enabled;
+                    });
+                    markSaved('Unsaved changes');
+                    previewUpdates.forEach(update => update());
+                });
+
+                row.appendChild(labelWrap);
+                row.appendChild(toggleWrap);
+                row.appendChild(selectWrap);
+                list.appendChild(row);
+            }
         } else {
             items.forEach(item => {
                 const row = document.createElement('div');
@@ -457,6 +607,7 @@ function renderTagConfig() {
                 } else {
                     select.value = '';
                 }
+                tagSelects.push(select);
 
                 const preview = document.createElement('div');
                 preview.className = 'w-[56px] h-[56px] bg-bg-secondary border border-border-subtle rounded-md flex items-center justify-center overflow-hidden';
@@ -498,6 +649,7 @@ function renderTagConfig() {
                     item.tagId = select.value === '' ? null : Number.parseInt(select.value, 10);
                     markSaved('Unsaved changes');
                     updatePreview();
+                    updateTagSelects();
                 });
 
                 selectWrap.appendChild(select);
@@ -514,6 +666,7 @@ function renderTagConfig() {
         wrapper.appendChild(list);
         els.tagConfig.appendChild(wrapper);
     });
+    updateTagSelects();
 }
 
 function renderMapCards() {
