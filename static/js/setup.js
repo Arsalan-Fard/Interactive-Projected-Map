@@ -643,16 +643,13 @@ function viewSelectedResponses() {
         alert('No responses selected.');
         return;
     }
-    if (selected.length > 1) {
-        alert('Select a single response to view.');
-        return;
-    }
-    const response = selected[0];
     const projectId = state.project?.id;
-    const filename = getResponseFilename(response);
     const params = new URLSearchParams();
     if (projectId) params.set('project', projectId);
-    if (filename) params.set('response', filename);
+    selected.forEach(response => {
+        const filename = getResponseFilename(response);
+        if (filename) params.append('response', filename);
+    });
     window.open(`/results?${params.toString()}`, '_blank');
 }
 

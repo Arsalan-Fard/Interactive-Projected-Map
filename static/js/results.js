@@ -30,6 +30,11 @@ function getQueryParam(name) {
     return params.get(name);
 }
 
+function getQueryParams(name) {
+    const params = new URLSearchParams(window.location.search);
+    return params.getAll(name);
+}
+
 async function fetchResponses(projectId) {
     if (!projectId) return [];
     try {
@@ -42,25 +47,38 @@ async function fetchResponses(projectId) {
     }
 }
 
-function pickResponse(responses, filename) {
-    if (!responses.length) return null;
-    if (filename) {
-        const match = responses.find(item => item.__filename === filename);
-        if (match) return match;
+function normalizeResponseSelection() {
+    const selected = getQueryParams('response');
+    const listParam = getQueryParam('responses');
+    const combined = [...selected];
+    if (listParam) {
+        listParam.split(',').forEach(item => combined.push(item));
     }
-    return responses[0];
+    return Array.from(new Set(combined.map(item => item.trim()).filter(Boolean)));
 }
 
-function buildAnswerMap(response) {
-    const answersById = new Map();
-    if (response && Array.isArray(response.answers)) {
-        response.answers.forEach(answer => {
-            if (answer && answer.questionId) {
-                answersById.set(answer.questionId, answer);
-            }
-        });
+function pickResponses(responses, filenames) {
+    if (!responses.length) return [];
+    if (filenames.length) {
+        const filtered = responses.filter(item => filenames.includes(item.__filename));
+        return filtered.length ? filtered : responses.slice(0, 1);
     }
-    return answersById;
+    return responses.slice(0, 1);
+}
+
+function buildAnswersByQuestion(responses) {
+    const map = new Map();
+    (responses || []).forEach(response => {
+        const list = Array.isArray(response.answers) ? response.answers : [];
+        list.forEach(answer => {
+            if (!answer || !answer.questionId) return;
+            if (!map.has(answer.questionId)) {
+                map.set(answer.questionId, []);
+            }
+            map.get(answer.questionId).push({ response, answer });
+        });
+    });
+    return map;
 }
 
 const responseLayerIds = {
@@ -178,11 +196,11 @@ function splitFeaturesByGeometry(features) {
 
 async function initResults() {
     const setupConfig = await loadSetupConfig();
-    const responseFilename = getQueryParam('response');
+    const responseFilenames = normalizeResponseSelection();
     const projectId = setupConfig.project?.id;
     const responseList = await fetchResponses(projectId);
-    const response = pickResponse(responseList, responseFilename);
-    const answersById = buildAnswerMap(response);
+    const selectedResponses = pickResponses(responseList, responseFilenames);
+    const answersByQuestion = buildAnswersByQuestion(selectedResponses);
 
     if (setupConfig.project.rearProjection) {
         document.body.style.transform = 'scaleX(-1)';
@@ -203,13 +221,22 @@ async function initResults() {
     const questionText = document.querySelector('.question-text');
     const questionOptions = document.getElementById('question-options');
     const dotsContainer = document.querySelector('.progress-dots');
+    const resultsCount = document.getElementById('results-count');
+    const resultsSummaryTitle = document.getElementById('results-summary-title');
+    const resultsSummaryBody = document.getElementById('results-summary-body');
 
     if (finishBtn) {
         finishBtn.classList.add('hidden');
     }
 
-    if (response?.savedAt) {
-        document.title = `Results · ${formatSavedAt(response.savedAt)}`;
+    if (selectedResponses.length > 1) {
+        document.title = `Results · ${selectedResponses.length} responses`;
+    } else if (selectedResponses[0]?.savedAt) {
+        document.title = `Results · ${formatSavedAt(selectedResponses[0].savedAt)}`;
+    }
+
+    if (resultsCount) {
+        resultsCount.textContent = `${selectedResponses.length} selected`;
     }
 
     const { map } = initMap({
@@ -241,16 +268,8 @@ async function initResults() {
         if (!questionOptions) return;
         questionOptions.innerHTML = '';
 
-        const answerEntry = answersById.get(question.id);
-        const answerValue = answerEntry ? answerEntry.answer : null;
-        const isChoice = ['single-choice', 'multi-choice'].includes(question.type);
-
-        if (isChoice) {
+        if (['single-choice', 'multi-choice'].includes(question.type)) {
             const options = Array.isArray(question.options) ? question.options : [];
-            const selected = question.type === 'multi-choice'
-                ? new Set(Array.isArray(answerValue) ? answerValue : [])
-                : new Set(answerValue != null ? [answerValue] : []);
-
             if (!options.length) {
                 const empty = document.createElement('div');
                 empty.className = 'rounded border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/70';
@@ -258,9 +277,8 @@ async function initResults() {
                 questionOptions.appendChild(empty);
             } else {
                 options.forEach(option => {
-                    const isSelected = selected.has(option);
                     const button = document.createElement('div');
-                    button.className = `question-option w-full text-left px-3 py-2 rounded-md border text-xs font-medium tracking-wide ${isSelected ? 'bg-white/15 border-white/40 text-white' : 'bg-white/5 border-white/10 text-white/85'} cursor-default`;
+                    button.className = 'question-option w-full text-left px-3 py-2 rounded-md border text-xs font-medium tracking-wide bg-white/5 border-white/10 text-white/85 cursor-default';
                     button.textContent = option;
                     questionOptions.appendChild(button);
                 });
@@ -271,33 +289,135 @@ async function initResults() {
 
         const message = document.createElement('div');
         message.className = 'rounded border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80';
-
-        if (question.type === 'sticker' || question.type === 'drawing') {
-            const count = Array.isArray(answerValue?.features) ? answerValue.features.length : 0;
-            message.textContent = count
-                ? `${count} item${count === 1 ? '' : 's'} shown on the map.`
-                : 'No response for this question.';
-        } else if (question.type === 'text') {
-            message.textContent = answerValue ? String(answerValue) : 'No response for this question.';
-        } else {
-            message.textContent = answerValue != null ? String(answerValue) : 'No response for this question.';
-        }
-
+        message.textContent = question.type === 'text'
+            ? 'Text responses are shown on the right.'
+            : 'Spatial responses are shown on the map.';
         questionOptions.appendChild(message);
         questionOptions.classList.remove('hidden');
     }
 
+    function getAnswerEntries(questionId) {
+        return answersByQuestion.get(questionId) || [];
+    }
+
+    function renderSummaryPanel(question) {
+        if (!resultsSummaryTitle || !resultsSummaryBody) return;
+
+        resultsSummaryTitle.textContent = question?.text ? question.text : 'Question Summary';
+        resultsSummaryBody.innerHTML = '';
+
+        const entries = getAnswerEntries(question.id);
+        if (!entries.length) {
+            const empty = document.createElement('div');
+            empty.className = 'rounded border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/70';
+            empty.textContent = 'No responses selected for this question.';
+            resultsSummaryBody.appendChild(empty);
+            return;
+        }
+
+        if (['single-choice', 'multi-choice'].includes(question.type)) {
+            const counts = new Map();
+            entries.forEach(entry => {
+                const value = entry.answer?.answer;
+                if (question.type === 'multi-choice') {
+                    if (Array.isArray(value)) {
+                        value.forEach(option => {
+                            if (!option) return;
+                            counts.set(option, (counts.get(option) || 0) + 1);
+                        });
+                    }
+                } else if (value != null) {
+                    counts.set(value, (counts.get(value) || 0) + 1);
+                }
+            });
+
+            const rows = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+            if (!rows.length) {
+                const empty = document.createElement('div');
+                empty.className = 'rounded border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/70';
+                empty.textContent = 'No choice responses for this question.';
+                resultsSummaryBody.appendChild(empty);
+                return;
+            }
+
+            const maxCount = Math.max(...rows.map(([, count]) => count), 1);
+            rows.forEach(([label, count]) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-2';
+
+                const name = document.createElement('div');
+                name.className = 'w-20 text-[11px] text-white/80 truncate';
+                name.textContent = String(label);
+
+                const barWrap = document.createElement('div');
+                barWrap.className = 'flex-1 h-2 rounded bg-white/10 overflow-hidden';
+                const bar = document.createElement('div');
+                bar.className = 'h-2 bg-blue-400/80';
+                bar.style.width = `${Math.round((count / maxCount) * 100)}%`;
+                barWrap.appendChild(bar);
+
+                const value = document.createElement('div');
+                value.className = 'w-6 text-[11px] text-white/70 text-right';
+                value.textContent = String(count);
+
+                row.appendChild(name);
+                row.appendChild(barWrap);
+                row.appendChild(value);
+                resultsSummaryBody.appendChild(row);
+            });
+            return;
+        }
+
+        if (question.type === 'text') {
+            const list = document.createElement('div');
+            list.className = 'max-h-40 overflow-auto flex flex-col gap-2';
+            const texts = entries
+                .map(entry => entry.answer?.answer)
+                .filter(value => value != null && String(value).trim().length > 0)
+                .map(value => String(value));
+
+            if (!texts.length) {
+                const empty = document.createElement('div');
+                empty.className = 'rounded border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/70';
+                empty.textContent = 'No text responses for this question.';
+                resultsSummaryBody.appendChild(empty);
+                return;
+            }
+
+            texts.forEach(text => {
+                const item = document.createElement('div');
+                item.className = 'rounded border border-white/10 bg-white/5 px-2.5 py-2 text-[11px] text-white/85 leading-snug';
+                item.textContent = text;
+                list.appendChild(item);
+            });
+            resultsSummaryBody.appendChild(list);
+            return;
+        }
+
+        const info = document.createElement('div');
+        info.className = 'rounded border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/70';
+        info.textContent = 'Map responses are aggregated on the map.';
+        resultsSummaryBody.appendChild(info);
+    }
+
     function renderResponseOnMap(question) {
         if (!map.isStyleLoaded()) return;
-        const answerEntry = answersById.get(question.id);
-        const features = answerEntry?.answer?.features;
+        const entries = getAnswerEntries(question.id);
+        const collected = [];
 
-        if (!Array.isArray(features) || features.length === 0) {
+        entries.forEach(entry => {
+            const features = entry.answer?.answer?.features;
+            if (Array.isArray(features)) {
+                collected.push(...features);
+            }
+        });
+
+        if (!collected.length) {
             clearResponseLayers(map);
             return;
         }
 
-        const { pointFeatures, lineFeatures, polygonFeatures } = splitFeaturesByGeometry(features);
+        const { pointFeatures, lineFeatures, polygonFeatures } = splitFeaturesByGeometry(collected);
         ensureResponseLayers(
             map,
             { type: 'FeatureCollection', features: pointFeatures },
@@ -354,6 +474,8 @@ async function initResults() {
         if (mapReady) {
             renderResponseOnMap(q);
         }
+
+        renderSummaryPanel(q);
     }
 
     if (prevBtn) {

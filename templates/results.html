@@ -38,35 +38,47 @@
     <div id="main_container" class="relative w-full h-full flex flex-col">
         <div id="map" class="relative flex-1 w-full"></div>
 
-        <div id="left-sidebar"
-            class="absolute bottom-5 left-5 w-[260px] flex flex-col gap-2.5 p-3.5 bg-gradient-to-b from-[#0f0f14f2] to-[#0a0a0ffa] border border-white/10 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.05)_inset] backdrop-blur-md transition-all duration-300 z-[100] text-white opacity-80 hover:opacity-100 hover:shadow-[0_12px_48px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.1)_inset] hover:border-white/20">
-            <div id="question-panel"
-                class="bg-[linear-gradient(135deg,rgba(30,30,40,0.75)_0%,rgba(20,20,30,0.75)_100%)] border border-white/15 rounded-lg px-4 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.08)_inset] backdrop-blur-md transition-all duration-300 hover:shadow-[0_12px_40px_rgba(0,0,0,0.99),0_0_0_1px_rgba(255,255,255,0.15)_inset]">
-                <div class="progress-dots flex justify-center gap-2.5 mb-4"></div>
-                <div class="question-text text-white/95 text-sm font-medium text-center leading-normal tracking-wide">
-                    Loading response...
+        <div class="absolute bottom-5 left-5 flex flex-col lg:flex-row gap-3 z-[100] text-white">
+            <div id="left-sidebar"
+                class="w-[260px] flex flex-col gap-2.5 p-3.5 bg-gradient-to-b from-[#0f0f14f2] to-[#0a0a0ffa] border border-white/10 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.05)_inset] backdrop-blur-md transition-all duration-300 opacity-80 hover:opacity-100 hover:shadow-[0_12px_48px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.1)_inset] hover:border-white/20">
+                <div id="question-panel"
+                    class="bg-[linear-gradient(135deg,rgba(30,30,40,0.75)_0%,rgba(20,20,30,0.75)_100%)] border border-white/15 rounded-lg px-4 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.08)_inset] backdrop-blur-md transition-all duration-300 hover:shadow-[0_12px_40px_rgba(0,0,0,0.99),0_0_0_1px_rgba(255,255,255,0.15)_inset]">
+                    <div class="progress-dots flex justify-center gap-2.5 mb-4"></div>
+                    <div class="question-text text-white/95 text-sm font-medium text-center leading-normal tracking-wide">
+                        Loading response...
+                    </div>
+                    <div id="question-options" class="mt-3 flex flex-col gap-2"></div>
+                    <div class="question-content flex items-center justify-between gap-3 mt-4">
+                        <button id="prev-btn"
+                            class="nav-btn bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded w-10 h-10 flex items-center justify-center cursor-pointer text-white/90 transition-all duration-200 flex-shrink-0 hover:from-white/20 hover:to-white/10 hover:border-white/40 hover:scale-105 hover:shadow-lg disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-95">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                        </button>
+                        <button id="next-btn"
+                            class="nav-btn bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded w-10 h-10 flex items-center justify-center cursor-pointer text-white/90 transition-all duration-200 flex-shrink-0 hover:from-white/20 hover:to-white/10 hover:border-white/40 hover:scale-105 hover:shadow-lg disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-95">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+                        <button id="finish-btn"
+                            class="nav-btn hidden bg-gradient-to-br from-white/15 to-white/5 border border-white/25 rounded h-10 px-4 flex items-center justify-center cursor-pointer text-white/95 text-xs font-semibold uppercase tracking-[1px] transition-all duration-200 flex-shrink-0 hover:from-white/25 hover:to-white/10 hover:border-white/50 hover:scale-105 hover:shadow-lg active:scale-95">
+                            Finish
+                        </button>
+                    </div>
                 </div>
-                <div id="question-options" class="mt-3 flex flex-col gap-2"></div>
-                <div class="question-content flex items-center justify-between gap-3 mt-4">
-                    <button id="prev-btn"
-                        class="nav-btn bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded w-10 h-10 flex items-center justify-center cursor-pointer text-white/90 transition-all duration-200 flex-shrink-0 hover:from-white/20 hover:to-white/10 hover:border-white/40 hover:scale-105 hover:shadow-lg disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-95">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <polyline points="15 18 9 12 15 6"></polyline>
-                        </svg>
-                    </button>
-                    <button id="next-btn"
-                        class="nav-btn bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded w-10 h-10 flex items-center justify-center cursor-pointer text-white/90 transition-all duration-200 flex-shrink-0 hover:from-white/20 hover:to-white/10 hover:border-white/40 hover:scale-105 hover:shadow-lg disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-95">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                    </button>
-                    <button id="finish-btn"
-                        class="nav-btn hidden bg-gradient-to-br from-white/15 to-white/5 border border-white/25 rounded h-10 px-4 flex items-center justify-center cursor-pointer text-white/95 text-xs font-semibold uppercase tracking-[1px] transition-all duration-200 flex-shrink-0 hover:from-white/25 hover:to-white/10 hover:border-white/50 hover:scale-105 hover:shadow-lg active:scale-95">
-                        Finish
-                    </button>
+            </div>
+
+            <div id="results-sidebar"
+                class="w-[320px] max-h-[70vh] flex flex-col gap-3 p-3.5 bg-gradient-to-b from-[#0f0f14f2] to-[#0a0a0ffa] border border-white/10 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.05)_inset] backdrop-blur-md transition-all duration-300 opacity-90 hover:opacity-100 hover:shadow-[0_12px_48px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.1)_inset] hover:border-white/20">
+                <div class="flex items-center justify-between">
+                    <div class="text-[11px] uppercase tracking-[1px] text-white/70">Aggregated Results</div>
+                    <div id="results-count" class="text-[11px] text-white/60">0 selected</div>
                 </div>
+                <div id="results-summary-title" class="text-sm font-semibold text-white/90">Question Summary</div>
+                <div id="results-summary-body" class="flex flex-col gap-2 text-xs"></div>
             </div>
         </div>
     </div>
