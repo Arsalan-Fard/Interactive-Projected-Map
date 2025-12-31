@@ -647,7 +647,13 @@ function viewSelectedResponses() {
         alert('Select a single response to view.');
         return;
     }
-    viewResponse(selected[0]);
+    const response = selected[0];
+    const projectId = state.project?.id;
+    const filename = getResponseFilename(response);
+    const params = new URLSearchParams();
+    if (projectId) params.set('project', projectId);
+    if (filename) params.set('response', filename);
+    window.open(`/results?${params.toString()}`, '_blank');
 }
 
 async function deleteSelectedResponses() {

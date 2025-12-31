@@ -408,6 +408,10 @@ def app_page():
 def setup_page():
     return render_template('setup.html')
 
+@app.route('/results')
+def results_page():
+    return render_template('results.html')
+
 # Catch-all removed in favor of standard static file serving by Flask
 
 if __name__ == '__main__':
