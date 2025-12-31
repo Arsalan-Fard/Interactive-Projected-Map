@@ -162,6 +162,9 @@ const DEFAULT_TAG_GROUPS = {
     shortestPath: [
         { id: 'A', label: 'Point A', enabled: true, tagId: null },
         { id: 'B', label: 'Point B', enabled: true, tagId: null }
+    ],
+    tools: [
+        { id: 'eraser', label: 'Eraser', enabled: true, tagId: null }
     ]
 };
 
@@ -215,7 +218,8 @@ function normalizeTagConfig() {
     state.project.tagConfig = {
         layers: { items: layerItems },
         reach15: { items: mergeTagItems(DEFAULT_TAG_GROUPS.reach15, existing.reach15?.items) },
-        shortestPath: { items: mergeTagItems(DEFAULT_TAG_GROUPS.shortestPath, existing.shortestPath?.items) }
+        shortestPath: { items: mergeTagItems(DEFAULT_TAG_GROUPS.shortestPath, existing.shortestPath?.items) },
+        tools: { items: mergeTagItems(DEFAULT_TAG_GROUPS.tools, existing.tools?.items) }
     };
 }
 
@@ -478,6 +482,13 @@ function renderStickerConfig() {
             }
         });
 
+        // Collect from tools
+        (tagConfig.tools?.items || []).forEach(item => {
+            if (Number.isInteger(item.tagId)) {
+                usedTags.add(String(item.tagId));
+            }
+        });
+
         return usedTags;
     };
 
@@ -661,6 +672,11 @@ function renderTagConfig() {
             key: 'shortestPath',
             title: 'Shortest Path',
             description: 'Assign tags for points A and B.'
+        },
+        {
+            key: 'tools',
+            title: 'Tools',
+            description: 'Assign tags for drawing tools like the eraser.'
         }
     ];
 

@@ -23,8 +23,10 @@ const FLOATING_BUTTON_STYLE = {
 };
 const ROUTE_UPDATE_INTERVAL = 250;
 const REACH_UPDATE_INTERVAL = 500;
+const ERASER_UPDATE_INTERVAL = 200;
 let lastRouteUpdate = 0;
 const lastReachUpdate = new Map();
+let lastEraserUpdate = 0;
 
 async function getRoute(map) {
     if (!pointA || !pointB) {
@@ -421,6 +423,37 @@ export function resetReachButton(map, mode) {
     if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('reach-reset', { detail: { mode } }));
     }
+}
+
+export function setEraserButtonPosition(map, draw, clientX, clientY) {
+    const btn = document.getElementById('btn-sticker-eraser');
+    if (!btn || !map || !draw) return false;
+    const point = getMapPointFromScreen(map, clientX, clientY);
+    if (!point) return false;
+
+    floatDraggableButton(btn, clientX, clientY);
+
+    const now = Date.now();
+    if (now - lastEraserUpdate < ERASER_UPDATE_INTERVAL) return true;
+    lastEraserUpdate = now;
+
+    const featureId = getDrawLineFeatureIdAtPoint(map, draw, point);
+    if (!featureId) return true;
+
+    if (typeof draw.changeMode === 'function') {
+        draw.changeMode('simple_select', { featureIds: [featureId] });
+    }
+    if (typeof draw.delete === 'function') {
+        draw.delete(featureId);
+    }
+    return true;
+}
+
+export function resetEraserButton() {
+    const btn = document.getElementById('btn-sticker-eraser');
+    if (!btn) return;
+    resetDraggableButton(btn);
+    lastEraserUpdate = 0;
 }
 
 export function resetShortestPathButton(map, label) {

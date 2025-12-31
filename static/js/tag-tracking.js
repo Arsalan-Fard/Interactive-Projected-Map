@@ -1,4 +1,14 @@
-import { getMapCoordsFromScreen, setShortestPathButtonPosition, resetShortestPathButton, setReachButtonPosition, resetReachButton, setStickerPosition, removeStickerMarker } from './ui.js';
+import {
+    getMapCoordsFromScreen,
+    setShortestPathButtonPosition,
+    resetShortestPathButton,
+    setReachButtonPosition,
+    resetReachButton,
+    setEraserButtonPosition,
+    resetEraserButton,
+    setStickerPosition,
+    removeStickerMarker
+} from './ui.js';
 
 const SEARCH_DELAY = 1000; // Wait 1s before going black
 const BLACK_SCREEN_DURATION = 1000; // Stay black for 1s
@@ -183,6 +193,20 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 });
             }
 
+            const toolItems = setupConfig?.project?.tagConfig?.tools?.items;
+            const toolTagIds = new Set();
+            let eraserTagId = null;
+            if (Array.isArray(toolItems)) {
+                toolItems.forEach(item => {
+                    if (!item || item.enabled === false) return;
+                    if (!Number.isInteger(item.tagId)) return;
+                    toolTagIds.add(item.tagId);
+                    if (item.id === 'eraser') {
+                        eraserTagId = item.tagId;
+                    }
+                });
+            }
+
             // Collect sticker tags
             const stickerTags = setupConfig?.project?.stickerConfig?.tags || [];
             const stickerColors = setupConfig?.project?.stickerConfig?.colors || [];
@@ -197,7 +221,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
             const hasTag = tagIds.includes(5)
                 || tagIds.includes(6)
-                || tagIds.some(id => layerTags.includes(id) || shortestTagIds.has(id) || reachTagIds.has(id) || stickerTagIds.has(id));
+                || tagIds.some(id => layerTags.includes(id) || shortestTagIds.has(id) || reachTagIds.has(id) || toolTagIds.has(id) || stickerTagIds.has(id));
 
             if (hasTag) {
                 lastSeenTime = now;
@@ -320,6 +344,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
             let tagAOutsideMap = false;
             let tagBOutsideMap = false;
             const reachOutsideMap = new Map();
+            let eraserOutsideMap = false;
             const updatedStickerTags = new Set();
 
             for (const key in detectedTags) {
@@ -434,6 +459,15 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     }
                 }
 
+                // --- Eraser Logic ---
+                if (eraserTagId !== null && tagId === eraserTagId) {
+                    if (screenX > leftBound && screenX < rightBound) {
+                        setEraserButtonPosition(map, draw, screenX, screenY);
+                    } else {
+                        eraserOutsideMap = true;
+                    }
+                }
+
                 // --- Sticker Logic ---
                 const stickerData = stickerTagMap.get(tagId);
                 if (stickerData) {
@@ -516,6 +550,9 @@ export function initTagTracking({ map, setupConfig, draw }) {
                         resetReachButton(map, mode);
                     }
                 });
+            }
+            if (eraserOutsideMap) {
+                resetEraserButton();
             }
 
             // Remove sticker markers that were not updated this frame

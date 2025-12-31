@@ -25,7 +25,7 @@
             "id": "mobility-infrastructure",
             "label": "Bike network",
             "enabled": true,
-            "tagId": 9
+            "tagId": null
           },
           {
             "id": "bus-lanes",
@@ -82,6 +82,16 @@
             "label": "Point B",
             "enabled": true,
             "tagId": 8
+          }
+        ]
+      },
+      "tools": {
+        "items": [
+          {
+            "id": "eraser",
+            "label": "Eraser",
+            "enabled": true,
+            "tagId": 9
           }
         ]
       }
