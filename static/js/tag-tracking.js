@@ -13,6 +13,8 @@ import {
 const SEARCH_DELAY = 1000; // Wait 1s before going black
 const BLACK_SCREEN_DURATION = 1000; // Stay black for 1s
 const COOLDOWN_DURATION = 2000; // Show map for 2s before trying again
+const HIT_THRESHOLD = 2;
+const MISS_THRESHOLD = 5;
 
 function createDebugDot() {
     const debugDot = document.createElement('div');
@@ -81,6 +83,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
     const debugDot = createDebugDot();
     const blackHoles = {}; // Map to store black hole elements by ID
+    const tagStates = new Map(); // tagId -> { hits, misses, visible, x, y }
 
     function getBlackHole(id) {
         if (!blackHoles[id]) {
@@ -104,6 +107,50 @@ export function initTagTracking({ map, setupConfig, draw }) {
     let lastTagClickTime = 0;
     let tag6LostStart = null;
     let tagDrawingCoordinates = [];
+
+    function updateTagStates(detectedTags) {
+        const detectedIds = new Set();
+
+        Object.values(detectedTags || {}).forEach(tag => {
+            const tagId = Number(tag?.id);
+            if (!Number.isFinite(tagId)) return;
+            detectedIds.add(tagId);
+            let state = tagStates.get(tagId);
+            if (!state) {
+                state = { hits: 0, misses: 0, visible: false, x: 0, y: 0 };
+                tagStates.set(tagId, state);
+            }
+            state.hits += 1;
+            state.misses = 0;
+            state.x = Number(tag.x);
+            state.y = Number(tag.y);
+            if (!state.visible && state.hits >= HIT_THRESHOLD) {
+                state.visible = true;
+            }
+        });
+
+        const toDelete = [];
+        tagStates.forEach((state, id) => {
+            if (!detectedIds.has(id)) {
+                state.hits = 0;
+                state.misses += 1;
+                if (state.visible && state.misses >= MISS_THRESHOLD) {
+                    state.visible = false;
+                }
+            }
+            if (!state.visible && state.misses >= MISS_THRESHOLD * 2) {
+                toDelete.push(id);
+            }
+        });
+        toDelete.forEach(id => tagStates.delete(id));
+
+        const visibleIds = new Set();
+        tagStates.forEach((state, id) => {
+            if (state.visible) visibleIds.add(id);
+        });
+
+        return { detectedIds, visibleIds };
+    }
 
     function updateTagDrawingLayer() {
         if (!map.isStyleLoaded()) return;
@@ -151,7 +198,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
             // data.tags is a dictionary keyed by tag id with normalized positions.
             const detectedTags = data.tags || {};
-            const tagIds = Object.keys(detectedTags).map(Number);
+            const { detectedIds, visibleIds } = updateTagStates(detectedTags);
             
             // Check if any significant tag is present to reset search mode
             // We include dynamic layer + shortest-path tags in this check
@@ -161,6 +208,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     .map(item => item.tagId)
                     .filter(id => Number.isInteger(id));
             }
+            const layerTagIds = new Set(layerTags);
 
             const shortestItems = setupConfig?.project?.tagConfig?.shortestPath?.items;
             const shortestTagIds = new Set();
@@ -219,9 +267,15 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 }
             });
 
-            const hasTag = tagIds.includes(5)
-                || tagIds.includes(6)
-                || tagIds.some(id => layerTags.includes(id) || shortestTagIds.has(id) || reachTagIds.has(id) || toolTagIds.has(id) || stickerTagIds.has(id));
+            const hasTag = Array.from(visibleIds).some(id =>
+                id === 5
+                || id === 6
+                || layerTagIds.has(id)
+                || shortestTagIds.has(id)
+                || reachTagIds.has(id)
+                || toolTagIds.has(id)
+                || stickerTagIds.has(id)
+            );
 
             if (hasTag) {
                 lastSeenTime = now;
@@ -347,22 +401,27 @@ export function initTagTracking({ map, setupConfig, draw }) {
             let eraserOutsideMap = false;
             const updatedStickerTags = new Set();
 
-            for (const key in detectedTags) {
-                const tag = detectedTags[key];
-                const tagId = tag.id;
-                const coords = getScreenCoordinates(tag.x, tag.y);
+            for (const tagId of visibleIds) {
+                const state = tagStates.get(tagId);
+                if (!state || !Number.isFinite(state.x) || !Number.isFinite(state.y)) {
+                    continue;
+                }
+                const coords = getScreenCoordinates(state.x, state.y);
                 const screenX = coords.x;
                 const screenY = coords.y;
+                const isDetected = detectedIds.has(tagId);
 
                 // Show Debug Dot for at least one tag
-                debugDot.style.left = `${screenX}px`;
-                debugDot.style.top = `${screenY}px`;
-                debugDotVisible = true;
+                if (isDetected) {
+                    debugDot.style.left = `${screenX}px`;
+                    debugDot.style.top = `${screenY}px`;
+                    debugDotVisible = true;
+                }
 
                 if (setupConfig.project.tuiMode) {
                     // Update generic black hole for any detected tag (if needed by logic)
                     // We only strictly need it for 5, 6, and layer tags.
-                    const isLayerTag = layerTags.includes(tagId);
+                    const isLayerTag = layerTagIds.has(tagId);
                     
                     if (tagId === 5 || tagId === 6 || isLayerTag) {
                         const bh = getBlackHole(tagId);
@@ -374,7 +433,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 }
 
                 // --- Tag 5 Logic (Map Styles) ---
-                if (tagId === 5) {
+                if (tagId === 5 && isDetected) {
                     const element = document.elementFromPoint(screenX, screenY);
                     const mapStylesSection = document.querySelector('#right-sidebar .toolbar-section:first-child .section-content');
                     const sidebar = document.getElementById('right-sidebar');
@@ -423,7 +482,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 }
 
                 // --- Tag 6 Logic (Drawing) ---
-                if (tagId === 6) {
+                if (tagId === 6 && isDetected) {
                     if (screenX > leftBound && screenX < rightBound) {
                         tag6LostStart = null;
                         if (Date.now() - lastTagClickTime > 200) {
@@ -440,11 +499,11 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 // --- Shortest Path A/B Logic ---
                 const shortestLabel = tagId === shortestTagA ? 'A' : (tagId === shortestTagB ? 'B' : null);
                 if (shortestLabel) {
-                    if (screenX > leftBound && screenX < rightBound) {
+                    if (isDetected && screenX > leftBound && screenX < rightBound) {
                         setShortestPathButtonPosition(map, shortestLabel, screenX, screenY);
-                    } else if (shortestLabel === 'A') {
+                    } else if (isDetected && shortestLabel === 'A') {
                         tagAOutsideMap = true;
-                    } else {
+                    } else if (isDetected) {
                         tagBOutsideMap = true;
                     }
                 }
@@ -452,18 +511,18 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 // --- 15-Minute Reach Logic ---
                 const reachMode = reachTagMap.get(tagId);
                 if (reachMode) {
-                    if (screenX > leftBound && screenX < rightBound) {
+                    if (isDetected && screenX > leftBound && screenX < rightBound) {
                         setReachButtonPosition(map, reachMode, screenX, screenY);
-                    } else {
+                    } else if (isDetected) {
                         reachOutsideMap.set(reachMode, true);
                     }
                 }
 
                 // --- Eraser Logic ---
                 if (eraserTagId !== null && tagId === eraserTagId) {
-                    if (screenX > leftBound && screenX < rightBound) {
+                    if (isDetected && screenX > leftBound && screenX < rightBound) {
                         setEraserButtonPosition(map, draw, screenX, screenY);
-                    } else {
+                    } else if (isDetected) {
                         eraserOutsideMap = true;
                     }
                 }
@@ -472,20 +531,19 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 const stickerData = stickerTagMap.get(tagId);
                 if (stickerData) {
                     if (screenX > leftBound && screenX < rightBound) {
-                        setStickerPosition(map, tagId, stickerData.index, stickerData.color, screenX, screenY);
+                        if (isDetected) {
+                            setStickerPosition(map, tagId, stickerData.index, stickerData.color, screenX, screenY);
+                        }
                         updatedStickerTags.add(tagId);
                     }
                 }
 
                 // --- Dynamic Layer Logic ---
                 // Debug log to see what we are working with
-                console.log('Detected Tag:', tagId, 'Config:', setupConfig?.project?.tagConfig);
 
                 if (setupConfig?.project?.tagConfig?.layers?.items) {
                      setupConfig.project.tagConfig.layers.items.forEach(layerItem => {
-                        // console.log('Checking layer item:', layerItem, 'against tagId:', tagId);
-                        if (layerItem.tagId === tagId) {
-                            console.log('Match found! Layer:', layerItem.id, 'Tag:', tagId);
+                        if (layerItem.tagId === tagId && isDetected) {
                             const buttonMap = {
                                 'palaiseau-roads': 'btn-layer-roads',
                                 'walking-network': 'btn-layer-walk',
@@ -513,18 +571,15 @@ export function initTagTracking({ map, setupConfig, draw }) {
                                     screenY <= rect.bottom
                                 );
 
-                                console.log(`Tag ${tagId} at (${screenX}, ${screenY}). Box: [${rect.left}, ${rect.right}, ${rect.top}, ${rect.bottom}]. Inside? ${isInside}`);
 
                                 const isActive = btn.classList.contains('active');
 
                                 if (isInside) {
                                     if (!isActive) {
-                                        console.log('Activating button for', layerItem.id);
                                         btn.click();
                                     }
                                 } else {
                                     if (isActive) {
-                                        console.log('Deactivating button for', layerItem.id);
                                         btn.click();
                                     }
                                 }
@@ -573,7 +628,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
             });
 
             // Tag 6 Lost Logic (Independent check)
-            if (!detectedTags['6']) {
+            if (!detectedIds.has(6)) {
                 if (!tag6LostStart) {
                     tag6LostStart = Date.now();
                 } else if (Date.now() - tag6LostStart > 3000) {
@@ -591,7 +646,6 @@ export function initTagTracking({ map, setupConfig, draw }) {
                             };
                             if (draw) {
                                 draw.add(feature);
-                                console.log('Feature added to mapbox-draw. Total features:', draw.getAll().features.length);
                             } else {
                                 console.error('Mapbox Draw instance not found!');
                             }
@@ -612,6 +666,6 @@ export function initTagTracking({ map, setupConfig, draw }) {
         }
     }
 
-    const intervalId = setInterval(checkPosition, 100);
+    const intervalId = setInterval(checkPosition, 30);
     return { stop: () => clearInterval(intervalId) };
 }

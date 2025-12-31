@@ -540,7 +540,6 @@ function createStickerMarker(map, lngLat, color, typeId, questionId) {
     sticker.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         marker.remove();
-        console.log(`Removed sticker with color: ${sticker.dataset.color}`);
     });
 }
 
@@ -589,7 +588,6 @@ export function initDraggableStickers(map, getQuestionId) {
                 ghost.remove();
                 const coords = getMapCoordsFromScreen(map, ev.clientX, ev.clientY);
                 if (!coords) return;
-                console.log(`Sticker placed at: [${coords.lng}, ${coords.lat}] with color: ${color}`);
                 const questionId = typeof getQuestionId === 'function' ? getQuestionId() : null;
                 createStickerMarker(map, coords, color, btn.id, questionId);
             };
@@ -886,14 +884,12 @@ export function initDrawEraser(map, draw) {
     
 
     const btn = document.getElementById('btn-sticker-eraser');
-    console.log('[eraser] init', { btn: !!btn, map: !!map, draw: !!draw });
     if (!btn || !map || !draw) return;
 
     btn.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return;
         e.preventDefault();
         floatDraggableButton(btn, e.clientX, e.clientY);
-        console.log('[eraser] drag start', { x: e.clientX, y: e.clientY });
 
         let isDragging = true;
         let didMove = false;
