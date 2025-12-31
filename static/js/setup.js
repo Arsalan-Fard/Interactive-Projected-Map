@@ -1806,7 +1806,13 @@ function initEvents() {
     els.downloadConfig?.addEventListener('click', downloadConfig);
     els.openProject?.addEventListener('click', () => {
         const selected = els.projectDropdown?.value || state.project.id;
-        const url = selected ? `/app?project=${encodeURIComponent(selected)}` : '/app';
+        const params = new URLSearchParams();
+        if (selected) {
+            params.set('project', selected);
+        }
+        params.set('tui', state.project?.tuiMode ? '1' : '0');
+        const query = params.toString();
+        const url = query ? `/app?${query}` : '/app';
         window.open(url, '_blank');
     });
 

@@ -91,6 +91,19 @@ function getQueryProjectId() {
     return params.get('project');
 }
 
+function parseQueryFlag(value) {
+    if (value === null || value === undefined) return null;
+    const normalized = String(value).trim().toLowerCase();
+    if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+    if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+    return null;
+}
+
+function getQueryTuiMode() {
+    const params = new URLSearchParams(window.location.search);
+    return parseQueryFlag(params.get('tui'));
+}
+
 async function fetchServerConfig(projectId) {
     try {
         const url = projectId ? `/api/config?project=${encodeURIComponent(projectId)}` : '/api/config';
@@ -107,6 +120,10 @@ async function fetchServerConfig(projectId) {
 export async function loadSetupConfig() {
     const projectId = getQueryProjectId();
     const serverConfig = await fetchServerConfig(projectId);
-    if (serverConfig) return normalizeConfig(serverConfig);
-    return normalizeConfig(fallbackConfig);
+    const baseConfig = serverConfig ? normalizeConfig(serverConfig) : normalizeConfig(fallbackConfig);
+    const tuiOverride = getQueryTuiMode();
+    if (tuiOverride !== null) {
+        baseConfig.project = { ...baseConfig.project, tuiMode: tuiOverride };
+    }
+    return baseConfig;
 }
