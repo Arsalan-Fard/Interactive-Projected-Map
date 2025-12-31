@@ -238,6 +238,127 @@ export function getMapCoordsFromScreen(map, clientX, clientY) {
     return point ? map.unproject([point.x, point.y]) : null;
 }
 
+function getSegmentDistanceSquared(px, py, ax, ay, bx, by) {
+    const dx = bx - ax;
+    const dy = by - ay;
+    if (dx === 0 && dy === 0) {
+        const dxp = px - ax;
+        const dyp = py - ay;
+        return dxp * dxp + dyp * dyp;
+    }
+    const t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+    const clamped = Math.max(0, Math.min(1, t));
+    const cx = ax + clamped * dx;
+    const cy = ay + clamped * dy;
+    const dxp = px - cx;
+    const dyp = py - cy;
+    return dxp * dxp + dyp * dyp;
+}
+
+function projectCoordToScreen(map, coord) {
+    if (!Array.isArray(coord) || coord.length < 2) return null;
+    const projected = map.project(coord);
+    if (!projected || !Number.isFinite(projected.x) || !Number.isFinite(projected.y)) return null;
+    return projected;
+}
+
+function getLineStringDistanceSquared(map, coords, px, py) {
+    if (!Array.isArray(coords) || coords.length === 0) return Infinity;
+    if (coords.length === 1) {
+        const proj = projectCoordToScreen(map, coords[0]);
+        if (!proj) return Infinity;
+        const dx = px - proj.x;
+        const dy = py - proj.y;
+        return dx * dx + dy * dy;
+    }
+    let best = Infinity;
+    for (let i = 0; i < coords.length - 1; i += 1) {
+        const a = projectCoordToScreen(map, coords[i]);
+        const b = projectCoordToScreen(map, coords[i + 1]);
+        if (!a || !b) continue;
+        const dist = getSegmentDistanceSquared(px, py, a.x, a.y, b.x, b.y);
+        if (dist < best) best = dist;
+    }
+    return best;
+}
+
+function getDrawLineFeatureIdAtPoint(map, draw, point, hitRadius = 10) {
+    if (!map || !draw || !point) return null;
+    const x = Number(point.x);
+    const y = Number(point.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    if (typeof map.isStyleLoaded === 'function' && !map.isStyleLoaded()) return null;
+    const minX = x - hitRadius;
+    const minY = y - hitRadius;
+    const maxX = x + hitRadius;
+    const maxY = y + hitRadius;
+    const style = typeof map.getStyle === 'function' ? map.getStyle() : null;
+    const layers = style && Array.isArray(style.layers) ? style.layers : [];
+    const lineLayerIds = layers
+        .map(layer => layer && layer.id)
+        .filter(id => typeof id === 'string' && id.indexOf('gl-draw-line') !== -1);
+    const options = lineLayerIds.length ? { layers: lineLayerIds } : undefined;
+    let features;
+    try {
+        features = map.queryRenderedFeatures([[minX, minY], [maxX, maxY]], options);
+    } catch (err) {
+        console.warn('[eraser] queryRenderedFeatures failed', err);
+        return null;
+    }
+    if (!Array.isArray(features) || features.length === 0) return null;
+
+    const candidates = new Map();
+    features.forEach(feature => {
+        if (!feature) return;
+        const meta = feature && feature.properties && feature.properties.meta;
+        const geomType = feature && feature.geometry && feature.geometry.type;
+        if (meta !== 'feature') return;
+        if (geomType !== 'LineString' && geomType !== 'MultiLineString') return;
+
+        const id = (feature.properties && feature.properties.id) || feature.id;
+        if (!id) return;
+
+        let dist2 = Infinity;
+        if (geomType === 'LineString') {
+            dist2 = getLineStringDistanceSquared(map, feature.geometry.coordinates, x, y);
+        } else if (geomType === 'MultiLineString') {
+            const lines = feature.geometry.coordinates;
+            if (Array.isArray(lines)) {
+                lines.forEach(lineCoords => {
+                    const lineDist = getLineStringDistanceSquared(map, lineCoords, x, y);
+                    if (lineDist < dist2) dist2 = lineDist;
+                });
+            }
+        }
+
+        if (!Number.isFinite(dist2)) return;
+        const existing = candidates.get(id);
+        if (existing === undefined || dist2 < existing) {
+            candidates.set(id, dist2);
+        }
+    });
+
+    if (candidates.size === 0) return null;
+
+    let bestId = null;
+    let bestDist = Infinity;
+    candidates.forEach((dist2, id) => {
+        if (dist2 < bestDist) {
+            bestDist = dist2;
+            bestId = id;
+        }
+    });
+    if (!bestId) return null;
+
+    const allFeatures = typeof draw.getAll === 'function' ? draw.getAll() : null;
+    if (allFeatures && Array.isArray(allFeatures.features)) {
+        const exists = allFeatures.features.some(feature => feature.id === bestId);
+        if (!exists) return null;
+    }
+
+    return bestId;
+}
+
 export function setShortestPathButtonPosition(map, label, clientX, clientY) {
     const btn = getShortestPathButton(label);
     if (!btn) return false;
@@ -725,6 +846,67 @@ export function initReachDraggables(map, options = {}) {
                 onReset(mode);
             }
         });
+    });
+}
+
+export function initDrawEraser(map, draw) {
+    
+
+    const btn = document.getElementById('btn-sticker-eraser');
+    console.log('[eraser] init', { btn: !!btn, map: !!map, draw: !!draw });
+    if (!btn || !map || !draw) return;
+
+    btn.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        floatDraggableButton(btn, e.clientX, e.clientY);
+        console.log('[eraser] drag start', { x: e.clientX, y: e.clientY });
+
+        let isDragging = true;
+        let didMove = false;
+
+        const moveHandler = (ev) => {
+            if (!isDragging) return;
+            didMove = true;
+            btn.style.left = ev.clientX + 'px';
+            btn.style.top = ev.clientY + 'px';
+        };
+
+        const upHandler = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            document.removeEventListener('mousemove', moveHandler);
+            document.removeEventListener('mouseup', upHandler);
+
+            if (didMove) {
+                btn.dataset.dragged = '1';
+                setTimeout(() => {
+                    delete btn.dataset.dragged;
+                }, 0);
+            }
+
+            const rect = btn.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const point = getMapPointFromScreen(map, centerX, centerY);
+            if (!point) return;
+
+            const featureId = getDrawLineFeatureIdAtPoint(map, draw, point);
+            if (!featureId) return;
+
+            draw.changeMode('simple_select', { featureIds: [featureId] });
+            draw.delete(featureId);
+        };
+
+        document.addEventListener('mousemove', moveHandler);
+        document.addEventListener('mouseup', upHandler);
+    });
+
+    btn.addEventListener('dblclick', (e) => {
+        if (!isFloatingButton(btn)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        resetDraggableButton(btn);
     });
 }
 

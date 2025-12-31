@@ -1,5 +1,5 @@
 import { add3DBuildings, loadAndRenderLayer } from './layers.js';
-import { initDraggableItems, initLayerToggles, getMapCoordsFromScreen, applyTagConfigVisibility, initReachDraggables } from './ui.js';
+import { initDraggableItems, initLayerToggles, getMapCoordsFromScreen, applyTagConfigVisibility, initReachDraggables, initDrawEraser } from './ui.js';
 import { initSurvey } from './survey.js';
 import { initTagTracking } from './tag-tracking.js';
 import { fallbackConfig, loadSetupConfig } from './config-loader.js';
@@ -27,6 +27,18 @@ function applyStickerConfig(setupConfig) {
 
 async function initApp() {
     const setupConfig = await loadSetupConfig();
+
+    window.addEventListener('error', (e) => {
+        console.error('[error]', e.message, e.filename, e.lineno, e.colno, e.error?.stack);
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+        console.error('[unhandledrejection]', e.reason?.message || e.reason, e.reason?.stack);
+    });
+    if ('caches' in window) {
+        caches.keys()
+            .then(keys => console.log('[cache] keys', keys))
+            .catch(err => console.error('[cache] keys failed', err));
+    }
 
     if (setupConfig.project.rearProjection) {
         document.body.style.transform = 'scaleX(-1)';
@@ -90,11 +102,20 @@ async function initApp() {
 
     function adjustDrawEvent(e) {
         const client = getClientPointFromEvent(e);
-        if (!client) return e;
+        if (!client) {
+            console.warn('[draw] no client point', e);
+            return e;
+        }
         const coords = getMapCoordsFromScreen(map, client.x, client.y);
-        if (!coords) return e;
+        if (!coords) {
+            console.warn('[draw] no map coords', { client, e });
+            return e;
+        }
         e.lngLat = coords;
         e.point = map.project(coords);
+        if (!e.point) {
+            console.warn('[draw] no point after project', { coords, e });
+        }
         return e;
     }
 
@@ -114,7 +135,11 @@ async function initApp() {
         handlers.forEach(handler => {
             if (typeof mode[handler] === 'function') {
                 wrapped[handler] = function (state, e) {
-                    return mode[handler].call(this, state, adjustDrawEvent(e));
+                    const adjusted = adjustDrawEvent(e);
+                    if (!adjusted?.point) {
+                        console.warn('[draw] missing point for', handler, adjusted);
+                    }
+                    return mode[handler].call(this, state, adjusted);
                 };
             }
         });
@@ -336,6 +361,7 @@ async function initApp() {
 
     initLayerToggles(map, overlayState.current);
     initDraggableItems(map);
+    initDrawEraser(map, draw);
 
     survey = initSurvey({
         map,

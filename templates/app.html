@@ -7,10 +7,10 @@
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
 
     <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
-    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js" crossorigin="anonymous"></script>
 
     <!-- Mapbox Draw -->
-    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.2/mapbox-gl-draw.js"></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.2/mapbox-gl-draw.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.2/mapbox-gl-draw.css"
         type="text/css">
 
@@ -40,7 +40,9 @@
 </head>
 
 <body class="m-0 p-0 bg-black h-screen w-screen overflow-hidden">
-    <div id="debug-ids" class="absolute top-2 left-2 z-[9999] text-white bg-black/50 p-2 rounded text-xs font-mono pointer-events-none">IDs: -</div>
+    <div id="debug-ids"
+        class="absolute top-2 left-2 z-[9999] text-white bg-black/50 p-2 rounded text-xs font-mono pointer-events-none">
+        IDs: -</div>
     <div id="main_container" class="relative w-full h-full flex flex-col">
         <!-- Right Sidebar -->
         <div id="right-sidebar"
@@ -233,10 +235,16 @@
                 </div>
 
             </div>
-            <button id="btn-sticker-apply"
-                class="w-full mx-2.3 mb-2.5 px-3 py-2 bg-white/5 border border-white/15 rounded-md text-white/85 text-xs font-semibold uppercase tracking-[1px] transition-all duration-200 hover:bg-white/10 hover:border-white/30 hover:text-white">
-                Apply
-            </button>
+            <div class="flex gap-2 mx-2.3 mb-2.5">
+                <button id="btn-sticker-save"
+                    class="flex-1 px-3 py-2 bg-white/5 border border-white/15 rounded-md text-white/85 text-xs font-semibold uppercase tracking-[1px] transition-all duration-200 hover:bg-white/10 hover:border-white/30 hover:text-white">
+                    Save
+                </button>
+                <button id="btn-sticker-eraser"
+                    class="flex-1 px-3 py-2 bg-white/5 border border-white/15 rounded-md text-white/85 text-xs font-semibold uppercase tracking-[1px] transition-all duration-200 hover:bg-white/10 hover:border-white/30 hover:text-white">
+                    Eraser
+                </button>
+            </div>
 
         </div>
     </div>
