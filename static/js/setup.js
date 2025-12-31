@@ -239,15 +239,21 @@ function normalizeStickerConfig() {
 
     count = clampStickerCount(count);
     const colors = Array.isArray(existing.colors) ? existing.colors.slice(0, MAX_STICKER_COUNT) : [];
+    const tags = Array.isArray(existing.tags) ? existing.tags.slice(0, MAX_STICKER_COUNT) : [];
 
     while (colors.length < count) {
         const fallback = DEFAULT_STICKER_COLORS[colors.length] || '#cccccc';
         colors.push(fallback);
     }
 
+    while (tags.length < count) {
+        tags.push(null);
+    }
+
     state.project.stickerConfig = {
         count,
-        colors: colors.slice(0, count)
+        colors: colors.slice(0, count),
+        tags: tags.slice(0, count)
     };
 }
 
@@ -430,16 +436,80 @@ function updateStickerCount(nextCount) {
 function renderStickerConfig() {
     if (!els.stickerCount || !els.stickerColors) return;
     normalizeStickerConfig();
-    const config = state.project.stickerConfig || { count: 0, colors: [] };
+    const config = state.project.stickerConfig || { count: 0, colors: [], tags: [] };
     const count = clampStickerCount(config.count);
     const colors = Array.isArray(config.colors) ? config.colors.slice(0, count) : [];
+    const tags = Array.isArray(config.tags) ? config.tags : [];
+
+    // Ensure tags array matches count
+    while (tags.length < count) {
+        tags.push(null);
+    }
+    state.project.stickerConfig.tags = tags.slice(0, count);
 
     els.stickerCount.value = count;
     els.stickerColors.innerHTML = '';
 
+    const tagSelects = [];
+
+    // Collect all tags used in other configurations
+    const getUsedTagsFromOtherConfigs = () => {
+        const usedTags = new Set();
+        const tagConfig = state.project.tagConfig || {};
+
+        // Collect from layers
+        (tagConfig.layers?.items || []).forEach(item => {
+            if (Number.isInteger(item.tagId)) {
+                usedTags.add(String(item.tagId));
+            }
+        });
+
+        // Collect from reach15
+        (tagConfig.reach15?.items || []).forEach(item => {
+            if (Number.isInteger(item.tagId)) {
+                usedTags.add(String(item.tagId));
+            }
+        });
+
+        // Collect from shortestPath
+        (tagConfig.shortestPath?.items || []).forEach(item => {
+            if (Number.isInteger(item.tagId)) {
+                usedTags.add(String(item.tagId));
+            }
+        });
+
+        return usedTags;
+    };
+
+    const updateTagSelects = () => {
+        const usedInOtherConfigs = getUsedTagsFromOtherConfigs();
+        const counts = new Map();
+
+        tagSelects.forEach(select => {
+            const value = select.value;
+            if (!value) return;
+            counts.set(value, (counts.get(value) || 0) + 1);
+        });
+
+        tagSelects.forEach(select => {
+            const current = select.value;
+            Array.from(select.options).forEach(option => {
+                if (!option.value) return;
+                const usedInStickers = counts.get(option.value) || 0;
+                const selectedElsewhere = option.value !== current && usedInStickers > 0;
+                const usedInOtherConfig = usedInOtherConfigs.has(option.value);
+                option.disabled = selectedElsewhere || usedInOtherConfig;
+            });
+        });
+    };
+
     colors.forEach((color, index) => {
         const wrapper = document.createElement('div');
-        wrapper.className = 'relative';
+        wrapper.className = 'flex flex-col gap-2';
+
+        // Color swatch row
+        const swatchRow = document.createElement('div');
+        swatchRow.className = 'relative';
 
         const swatch = document.createElement('button');
         swatch.type = 'button';
@@ -463,10 +533,81 @@ function renderStickerConfig() {
             markSaved('Unsaved changes');
         });
 
-        wrapper.appendChild(swatch);
-        wrapper.appendChild(picker);
+        swatchRow.appendChild(swatch);
+        swatchRow.appendChild(picker);
+
+        // Tag selector row
+        const tagRow = document.createElement('div');
+        tagRow.className = 'flex items-center gap-2';
+
+        const select = document.createElement('select');
+        select.className = 'h-9 px-3 bg-bg-secondary border border-border-subtle rounded-md text-text-primary text-xs cursor-pointer transition-colors duration-200 hover:border-border-focus focus:outline-none focus:border-accent-primary';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Select tag ID';
+        select.appendChild(placeholder);
+
+        TAG_ID_OPTIONS.forEach(tagId => {
+            const option = document.createElement('option');
+            option.value = String(tagId);
+            option.textContent = `ID ${tagId}`;
+            select.appendChild(option);
+        });
+
+        const currentTag = tags[index];
+        if (Number.isInteger(currentTag)) {
+            select.value = String(currentTag);
+        } else {
+            select.value = '';
+        }
+        tagSelects.push(select);
+
+        tagRow.appendChild(select);
+
+        // Tag preview row
+        const preview = document.createElement('div');
+        preview.className = 'w-[56px] h-[56px] bg-bg-secondary border border-border-subtle rounded-md flex items-center justify-center overflow-hidden';
+        const img = document.createElement('img');
+        img.className = 'w-full h-full object-contain';
+        img.alt = `Sticker ${index + 1} tag`;
+        const placeholderText = document.createElement('span');
+        placeholderText.className = 'text-[9px] text-text-muted uppercase tracking-wider';
+        placeholderText.textContent = 'No tag';
+
+        preview.appendChild(img);
+        preview.appendChild(placeholderText);
+
+        const updatePreview = () => {
+            const tagValue = state.project.stickerConfig.tags[index];
+            if (Number.isInteger(tagValue)) {
+                img.src = getTagImageSrc(tagValue);
+                img.style.display = 'block';
+                placeholderText.style.display = 'none';
+            } else {
+                img.src = '';
+                img.style.display = 'none';
+                placeholderText.style.display = 'block';
+            }
+        };
+
+        updatePreview();
+
+        select.addEventListener('change', () => {
+            state.project.stickerConfig.tags[index] = select.value === '' ? null : Number.parseInt(select.value, 10);
+            markSaved('Unsaved changes');
+            updatePreview();
+            updateTagSelects();
+            renderTagConfig(); // Update layer/reach15/shortestPath tag selects
+        });
+
+        wrapper.appendChild(swatchRow);
+        wrapper.appendChild(tagRow);
+        wrapper.appendChild(preview);
         els.stickerColors.appendChild(wrapper);
     });
+
+    updateTagSelects();
 }
 
 function renderTagConfig() {
@@ -484,13 +625,23 @@ function renderTagConfig() {
             counts.set(value, (counts.get(value) || 0) + 1);
         });
 
+        // Collect tags used in sticker config
+        const usedInStickers = new Set();
+        const stickerTags = state.project.stickerConfig?.tags || [];
+        stickerTags.forEach(tagId => {
+            if (Number.isInteger(tagId)) {
+                usedInStickers.add(String(tagId));
+            }
+        });
+
         tagSelects.forEach(select => {
             const current = select.value;
             Array.from(select.options).forEach(option => {
                 if (!option.value) return;
                 const count = counts.get(option.value) || 0;
                 const selectedElsewhere = option.value !== current && count > 0;
-                option.disabled = selectedElsewhere;
+                const usedInStickerConfig = usedInStickers.has(option.value);
+                option.disabled = selectedElsewhere || usedInStickerConfig;
             });
         });
     };
@@ -641,6 +792,7 @@ function renderTagConfig() {
                         markSaved('Unsaved changes');
                         updatePreview();
                         updateTagSelects();
+                        renderStickerConfig(); // Update sticker tag selects
                     });
 
                     controlWrap.appendChild(shortLabelEl);
@@ -758,6 +910,7 @@ function renderTagConfig() {
                     markSaved('Unsaved changes');
                     updatePreview();
                     updateTagSelects();
+                    renderStickerConfig(); // Update sticker tag selects
                 });
 
                 selectWrap.appendChild(select);
