@@ -234,8 +234,31 @@ def save_responses():
         print(f"Error saving responses: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/responses', methods=['GET'])
+@app.route('/api/responses', methods=['GET', 'DELETE'])
 def list_responses():
+    if request.method == 'DELETE':
+        project_id = request.args.get('project')
+        filename = request.args.get('filename')
+        if not project_id:
+            return jsonify({'error': 'Missing project ID'}), 400
+        if not filename:
+            return jsonify({'error': 'Missing filename'}), 400
+
+        filename = os.path.basename(filename)
+        if not filename.endswith('.json'):
+            return jsonify({'error': 'Invalid filename'}), 400
+
+        answers_dir = os.path.join(CONFIG_ROOT, project_id, 'answers')
+        filepath = os.path.join(answers_dir, filename)
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'Response not found'}), 404
+
+        try:
+            os.remove(filepath)
+            return jsonify({'status': 'deleted', 'filename': filename})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
     project_id = request.args.get('project')
     if not project_id:
         latest = get_latest_config_path()

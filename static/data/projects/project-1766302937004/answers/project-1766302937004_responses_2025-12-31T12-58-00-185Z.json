@@ -1,0 +1,113 @@
+{
+  "projectId": "project-1766302937004",
+  "projectName": "Pilot 2",
+  "savedAt": "2025-12-31T12:58:00.184Z",
+  "answers": [
+    {
+      "questionId": "arrival-mode",
+      "questionText": "How do you typically travel to campus?",
+      "type": "single-choice",
+      "responseShape": "scalar",
+      "answer": "Bike"
+    },
+    {
+      "questionId": "bike-lanes",
+      "questionText": "Where should we add bike lanes?",
+      "type": "sticker",
+      "responseShape": "point-collection",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                2.1992421229101353,
+                48.71495204517461
+              ]
+            },
+            "properties": {
+              "id": "sticker-btn-2",
+              "color": "#4ECDC4",
+              "questionId": "bike-lanes",
+              "storageKey": "bike-lanes",
+              "questionIndex": 1,
+              "questionText": "Where should we add bike lanes?",
+              "projectId": "project-1766302937004",
+              "timestamp": "2025-12-31T12:58:00.185Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "questionId": "confusing-areas",
+      "questionText": "Where do you get confused?",
+      "type": "sticker",
+      "responseShape": "point-collection",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                2.202349954450682,
+                48.714445847862834
+              ]
+            },
+            "properties": {
+              "id": "sticker-btn-3",
+              "color": "#45B7D1",
+              "questionId": "confusing-areas",
+              "storageKey": "confusing-areas",
+              "questionIndex": 2,
+              "questionText": "Where do you get confused?",
+              "projectId": "project-1766302937004",
+              "timestamp": "2025-12-31T12:58:00.185Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "questionId": "priority-corridors",
+      "questionText": "Draw corridors for pedestrians.",
+      "type": "drawing",
+      "responseShape": "line-string",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "id": "d5d47ce42fea4c8a0d7bb925a68bdda5",
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "coordinates": [
+                [
+                  2.194669570200716,
+                  48.71520812773852
+                ],
+                [
+                  2.1967434231279412,
+                  48.715314827252854
+                ],
+                [
+                  2.195838882857174,
+                  48.71469981254208
+                ],
+                [
+                  2.195525667650003,
+                  48.713842311209476
+                ]
+              ],
+              "type": "LineString"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

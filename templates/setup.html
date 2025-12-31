@@ -70,6 +70,7 @@
             <button class="tab-btn py-3 px-4 bg-transparent border-0 border-b-2 border-transparent text-text-secondary text-sm font-medium cursor-pointer transition-all duration-200 relative hover:text-text-primary [&.active]:text-accent-primary [&.active]:border-accent-primary active" data-tab="project">Project Details</button>
             <button class="tab-btn py-3 px-4 bg-transparent border-0 border-b-2 border-transparent text-text-secondary text-sm font-medium cursor-pointer transition-all duration-200 relative hover:text-text-primary [&.active]:text-accent-primary [&.active]:border-accent-primary" data-tab="maps">Maps & Layers</button>
             <button class="tab-btn py-3 px-4 bg-transparent border-0 border-b-2 border-transparent text-text-secondary text-sm font-medium cursor-pointer transition-all duration-200 relative hover:text-text-primary [&.active]:text-accent-primary [&.active]:border-accent-primary" data-tab="questions">Survey Questions</button>
+            <button class="tab-btn py-3 px-4 bg-transparent border-0 border-b-2 border-transparent text-text-secondary text-sm font-medium cursor-pointer transition-all duration-200 relative hover:text-text-primary [&.active]:text-accent-primary [&.active]:border-accent-primary" data-tab="responses">Responds</button>
         </nav>
 
         <!-- Main Content Area -->
@@ -136,6 +137,7 @@
                     </div>
                     <div id="tag-config" class="flex flex-col gap-6"></div>
                 </div>
+
             </section>
 
             <!-- Maps & Layers Tab -->
@@ -247,6 +249,42 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </section>
+
+            <!-- Responds Tab -->
+            <section class="tab-panel hidden" data-panel="responses">
+                <div class="panel-header flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold m-0">Responds</h2>
+                    <div class="flex items-center gap-2">
+                        <input id="upload-responses-input" type="file" accept=".json,application/json" class="hidden">
+                        <button id="upload-responses" class="btn-secondary h-[34px] px-4 text-[13px] bg-transparent text-text-primary border border-border-subtle rounded-md font-medium cursor-pointer transition-all duration-200 flex items-center justify-center hover:border-accent-primary hover:text-accent-primary">Upload JSON</button>
+                    </div>
+                </div>
+
+                <div class="form-section bg-bg-secondary border border-border-subtle rounded-lg p-6">
+                    <div class="section-header flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-base font-semibold m-0">List of responds</h3>
+                            <p class="text-xs text-text-muted m-0 mt-1">Survey completion times for this project.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="responses-select-all" class="px-3 py-1 text-[11px] border border-border-subtle rounded-md text-text-secondary hover:text-text-primary hover:border-border-focus">Select All</button>
+                            <button id="responses-view-selected" class="px-3 py-1 text-[11px] border border-border-subtle rounded-md text-text-secondary hover:text-text-primary hover:border-border-focus">View Selected</button>
+                            <button id="responses-delete-selected" class="px-3 py-1 text-[11px] border border-border-subtle rounded-md text-accent-danger hover:text-white hover:bg-accent-danger hover:border-accent-danger">Delete Selected</button>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-end gap-3 mb-4">
+                        <div class="flex flex-col gap-1">
+                            <label for="responses-filter-start" class="text-[11px] text-text-muted uppercase tracking-wider">From</label>
+                            <input id="responses-filter-start" type="date" class="h-9 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-xs cursor-pointer transition-colors duration-200 hover:border-border-focus focus:outline-none focus:border-accent-primary">
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label for="responses-filter-end" class="text-[11px] text-text-muted uppercase tracking-wider">To</label>
+                            <input id="responses-filter-end" type="date" class="h-9 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-xs cursor-pointer transition-colors duration-200 hover:border-border-focus focus:outline-none focus:border-accent-primary">
+                        </div>
+                    </div>
+                    <div id="responses-list" class="flex flex-col gap-2 text-sm"></div>
                 </div>
             </section>
         </main>
