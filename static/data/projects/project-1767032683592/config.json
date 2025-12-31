@@ -52,13 +52,13 @@
           {
             "id": "walk",
             "label": "Walk",
-            "enabled": true,
-            "tagId": 7
+            "enabled": false,
+            "tagId": null
           },
           {
             "id": "bike",
             "label": "Cycling",
-            "enabled": true,
+            "enabled": false,
             "tagId": null
           },
           {
@@ -93,6 +93,12 @@
         "#4ECDC4",
         "#c2ced1",
         "#FFA07A"
+      ],
+      "tags": [
+        7,
+        null,
+        null,
+        null
       ]
     }
   },

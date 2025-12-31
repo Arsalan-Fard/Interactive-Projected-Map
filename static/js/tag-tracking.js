@@ -1,4 +1,4 @@
-import { getMapCoordsFromScreen, setShortestPathButtonPosition, resetShortestPathButton, setReachButtonPosition, resetReachButton } from './ui.js';
+import { getMapCoordsFromScreen, setShortestPathButtonPosition, resetShortestPathButton, setReachButtonPosition, resetReachButton, setStickerPosition, removeStickerMarker } from './ui.js';
 
 const SEARCH_DELAY = 1000; // Wait 1s before going black
 const BLACK_SCREEN_DURATION = 1000; // Stay black for 1s
@@ -183,9 +183,21 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 });
             }
 
+            // Collect sticker tags
+            const stickerTags = setupConfig?.project?.stickerConfig?.tags || [];
+            const stickerColors = setupConfig?.project?.stickerConfig?.colors || [];
+            const stickerTagMap = new Map(); // tagId -> { index, color }
+            const stickerTagIds = new Set();
+            stickerTags.forEach((tagId, index) => {
+                if (Number.isInteger(tagId)) {
+                    stickerTagMap.set(tagId, { index, color: stickerColors[index] || '#cccccc' });
+                    stickerTagIds.add(tagId);
+                }
+            });
+
             const hasTag = tagIds.includes(5)
                 || tagIds.includes(6)
-                || tagIds.some(id => layerTags.includes(id) || shortestTagIds.has(id) || reachTagIds.has(id));
+                || tagIds.some(id => layerTags.includes(id) || shortestTagIds.has(id) || reachTagIds.has(id) || stickerTagIds.has(id));
 
             if (hasTag) {
                 lastSeenTime = now;
@@ -308,6 +320,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
             let tagAOutsideMap = false;
             let tagBOutsideMap = false;
             const reachOutsideMap = new Map();
+            const updatedStickerTags = new Set();
 
             for (const key in detectedTags) {
                 const tag = detectedTags[key];
@@ -421,6 +434,15 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     }
                 }
 
+                // --- Sticker Logic ---
+                const stickerData = stickerTagMap.get(tagId);
+                if (stickerData) {
+                    if (screenX > leftBound && screenX < rightBound) {
+                        setStickerPosition(map, tagId, stickerData.index, stickerData.color, screenX, screenY);
+                        updatedStickerTags.add(tagId);
+                    }
+                }
+
                 // --- Dynamic Layer Logic ---
                 // Debug log to see what we are working with
                 console.log('Detected Tag:', tagId, 'Config:', setupConfig?.project?.tagConfig);
@@ -495,6 +517,13 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     }
                 });
             }
+
+            // Remove sticker markers that were not updated this frame
+            stickerTagIds.forEach(tagId => {
+                if (!updatedStickerTags.has(tagId)) {
+                    removeStickerMarker(tagId);
+                }
+            });
 
             debugDot.style.display = debugDotVisible ? 'block' : 'none';
 

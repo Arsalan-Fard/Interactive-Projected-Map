@@ -727,3 +727,60 @@ export function initReachDraggables(map, options = {}) {
         });
     });
 }
+
+// Track sticker markers created by AprilTags
+const tagStickerMarkers = new Map(); // tagId -> marker
+
+export function setStickerPosition(map, tagId, stickerIndex, color, screenX, screenY) {
+    const coords = getMapCoordsFromScreen(map, screenX, screenY);
+    if (!coords) return false;
+
+    const key = `${tagId}`;
+    let marker = tagStickerMarkers.get(key);
+
+    if (!marker) {
+        // Create new marker
+        const sticker = document.createElement('div');
+        Object.assign(sticker.style, {
+            width: '20px',
+            height: '20px',
+            backgroundColor: color,
+            borderRadius: '50%',
+            border: '2px solid white',
+            cursor: 'pointer',
+            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
+            userSelect: 'none'
+        });
+
+        sticker.dataset.tagId = tagId;
+        sticker.dataset.stickerIndex = stickerIndex;
+        sticker.dataset.color = color;
+        sticker.classList.add('tag-controlled-sticker');
+
+        marker = new mapboxgl.Marker({ element: sticker, draggable: false })
+            .setLngLat(coords)
+            .addTo(map);
+
+        tagStickerMarkers.set(key, marker);
+    } else {
+        // Update existing marker position
+        marker.setLngLat(coords);
+        // Update color in case it changed
+        const element = marker.getElement();
+        if (element) {
+            element.style.backgroundColor = color;
+            element.dataset.color = color;
+        }
+    }
+
+    return true;
+}
+
+export function removeStickerMarker(tagId) {
+    const key = `${tagId}`;
+    const marker = tagStickerMarkers.get(key);
+    if (marker) {
+        marker.remove();
+        tagStickerMarkers.delete(key);
+    }
+}
