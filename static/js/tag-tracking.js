@@ -86,6 +86,14 @@ export function initTagTracking({ map, setupConfig, draw }) {
     const blackHoles = {}; // Map to store black hole elements by ID
     const tagStates = new Map(); // tagId -> { hits, misses, visible, x, y }
 
+    function getDrawingTagId() {
+        const questions = setupConfig?.questionFlow || [];
+        const drawingQuestion = questions.find(q => q.type === 'drawing');
+        return Number.isInteger(drawingQuestion?.drawTagId) ? drawingQuestion.drawTagId : 6; // Default to 6
+    }
+
+    let currentDrawingTagId = getDrawingTagId();
+
     function getBlackHole(id) {
         if (!blackHoles[id]) {
             blackHoles[id] = createBlackHole(id);
@@ -95,8 +103,24 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
     // Initialize special black holes
     getBlackHole(5);
-    getBlackHole(6);
+    getBlackHole(currentDrawingTagId);
     getBlackHole(11); // Keep 11 initialized for consistency if used
+
+    // Listen for drawTagIdChanged event from setup page
+    window.addEventListener('drawTagIdChanged', (event) => {
+        const { drawTagId } = event.detail || {};
+        if (Number.isInteger(drawTagId) && drawTagId !== currentDrawingTagId) {
+            const oldTagId = currentDrawingTagId;
+            currentDrawingTagId = drawTagId;
+            // Initialize black hole for new tag ID if needed
+            getBlackHole(currentDrawingTagId);
+            // Reset drawing state when tag ID changes
+            tag6LostStart = null;
+            tagDrawingCoordinates = [];
+            updateTagDrawingLayer();
+            lastTagDrawScreenPoint = null;
+        }
+    });
 
     const searchOverlay = createSearchOverlay();
 
@@ -274,7 +298,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
             const hasTag = Array.from(visibleIds).some(id =>
                 id === 5
-                || id === 6
+                || id === currentDrawingTagId
                 || layerTagIds.has(id)
                 || shortestTagIds.has(id)
                 || reachTagIds.has(id)
@@ -425,10 +449,10 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
                 if (setupConfig.project.tuiMode) {
                     // Update generic black hole for any detected tag (if needed by logic)
-                    // We only strictly need it for 5, 6, and layer tags.
+                    // We only strictly need it for 5, drawing tag, and layer tags.
                     const isLayerTag = layerTagIds.has(tagId);
                     
-                    if (tagId === 5 || tagId === 6 || isLayerTag) {
+                    if (tagId === 5 || tagId === currentDrawingTagId || isLayerTag) {
                         const bh = getBlackHole(tagId);
                         bh.style.left = `${screenX}px`;
                         bh.style.top = `${screenY}px`;
@@ -486,8 +510,8 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     }
                 }
 
-                // --- Tag 6 Logic (Drawing) ---
-                if (tagId === 6 && isDetected) {
+                // --- Drawing Tag Logic ---
+                if (tagId === currentDrawingTagId && isDetected) {
                     if (screenX > leftBound && screenX < rightBound) {
                         tag6LostStart = null;
                         if (Date.now() - lastTagClickTime > 200) {
@@ -637,8 +661,8 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 }
             });
 
-            // Tag 6 Lost Logic (Independent check)
-            if (!detectedIds.has(6)) {
+            // Drawing Tag Lost Logic (Independent check)
+            if (!detectedIds.has(currentDrawingTagId)) {
                 if (!tag6LostStart) {
                     tag6LostStart = Date.now();
                 } else if (Date.now() - tag6LostStart > 3000) {
@@ -668,7 +692,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     tag6LostStart = null;
                 }
             } else {
-                // Tag 6 is present, reset lost timer
+                // Drawing tag is present, reset lost timer
                 tag6LostStart = null;
             }
 

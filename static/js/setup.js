@@ -1864,6 +1864,10 @@ function renderQuestionDrawingOptions(question) {
         question.drawTagId = Number.parseInt(tagSelect.value, 10);
         markSaved('Unsaved changes');
         updateTagPreview();
+        // Dispatch event to update tag tracking
+        window.dispatchEvent(new CustomEvent('drawTagIdChanged', { 
+            detail: { questionId: question.id, drawTagId: question.drawTagId } 
+        }));
     });
     
     optionsRow.appendChild(textLabel);
