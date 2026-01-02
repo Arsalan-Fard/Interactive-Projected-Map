@@ -553,6 +553,8 @@ export function initDraggableStickers(map, getQuestionId) {
             // Create a drag ghost
             const ghost = document.createElement('div');
             const color = btn.dataset.color;
+            const questionId = btn.dataset.questionId || (typeof getQuestionId === 'function' ? getQuestionId() : null);
+            const typeId = btn.dataset.typeId || btn.id;
 
             Object.assign(ghost.style, {
                 position: 'absolute',
@@ -588,8 +590,7 @@ export function initDraggableStickers(map, getQuestionId) {
                 ghost.remove();
                 const coords = getMapCoordsFromScreen(map, ev.clientX, ev.clientY);
                 if (!coords) return;
-                const questionId = typeof getQuestionId === 'function' ? getQuestionId() : null;
-                createStickerMarker(map, coords, color, btn.id, questionId);
+                createStickerMarker(map, coords, color, typeId, questionId);
             };
 
             document.addEventListener('mousemove', moveHandler);

@@ -31,22 +31,24 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
     if (!questions.length) {
         questions = flattenQuestions(fallbackConfig.questionFlow);
     }
+    const isTuiMode = Boolean(setupConfig?.project?.tuiMode);
     let currentQuestionIndex = 0;
     const responseState = new Map();
-
-    initDraggableStickers(map, () => questions[currentQuestionIndex]?.id);
 
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
     const finishBtn = document.getElementById('finish-btn');
+    const finishBtnTui = document.getElementById('finish-btn-tui');
     const questionText = document.querySelector('.question-text');
     const questionOptions = document.getElementById('question-options');
     const dotsContainer = document.querySelector('.progress-dots');
+    const tuiQuestionList = document.getElementById('tui-question-list');
     const previousAnswersBtn = document.getElementById('btn-previous-answers');
     const previousAnswersPanel = document.getElementById('previous-answers-panel');
     const previousAnswersSummary = document.getElementById('previous-answers-summary');
     const previousAnswersList = document.getElementById('previous-answers-list');
     let dots = [];
+    let tuiRows = [];
     let previousResponses = [];
     let previousResponsesLoaded = false;
     let showPreviousAnswers = false;
@@ -108,6 +110,137 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                 renderQuestionOptions(question);
             });
             questionOptions.appendChild(button);
+        });
+    }
+
+    function getStickerButtonTemplates() {
+        const allButtons = Array.from(document.querySelectorAll('#left-sidebar .points-section .point-btn'));
+        const visibleButtons = allButtons.filter(btn => btn.style.display !== 'none');
+        return visibleButtons.length ? visibleButtons : allButtons;
+    }
+
+    function getTuiRowClass(isActive) {
+        return `rounded-lg border px-3 py-3 transition-all duration-200 cursor-pointer ${isActive ? 'border-white/35 bg-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.12)_inset]' : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'}`;
+    }
+
+    function updateTuiActiveRow() {
+        if (!tuiRows.length) return;
+        tuiRows.forEach(({ element, index }) => {
+            if (!element) return;
+            element.className = getTuiRowClass(index === currentQuestionIndex);
+        });
+    }
+
+    function renderTuiQuestionList() {
+        if (!tuiQuestionList) return;
+        tuiQuestionList.innerHTML = '';
+        tuiRows = [];
+
+        const stickerTemplates = getStickerButtonTemplates();
+
+        questions.forEach((question, index) => {
+            const row = document.createElement('div');
+            row.className = getTuiRowClass(index === currentQuestionIndex);
+            row.dataset.questionId = question.id || '';
+            row.addEventListener('click', () => {
+                currentQuestionIndex = index;
+                updateQuestion();
+            });
+
+            const titleRow = document.createElement('div');
+            titleRow.className = 'text-xs font-semibold text-white/95 leading-snug';
+            titleRow.textContent = question.text || 'Untitled question';
+            row.appendChild(titleRow);
+
+            const inputRow = document.createElement('div');
+            inputRow.className = 'mt-2 flex flex-col gap-2';
+
+            if (['single-choice', 'multi-choice'].includes(question.type)) {
+                const options = Array.isArray(question.options) ? question.options : [];
+                const optionsRow = document.createElement('div');
+                optionsRow.className = 'flex flex-wrap gap-2';
+
+                const getChoiceClass = (selected) => (
+                    `px-2.5 py-2 rounded-md border text-[11px] font-semibold tracking-wide transition-all duration-150 ${selected ? 'bg-white/20 border-white/40 text-white' : 'bg-white/5 border-white/10 text-white/85 hover:bg-white/10 hover:border-white/25'}`
+                );
+
+                const updateChoiceStyles = () => {
+                    const stored = responseState.get(question.id);
+                    Array.from(optionsRow.querySelectorAll('button[data-option]')).forEach(btn => {
+                        const value = btn.dataset.option;
+                        const selected = question.type === 'multi-choice'
+                            ? Array.isArray(stored) && stored.includes(value)
+                            : stored === value;
+                        btn.className = getChoiceClass(selected);
+                        btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+                    });
+                };
+
+                options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.dataset.option = option;
+                    button.className = getChoiceClass(false);
+                    button.textContent = option;
+                    button.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        currentQuestionIndex = index;
+                        updateQuestion();
+                        toggleChoiceAnswer(question, option);
+                        updateChoiceStyles();
+                        updateTuiActiveRow();
+                    });
+                    optionsRow.appendChild(button);
+                });
+
+                updateChoiceStyles();
+                inputRow.appendChild(optionsRow);
+            } else if (question.type === 'drawing') {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'w-full px-3 py-2 rounded-md border border-white/15 bg-white/5 text-white/85 text-xs font-semibold uppercase tracking-[1px] transition-all duration-200 hover:bg-white/10 hover:border-white/30 hover:text-white';
+                button.textContent = 'Draw Line';
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    currentQuestionIndex = index;
+                    updateQuestion();
+                    updateTuiActiveRow();
+                    if (!draw || typeof draw.getMode !== 'function' || typeof draw.changeMode !== 'function') return;
+                    const targetMode = 'draw_line_string';
+                    const mode = draw.getMode();
+                    draw.changeMode(mode !== targetMode ? targetMode : 'simple_select');
+                });
+                inputRow.appendChild(button);
+            } else if (question.type === 'sticker') {
+                const paletteRow = document.createElement('div');
+                paletteRow.className = 'flex flex-wrap gap-2';
+
+                stickerTemplates.forEach(template => {
+                    const clone = template.cloneNode(true);
+                    const typeId = template.id || template.dataset.typeId;
+                    clone.removeAttribute('id');
+                    if (typeId) clone.dataset.typeId = typeId;
+                    clone.dataset.questionId = question.id;
+                    clone.addEventListener('mousedown', (e) => {
+                        e.stopPropagation();
+                        currentQuestionIndex = index;
+                        updateQuestion();
+                        updateTuiActiveRow();
+                    });
+                    paletteRow.appendChild(clone);
+                });
+
+                inputRow.appendChild(paletteRow);
+            } else {
+                const message = document.createElement('div');
+                message.className = 'text-[11px] text-white/70';
+                message.textContent = 'This question type is not supported in TUI layout yet.';
+                inputRow.appendChild(message);
+            }
+
+            row.appendChild(inputRow);
+            tuiQuestionList.appendChild(row);
+            tuiRows.push({ element: row, index });
         });
     }
 
@@ -497,7 +630,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         // Map switching logic
         if (q.mapId && setupConfig.maps) {
             const mapConfig = setupConfig.maps.find(m => m.id === q.mapId);
-            if (mapConfig) {
+        if (mapConfig) {
                 // Update active overlays
                 overlayStateRef.current = new Set(mapConfig.overlays || []);
 
@@ -530,6 +663,9 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         if (finishBtn) finishBtn.classList.toggle('hidden', !isLastQuestion);
         renderPreviousAnswers(q);
         renderPreviousAnswersOnMap(q);
+        if (isTuiMode) {
+            updateTuiActiveRow();
+        }
     }
 
     prevBtn.addEventListener('click', () => {
@@ -570,6 +706,31 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
             }
         });
     }
+
+    if (finishBtnTui) {
+        finishBtnTui.addEventListener('click', async () => {
+            if (!questions.length) return;
+            finishBtnTui.disabled = true;
+            try {
+                await saveResponses();
+                if (showPreviousAnswers) {
+                    previousResponses = await fetchPreviousResponses();
+                    previousResponsesLoaded = true;
+                }
+                window.alert('Thanks for completing the survey (Please return tokens to their places)');
+                currentQuestionIndex = 0;
+                updateQuestion();
+            } finally {
+                finishBtnTui.disabled = false;
+            }
+        });
+    }
+
+    if (isTuiMode) {
+        renderTuiQuestionList();
+    }
+
+    initDraggableStickers(map, () => questions[currentQuestionIndex]?.id);
 
     return {
         onStyleLoad() {

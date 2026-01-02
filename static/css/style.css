@@ -2,6 +2,13 @@
     display: none !important;
 }
 
+body.tui-mode #sidebar-standard {
+    display: none !important;
+}
+
+body:not(.tui-mode) #sidebar-tui {
+    display: none !important;
+}
 
 
 #main_container {

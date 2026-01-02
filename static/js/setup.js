@@ -63,7 +63,7 @@ const defaultState = {
             id: 'arrival-mode',
             text: 'How do you typically travel to campus?',
             type: 'single-choice',
-            options: ['Walk', 'Bike', 'Bus', 'Car', 'Other'],
+            options: ['Walk', 'Bike', 'Bus', 'Car'],
             required: true,
             responseShape: 'scalar',
             mapId: null,
