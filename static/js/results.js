@@ -115,7 +115,7 @@ function clearResponseLayers(map) {
     removeSourceIfExists(map, responseLayerIds.polygonsSource);
 }
 
-function ensureResponseLayers(map, pointData, lineData, polygonData) {
+function ensureResponseLayers(map, pointData, lineData, polygonData, drawColor = '#FF00FF') {
     if (!map.getSource(responseLayerIds.pointsSource)) {
         map.addSource(responseLayerIds.pointsSource, { type: 'geojson', data: pointData });
         map.addLayer({
@@ -145,12 +145,15 @@ function ensureResponseLayers(map, pointData, lineData, polygonData) {
             type: 'line',
             source: responseLayerIds.linesSource,
             paint: {
-                'line-color': 'magenta',
+                'line-color': drawColor,
                 'line-width': 14,
                 'line-opacity': 0.6,
                 'line-blur': 6
             }
         }, map.getLayer(responseLayerIds.linesLayer) ? responseLayerIds.linesLayer : undefined);
+    } else {
+        // Update color if layer already exists
+        map.setPaintProperty(responseLayerIds.linesGlow, 'line-color', drawColor);
     }
     if (!map.getLayer(responseLayerIds.linesLayer)) {
         map.addLayer({
@@ -435,11 +438,15 @@ async function initResults() {
         }
 
         const { pointFeatures, lineFeatures, polygonFeatures } = splitFeaturesByGeometry(collected);
+        const drawColor = question.type === 'drawing' && question.drawColor 
+            ? question.drawColor 
+            : '#FF00FF'; // Default magenta
         ensureResponseLayers(
             map,
             { type: 'FeatureCollection', features: pointFeatures },
             { type: 'FeatureCollection', features: lineFeatures },
-            { type: 'FeatureCollection', features: polygonFeatures }
+            { type: 'FeatureCollection', features: polygonFeatures },
+            drawColor
         );
     }
 

@@ -1,25 +1,25 @@
 {
   "project": {
-    "name": "Testt",
+    "name": "333",
     "location": "",
-    "id": "project-1767032683592",
+    "id": "project-1767369721375",
     "mapId": "palaiseau-outdoor",
     "rearProjection": false,
-    "tuiMode": false,
+    "tuiMode": true,
     "tagConfig": {
       "layers": {
         "items": [
           {
             "id": "palaiseau-roads",
             "label": "Road network",
-            "enabled": false,
+            "enabled": true,
             "tagId": null
           },
           {
             "id": "walking-network",
             "label": "Walking network",
             "enabled": true,
-            "tagId": 10
+            "tagId": null
           },
           {
             "id": "mobility-infrastructure",
@@ -52,13 +52,13 @@
           {
             "id": "walk",
             "label": "Walk",
-            "enabled": false,
+            "enabled": true,
             "tagId": null
           },
           {
             "id": "bike",
             "label": "Cycling",
-            "enabled": false,
+            "enabled": true,
             "tagId": null
           },
           {
@@ -75,13 +75,13 @@
             "id": "A",
             "label": "Point A",
             "enabled": true,
-            "tagId": 11
+            "tagId": null
           },
           {
             "id": "B",
             "label": "Point B",
             "enabled": true,
-            "tagId": 8
+            "tagId": null
           }
         ]
       },
@@ -91,21 +91,19 @@
             "id": "eraser",
             "label": "Eraser",
             "enabled": true,
-            "tagId": 9
+            "tagId": null
           }
         ]
       }
     },
     "stickerConfig": {
-      "count": 4,
+      "count": 3,
       "colors": [
         "#FF6B6B",
         "#4ECDC4",
-        "#c2ced1",
-        "#FFA07A"
+        "#45B7D1"
       ],
       "tags": [
-        7,
         null,
         null,
         null
@@ -223,8 +221,7 @@
         "Walk",
         "Bike",
         "Bus",
-        "Car",
-        "Other"
+        "Car"
       ],
       "required": true,
       "responseShape": "scalar",
@@ -259,7 +256,10 @@
       "required": false,
       "responseShape": "line-string",
       "mapId": "palaiseau-outdoor",
-      "order": 4
+      "order": 4,
+      "drawLabel": "new",
+      "drawColor": "#00ff33",
+      "drawTagId": 6
     }
   ],
   "responseTemplate": {

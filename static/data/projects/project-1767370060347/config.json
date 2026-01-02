@@ -1,11 +1,11 @@
 {
   "project": {
-    "name": "Latestt",
+    "name": "New Project",
     "location": "",
-    "id": "project-1767184963940",
+    "id": "project-1767370060347",
     "mapId": "palaiseau-outdoor",
     "rearProjection": false,
-    "tuiMode": true,
+    "tuiMode": false,
     "tagConfig": {
       "layers": {
         "items": [
@@ -97,12 +97,28 @@
       }
     },
     "stickerConfig": {
-      "count": 2,
+      "count": 10,
       "colors": [
         "#FF6B6B",
-        "#4ECDC4"
+        "#4ECDC4",
+        "#45B7D1",
+        "#FFA07A",
+        "#98D8C8",
+        "#F7DC6F",
+        "#BB8FCE",
+        "#85C1E2",
+        "#F8B739",
+        "#E74C3C"
       ],
       "tags": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
         null,
         null
       ]
@@ -110,14 +126,16 @@
   },
   "maps": [
     {
-      "bearing": 40,
+      "id": "palaiseau-outdoor",
+      "label": "IP Paris Campus",
+      "style": "mapbox://styles/mapbox/light-v11",
       "center": [
         2.2,
         48.714
       ],
-      "description": "Base view for the campus and surroundings",
-      "id": "palaiseau-outdoor",
-      "label": "IP Paris Campus",
+      "zoom": 15,
+      "pitch": 45,
+      "bearing": 40,
       "overlays": [
         "palaiseau-roads",
         "walking-network",
@@ -125,36 +143,36 @@
         "bus-lanes",
         "amenities"
       ],
-      "pitch": 45,
-      "style": "mapbox://styles/mapbox/light-v11",
-      "zoom": 15
+      "description": "Base view for the campus and surroundings"
     },
     {
-      "bearing": 0,
+      "id": "telecom-floorplan-view",
+      "label": "Telecom indoor",
+      "style": "mapbox://styles/mapbox/light-v11",
       "center": [
         2.2005,
         48.7138
       ],
-      "description": "Image overlay for indoor exercises",
-      "id": "telecom-floorplan-view",
-      "label": "Telecom indoor",
+      "zoom": 17,
+      "pitch": 0,
+      "bearing": 0,
       "overlays": [
         "telecom-floorplan"
       ],
-      "pitch": 0,
-      "style": "mapbox://styles/mapbox/light-v11",
-      "zoom": 17
+      "description": "Image overlay for indoor exercises"
     }
   ],
   "map": {
-    "bearing": 40,
+    "id": "palaiseau-outdoor",
+    "label": "IP Paris Campus",
+    "style": "mapbox://styles/mapbox/light-v11",
     "center": [
       2.2,
       48.714
     ],
-    "description": "Base view for the campus and surroundings",
-    "id": "palaiseau-outdoor",
-    "label": "IP Paris Campus",
+    "zoom": 15,
+    "pitch": 45,
+    "bearing": 40,
     "overlays": [
       "palaiseau-roads",
       "walking-network",
@@ -162,59 +180,57 @@
       "bus-lanes",
       "amenities"
     ],
-    "pitch": 45,
-    "style": "mapbox://styles/mapbox/light-v11",
-    "zoom": 15
+    "description": "Base view for the campus and surroundings"
   },
   "overlays": [
     {
-      "file": "/static/data/palaiseau_roads.geojson",
       "id": "palaiseau-roads",
       "label": "Road network",
-      "note": "OSM roads for the outdoor view",
-      "type": "line"
+      "file": "/static/data/palaiseau_roads.geojson",
+      "type": "line",
+      "note": "OSM roads for the outdoor view"
     },
     {
-      "file": "/static/data/walking_network.geojson",
       "id": "walking-network",
       "label": "Walking network",
-      "note": "Pedestrian paths used for routes",
-      "type": "line"
+      "file": "/static/data/walking_network.geojson",
+      "type": "line",
+      "note": "Pedestrian paths used for routes"
     },
     {
-      "file": "/static/data/mobility_infrastructure.geojson",
       "id": "mobility-infrastructure",
       "label": "Bike network",
-      "note": "Cycleways and shared lanes",
-      "type": "line"
+      "file": "/static/data/mobility_infrastructure.geojson",
+      "type": "line",
+      "note": "Cycleways and shared lanes"
     },
     {
-      "file": "/static/data/bus_lanes.geojson",
       "id": "bus-lanes",
       "label": "Bus lanes",
-      "note": "Transit priority lanes",
-      "type": "line"
+      "file": "/static/data/bus_lanes.geojson",
+      "type": "line",
+      "note": "Transit priority lanes"
     },
     {
-      "file": "/static/data/amenities.geojson",
       "id": "amenities",
       "label": "Amenities",
-      "note": "Hospitals, schools, markets, libraries",
-      "type": "point"
+      "file": "/static/data/amenities.geojson",
+      "type": "point",
+      "note": "Hospitals, schools, markets, libraries"
     },
     {
-      "file": "/static/data/images.jpg",
       "id": "telecom-floorplan",
       "label": "Telecom floorplan",
-      "note": "Indoor overlay for the Telecom building",
-      "type": "image"
+      "file": "/static/data/images.jpg",
+      "type": "image",
+      "note": "Indoor overlay for the Telecom building"
     }
   ],
   "questionFlow": [
     {
       "id": "arrival-mode",
       "text": "How do you typically travel to campus?",
-      "type": "multi-choice",
+      "type": "single-choice",
       "options": [
         "Walk",
         "Bike",
@@ -260,7 +276,7 @@
   "responseTemplate": {
     "arrival-mode": {
       "questionId": "arrival-mode",
-      "type": "multi-choice",
+      "type": "single-choice",
       "responseShape": "scalar",
       "required": true,
       "answers": []

@@ -151,6 +151,8 @@ const els = {
     questionOptionsContainer: document.getElementById('question-options-container'),
     questionStickerSelectionContainer: document.getElementById('question-sticker-selection-container'),
     questionStickerSelection: document.getElementById('question-sticker-selection'),
+    questionDrawingOptionsContainer: document.getElementById('question-drawing-options-container'),
+    questionDrawingOptions: document.getElementById('question-drawing-options'),
     deleteQuestionBtn: document.getElementById('delete-question'),
 
     addMapBtn: document.getElementById('add-map'),
@@ -1553,6 +1555,8 @@ function renderQuestionDetails() {
         if (els.questionOptionsContainer) els.questionOptionsContainer.style.display = 'none';
         if (els.questionStickerSelectionContainer) els.questionStickerSelectionContainer.style.display = 'none';
         if (els.questionStickerSelection) els.questionStickerSelection.innerHTML = '';
+        if (els.questionDrawingOptionsContainer) els.questionDrawingOptionsContainer.style.display = 'none';
+        if (els.questionDrawingOptions) els.questionDrawingOptions.innerHTML = '';
         els.questionText.disabled = true;
         els.questionType.disabled = true;
         els.questionMapPreset.disabled = true;
@@ -1596,6 +1600,7 @@ function renderQuestionDetails() {
     }
 
     renderQuestionStickerSelection(q);
+    renderQuestionDrawingOptions(q);
 }
 
 function getAvailableStickerChoices() {
@@ -1721,6 +1726,158 @@ function renderQuestionStickerSelection(question) {
     els.questionStickerSelectionContainer.style.display = 'block';
 }
 
+function renderQuestionDrawingOptions(question) {
+    if (!els.questionDrawingOptionsContainer || !els.questionDrawingOptions) return;
+    if (!question || question.type !== 'drawing') {
+        els.questionDrawingOptionsContainer.style.display = 'none';
+        els.questionDrawingOptions.innerHTML = '';
+        return;
+    }
+
+    // Initialize defaults if not set
+    if (question.drawLabel === undefined) {
+        question.drawLabel = 'Draw Line';
+    }
+    if (question.drawColor === undefined) {
+        question.drawColor = '#FF00FF'; // Magenta
+    }
+    if (question.drawTagId === undefined) {
+        question.drawTagId = 6;
+    }
+
+    const wrapper = els.questionDrawingOptions;
+    wrapper.innerHTML = '';
+
+    // Single row with Label, Color, and Tag ID
+    const optionsRow = document.createElement('div');
+    optionsRow.className = 'flex items-center gap-3 flex-wrap';
+    
+    // Label field
+    const textLabel = document.createElement('label');
+    textLabel.className = 'text-[11px] text-text-secondary font-medium whitespace-nowrap';
+    textLabel.textContent = 'Label:';
+    
+    const textInput = document.createElement('input');
+    textInput.type = 'text';
+    textInput.className = 'h-9 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-xs transition-colors duration-200 hover:border-border-focus focus:outline-none focus:border-accent-primary';
+    textInput.style.width = '120px';
+    textInput.value = question.drawLabel || 'Draw Line';
+    textInput.placeholder = 'Draw Line';
+    
+    textInput.addEventListener('input', () => {
+        question.drawLabel = textInput.value || 'Draw Line';
+        markSaved('Unsaved changes');
+        // Dispatch event to update UI buttons
+        window.dispatchEvent(new CustomEvent('drawLabelChanged', { 
+            detail: { questionId: question.id, drawLabel: question.drawLabel } 
+        }));
+    });
+    
+    // Color picker
+    const colorLabel = document.createElement('label');
+    colorLabel.className = 'text-[11px] text-text-secondary font-medium whitespace-nowrap';
+    colorLabel.textContent = 'Color:';
+    
+    const colorWrapper = document.createElement('div');
+    colorWrapper.className = 'relative flex items-center gap-2';
+    
+    const colorSwatch = document.createElement('button');
+    colorSwatch.type = 'button';
+    colorSwatch.className = 'w-9 h-9 rounded-full border border-border-subtle shadow-inner cursor-pointer transition-transform duration-200 hover:scale-105';
+    colorSwatch.style.backgroundColor = question.drawColor || '#FF00FF';
+    colorSwatch.title = 'Drawing color';
+    
+    const colorPicker = document.createElement('input');
+    colorPicker.type = 'color';
+    colorPicker.value = question.drawColor || '#FF00FF';
+    colorPicker.className = 'absolute opacity-0 pointer-events-none w-0 h-0';
+    
+    colorSwatch.addEventListener('click', () => {
+        colorPicker.click();
+    });
+    
+    colorPicker.addEventListener('input', () => {
+        const nextColor = colorPicker.value;
+        question.drawColor = nextColor;
+        colorSwatch.style.backgroundColor = nextColor;
+        markSaved('Unsaved changes');
+        // Dispatch event to update UI colors
+        window.dispatchEvent(new CustomEvent('drawColorChanged', { 
+            detail: { questionId: question.id, drawColor: nextColor } 
+        }));
+    });
+    
+    colorWrapper.appendChild(colorSwatch);
+    colorWrapper.appendChild(colorPicker);
+    
+    // Tag ID selector
+    const tagLabel = document.createElement('label');
+    tagLabel.className = 'text-[11px] text-text-secondary font-medium whitespace-nowrap ml-2';
+    tagLabel.textContent = 'Tag ID:';
+    
+    const tagSelect = document.createElement('select');
+    tagSelect.className = 'h-9 px-3 bg-bg-secondary border border-border-subtle rounded-md text-text-primary text-xs cursor-pointer transition-colors duration-200 hover:border-border-focus focus:outline-none focus:border-accent-primary';
+    
+    TAG_ID_OPTIONS.forEach(tagId => {
+        const option = document.createElement('option');
+        option.value = String(tagId);
+        option.textContent = `ID ${tagId}`;
+        tagSelect.appendChild(option);
+    });
+    
+    if (Number.isInteger(question.drawTagId)) {
+        tagSelect.value = String(question.drawTagId);
+    } else {
+        tagSelect.value = '6';
+        question.drawTagId = 6;
+    }
+    
+    // Tag preview
+    const tagPreview = document.createElement('div');
+    tagPreview.className = 'w-[56px] h-[56px] bg-bg-secondary border border-border-subtle rounded-md flex items-center justify-center overflow-hidden';
+    const tagImg = document.createElement('img');
+    tagImg.className = 'w-full h-full object-contain';
+    tagImg.alt = 'Drawing tag preview';
+    const tagPlaceholder = document.createElement('span');
+    tagPlaceholder.className = 'text-[9px] text-text-muted uppercase tracking-wider';
+    tagPlaceholder.textContent = 'No tag';
+    
+    tagPreview.appendChild(tagImg);
+    tagPreview.appendChild(tagPlaceholder);
+    
+    const updateTagPreview = () => {
+        const tagValue = Number.isInteger(question.drawTagId) ? question.drawTagId : 6;
+        if (tagValue) {
+            tagImg.src = getTagImageSrc(tagValue);
+            tagImg.style.display = 'block';
+            tagPlaceholder.style.display = 'none';
+        } else {
+            tagImg.src = '';
+            tagImg.style.display = 'none';
+            tagPlaceholder.style.display = 'block';
+        }
+    };
+    
+    updateTagPreview();
+    
+    tagSelect.addEventListener('change', () => {
+        question.drawTagId = Number.parseInt(tagSelect.value, 10);
+        markSaved('Unsaved changes');
+        updateTagPreview();
+    });
+    
+    optionsRow.appendChild(textLabel);
+    optionsRow.appendChild(textInput);
+    optionsRow.appendChild(colorLabel);
+    optionsRow.appendChild(colorWrapper);
+    optionsRow.appendChild(tagLabel);
+    optionsRow.appendChild(tagSelect);
+    optionsRow.appendChild(tagPreview);
+    wrapper.appendChild(optionsRow);
+    
+    els.questionDrawingOptionsContainer.style.display = 'block';
+}
+
 function updateSelectedQuestion() {
     if (isSwitching) return; 
     if (!selectedQuestionId) return;
@@ -1811,6 +1968,20 @@ function buildPreviewConfig() {
                 .map(value => String(value))
                 .filter(id => availableStickerIdSet.has(id));
             return { ...base, stickerIds: selected };
+        }
+
+        if (q.type === 'drawing') {
+            const drawingProps = {};
+            if (q.drawLabel !== undefined) {
+                drawingProps.drawLabel = q.drawLabel;
+            }
+            if (q.drawColor !== undefined) {
+                drawingProps.drawColor = q.drawColor;
+            }
+            if (q.drawTagId !== undefined) {
+                drawingProps.drawTagId = q.drawTagId;
+            }
+            return { ...base, ...drawingProps };
         }
 
         return base;

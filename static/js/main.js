@@ -158,13 +158,25 @@ async function initApp() {
         return wrappedModes;
     }
 
+    function getDrawingColor() {
+        const questions = setupConfig?.questionFlow || [];
+        const drawingQuestion = questions.find(q => q.type === 'drawing');
+        return drawingQuestion?.drawColor || '#FF00FF'; // Default magenta if not found
+    }
+
     function addDrawLineGlow(mapInstance) {
         if (!mapInstance || typeof mapInstance.getSource !== 'function') return false;
         const sourceId = 'mapbox-gl-draw-cold';
         if (!mapInstance.getSource(sourceId)) return false;
         const layerId = 'gl-draw-line-glow';
-        if (mapInstance.getLayer(layerId)) return true;
+        if (mapInstance.getLayer(layerId)) {
+            // Update color if layer already exists
+            const drawColor = getDrawingColor();
+            mapInstance.setPaintProperty(layerId, 'line-color', drawColor);
+            return true;
+        }
 
+        const drawColor = getDrawingColor();
         const glowLayer = {
             id: layerId,
             type: 'line',
@@ -175,7 +187,7 @@ async function initApp() {
                 'line-join': 'round'
             },
             paint: {
-                'line-color': 'magenta',
+                'line-color': drawColor,
                 'line-width': 14,
                 'line-opacity': 0.6,
                 'line-blur': 6
@@ -231,6 +243,24 @@ async function initApp() {
     if (drawBtn) {
         drawBtn.addEventListener('click', () => {
             setDrawMode('draw_line_string');
+        });
+
+        // Listen for drawLabelChanged event from setup page
+        window.addEventListener('drawLabelChanged', (event) => {
+            const { drawLabel } = event.detail || {};
+            if (drawLabel) {
+                // Extract just the text part (e.g., "Line" from "Draw Line")
+                const shortLabel = drawLabel.replace(/^draw\s+/i, '').trim() || 'Line';
+                drawBtn.textContent = shortLabel;
+            }
+        });
+
+        // Listen for drawColorChanged event from setup page
+        window.addEventListener('drawColorChanged', (event) => {
+            const { drawColor } = event.detail || {};
+            if (drawColor && map.getLayer('gl-draw-line-glow')) {
+                map.setPaintProperty('gl-draw-line-glow', 'line-color', drawColor);
+            }
         });
     }
 

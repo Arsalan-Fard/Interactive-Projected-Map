@@ -202,7 +202,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'w-full px-3 py-2 rounded-md border border-white/15 bg-white/5 text-white/85 text-xs font-semibold uppercase tracking-[1px] transition-all duration-200 hover:bg-white/10 hover:border-white/30 hover:text-white';
-                button.textContent = 'Draw Line';
+                button.textContent = question.drawLabel || 'Draw Line';
                 button.addEventListener('click', (e) => {
                     e.stopPropagation();
                     currentQuestionIndex = index;
@@ -703,6 +703,15 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         }
         if (isTuiMode) {
             updateTuiActiveRow();
+        }
+
+        // Update btn-draw button text if current question is a drawing question
+        const drawBtn = document.getElementById('btn-draw');
+        if (drawBtn && q.type === 'drawing') {
+            const drawLabel = q.drawLabel || 'Draw Line';
+            // Extract just the text part (e.g., "Line" from "Draw Line")
+            const shortLabel = drawLabel.replace(/^draw\s+/i, '').trim() || 'Line';
+            drawBtn.textContent = shortLabel;
         }
     }
 
