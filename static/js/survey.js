@@ -114,9 +114,12 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
     }
 
     function getStickerButtonTemplates() {
-        const allButtons = Array.from(document.querySelectorAll('#left-sidebar .points-section .point-btn'));
-        const visibleButtons = allButtons.filter(btn => btn.style.display !== 'none');
-        return visibleButtons.length ? visibleButtons : allButtons;
+        const allButtons = Array.from(document.querySelectorAll('#left-sidebar #sidebar-standard .points-section .point-btn'));
+        if (!allButtons.length) return [];
+        const count = Number.isInteger(setupConfig?.project?.stickerConfig?.count)
+            ? setupConfig.project.stickerConfig.count
+            : allButtons.length;
+        return allButtons.slice(0, Math.max(0, Math.min(allButtons.length, count)));
     }
 
     function getTuiRowClass(isActive) {
@@ -215,12 +218,22 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                 const paletteRow = document.createElement('div');
                 paletteRow.className = 'flex flex-wrap gap-2';
 
+                const hasExplicitStickerSelection = Array.isArray(question.stickerIds);
+                const allowedStickerIds = hasExplicitStickerSelection
+                    ? question.stickerIds.map(value => String(value)).filter(Boolean)
+                    : [];
+                const allowedStickerIdSet = hasExplicitStickerSelection ? new Set(allowedStickerIds) : null;
+
                 stickerTemplates.forEach(template => {
-                    const clone = template.cloneNode(true);
                     const typeId = template.id || template.dataset.typeId;
+                    if (allowedStickerIdSet && typeId && !allowedStickerIdSet.has(typeId)) {
+                        return;
+                    }
+                    const clone = template.cloneNode(true);
                     clone.removeAttribute('id');
                     if (typeId) clone.dataset.typeId = typeId;
                     clone.dataset.questionId = question.id;
+                    clone.style.display = '';
                     clone.addEventListener('mousedown', (e) => {
                         e.stopPropagation();
                         currentQuestionIndex = index;
@@ -230,7 +243,14 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                     paletteRow.appendChild(clone);
                 });
 
-                inputRow.appendChild(paletteRow);
+                if (!paletteRow.childElementCount) {
+                    const empty = document.createElement('div');
+                    empty.className = 'text-[11px] text-white/70';
+                    empty.textContent = 'No stickers configured for this question.';
+                    inputRow.appendChild(empty);
+                } else {
+                    inputRow.appendChild(paletteRow);
+                }
             } else {
                 const message = document.createElement('div');
                 message.className = 'text-[11px] text-white/70';
@@ -663,6 +683,24 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         if (finishBtn) finishBtn.classList.toggle('hidden', !isLastQuestion);
         renderPreviousAnswers(q);
         renderPreviousAnswersOnMap(q);
+
+        if (!isTuiMode) {
+            const buttons = Array.from(document.querySelectorAll('#left-sidebar #sidebar-standard .points-section .point-btn'));
+            const count = Number.isInteger(setupConfig?.project?.stickerConfig?.count)
+                ? setupConfig.project.stickerConfig.count
+                : buttons.length;
+            const availableIds = new Set(Array.from({ length: Math.max(0, count) }, (_, i) => `sticker-btn-${i + 1}`));
+            const allowed = q.type === 'sticker' && Array.isArray(q.stickerIds)
+                ? new Set(q.stickerIds.map(value => String(value)).filter(Boolean))
+                : null;
+
+            buttons.forEach(btn => {
+                const id = btn.id || btn.dataset.typeId;
+                const withinConfigured = id && availableIds.has(id);
+                const shouldShow = withinConfigured && (!allowed || allowed.has(id));
+                btn.style.display = shouldShow ? '' : 'none';
+            });
+        }
         if (isTuiMode) {
             updateTuiActiveRow();
         }

@@ -149,6 +149,8 @@ const els = {
     questionMapPreset: document.getElementById('question-map-preset'),
     questionOptions: document.getElementById('question-options'),
     questionOptionsContainer: document.getElementById('question-options-container'),
+    questionStickerSelectionContainer: document.getElementById('question-sticker-selection-container'),
+    questionStickerSelection: document.getElementById('question-sticker-selection'),
     deleteQuestionBtn: document.getElementById('delete-question'),
 
     addMapBtn: document.getElementById('add-map'),
@@ -1549,6 +1551,8 @@ function renderQuestionDetails() {
         els.questionType.value = 'text';
         els.questionMapPreset.value = '';
         if (els.questionOptionsContainer) els.questionOptionsContainer.style.display = 'none';
+        if (els.questionStickerSelectionContainer) els.questionStickerSelectionContainer.style.display = 'none';
+        if (els.questionStickerSelection) els.questionStickerSelection.innerHTML = '';
         els.questionText.disabled = true;
         els.questionType.disabled = true;
         els.questionMapPreset.disabled = true;
@@ -1590,6 +1594,131 @@ function renderQuestionDetails() {
     } else {
          if (els.questionOptionsContainer) els.questionOptionsContainer.style.display = 'none';
     }
+
+    renderQuestionStickerSelection(q);
+}
+
+function getAvailableStickerChoices() {
+    normalizeStickerConfig();
+    const config = state.project?.stickerConfig;
+    const count = clampStickerCount(config?.count ?? MAX_STICKER_COUNT);
+    const colors = Array.isArray(config?.colors) ? config.colors : [];
+    const tags = Array.isArray(config?.tags) ? config.tags : [];
+
+    return Array.from({ length: count }, (_, index) => ({
+        index,
+        id: `sticker-btn-${index + 1}`,
+        color: colors[index] || DEFAULT_STICKER_COLORS[index] || '#cccccc',
+        tagId: Number.isInteger(tags[index]) ? tags[index] : null
+    }));
+}
+
+function renderQuestionStickerSelection(question) {
+    if (!els.questionStickerSelectionContainer || !els.questionStickerSelection) return;
+    if (!question || question.type !== 'sticker') {
+        els.questionStickerSelectionContainer.style.display = 'none';
+        els.questionStickerSelection.innerHTML = '';
+        return;
+    }
+
+    const available = getAvailableStickerChoices();
+    const availableIds = available.map(item => item.id);
+    const availableIdSet = new Set(availableIds);
+
+    const selectedIds = Array.isArray(question.stickerIds)
+        ? question.stickerIds.map(value => String(value)).filter(id => availableIdSet.has(id))
+        : availableIds;
+    const selected = new Set(selectedIds);
+
+    const chipClass = (active) => (
+        `flex items-center gap-2 px-2.5 py-2 rounded-md border text-xs font-medium transition-all duration-150 ${active ? 'bg-blue-500/15 border-accent-primary text-text-primary' : 'bg-bg-tertiary border-border-subtle text-text-secondary hover:border-border-focus'}`
+    );
+
+    const applySelection = () => {
+        const next = availableIds.filter(id => selected.has(id));
+        if (next.length === availableIds.length) {
+            delete question.stickerIds;
+        } else {
+            question.stickerIds = next;
+        }
+        markSaved('Unsaved changes');
+    };
+
+    const wrapper = els.questionStickerSelection;
+    wrapper.innerHTML = '';
+
+    const headerRow = document.createElement('div');
+    headerRow.className = 'flex items-center justify-between gap-2';
+
+    const hint = document.createElement('div');
+    hint.className = 'text-[11px] text-text-muted';
+    hint.textContent = 'Choose which stickers appear for this question.';
+    headerRow.appendChild(hint);
+
+    const actions = document.createElement('div');
+    actions.className = 'flex items-center gap-2';
+
+    const selectAllBtn = document.createElement('button');
+    selectAllBtn.type = 'button';
+    selectAllBtn.className = 'px-2 py-1 text-[11px] border border-border-subtle rounded-md text-text-secondary hover:text-text-primary hover:border-border-focus';
+    selectAllBtn.textContent = 'All';
+    selectAllBtn.addEventListener('click', () => {
+        availableIds.forEach(id => selected.add(id));
+        applySelection();
+        renderQuestionStickerSelection(question);
+    });
+
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'px-2 py-1 text-[11px] border border-border-subtle rounded-md text-text-secondary hover:text-text-primary hover:border-border-focus';
+    clearBtn.textContent = 'None';
+    clearBtn.addEventListener('click', () => {
+        selected.clear();
+        applySelection();
+        renderQuestionStickerSelection(question);
+    });
+
+    actions.appendChild(selectAllBtn);
+    actions.appendChild(clearBtn);
+    headerRow.appendChild(actions);
+    wrapper.appendChild(headerRow);
+
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'flex flex-wrap gap-2';
+
+    available.forEach(sticker => {
+        const active = selected.has(sticker.id);
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = chipClass(active);
+        chip.setAttribute('aria-pressed', active ? 'true' : 'false');
+
+        const swatch = document.createElement('span');
+        swatch.className = 'w-3 h-3 rounded-full border border-white/15 flex-none';
+        swatch.style.backgroundColor = sticker.color;
+
+        const label = document.createElement('span');
+        const tagLabel = Number.isInteger(sticker.tagId) ? ` • ID ${sticker.tagId}` : '';
+        label.textContent = `#${sticker.index + 1}${tagLabel}`;
+
+        chip.appendChild(swatch);
+        chip.appendChild(label);
+
+        chip.addEventListener('click', () => {
+            if (selected.has(sticker.id)) {
+                selected.delete(sticker.id);
+            } else {
+                selected.add(sticker.id);
+            }
+            applySelection();
+            renderQuestionStickerSelection(question);
+        });
+
+        chipsRow.appendChild(chip);
+    });
+
+    wrapper.appendChild(chipsRow);
+    els.questionStickerSelectionContainer.style.display = 'block';
 }
 
 function updateSelectedQuestion() {
@@ -1660,16 +1789,32 @@ function buildPreviewConfig() {
     normalizeTagConfig();
     const selectedMap = state.maps.find(m => m.id === state.project.mapId) || state.maps[0];
     const overlayDetails = state.overlays;
-    const questionFlow = state.questions.map((q, index) => ({
-        id: q.id,
-        text: q.text,
-        type: q.type,
-        options: q.options,
-        required: q.required,
-        responseShape: q.responseShape,
-        mapId: q.mapId || null,
-        order: index + 1 // Ensure strict order based on array position
-    }));
+    normalizeStickerConfig();
+    const stickerCount = state.project?.stickerConfig?.count ?? MAX_STICKER_COUNT;
+    const availableStickerIds = Array.from({ length: clampStickerCount(stickerCount) }, (_, i) => `sticker-btn-${i + 1}`);
+    const availableStickerIdSet = new Set(availableStickerIds);
+
+    const questionFlow = state.questions.map((q, index) => {
+        const base = {
+            id: q.id,
+            text: q.text,
+            type: q.type,
+            options: q.options,
+            required: q.required,
+            responseShape: q.responseShape,
+            mapId: q.mapId || null,
+            order: index + 1 // Ensure strict order based on array position
+        };
+
+        if (q.type === 'sticker' && Array.isArray(q.stickerIds)) {
+            const selected = q.stickerIds
+                .map(value => String(value))
+                .filter(id => availableStickerIdSet.has(id));
+            return { ...base, stickerIds: selected };
+        }
+
+        return base;
+    });
 
     return {
         project: state.project,
