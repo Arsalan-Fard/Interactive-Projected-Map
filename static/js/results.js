@@ -85,6 +85,7 @@ const responseLayerIds = {
     pointsSource: 'selected-response-points',
     pointsLayer: 'selected-response-points-layer',
     linesSource: 'selected-response-lines',
+    linesGlow: 'selected-response-lines-glow',
     linesLayer: 'selected-response-lines-layer',
     polygonsSource: 'selected-response-polygons',
     polygonsFill: 'selected-response-polygons-fill',
@@ -105,6 +106,7 @@ function removeSourceIfExists(map, id) {
 
 function clearResponseLayers(map) {
     removeLayerIfExists(map, responseLayerIds.pointsLayer);
+    removeLayerIfExists(map, responseLayerIds.linesGlow);
     removeLayerIfExists(map, responseLayerIds.linesLayer);
     removeLayerIfExists(map, responseLayerIds.polygonsOutline);
     removeLayerIfExists(map, responseLayerIds.polygonsFill);
@@ -134,6 +136,23 @@ function ensureResponseLayers(map, pointData, lineData, polygonData) {
 
     if (!map.getSource(responseLayerIds.linesSource)) {
         map.addSource(responseLayerIds.linesSource, { type: 'geojson', data: lineData });
+    } else {
+        map.getSource(responseLayerIds.linesSource).setData(lineData);
+    }
+    if (!map.getLayer(responseLayerIds.linesGlow)) {
+        map.addLayer({
+            id: responseLayerIds.linesGlow,
+            type: 'line',
+            source: responseLayerIds.linesSource,
+            paint: {
+                'line-color': 'magenta',
+                'line-width': 14,
+                'line-opacity': 0.6,
+                'line-blur': 6
+            }
+        }, map.getLayer(responseLayerIds.linesLayer) ? responseLayerIds.linesLayer : undefined);
+    }
+    if (!map.getLayer(responseLayerIds.linesLayer)) {
         map.addLayer({
             id: responseLayerIds.linesLayer,
             type: 'line',
@@ -144,8 +163,6 @@ function ensureResponseLayers(map, pointData, lineData, polygonData) {
                 'line-opacity': 0.7
             }
         });
-    } else {
-        map.getSource(responseLayerIds.linesSource).setData(lineData);
     }
 
     if (!map.getSource(responseLayerIds.polygonsSource)) {

@@ -80,6 +80,7 @@ async function initApp() {
         add3DBuildings,
         loadAndRenderLayer,
         onStyleLoad: () => {
+            scheduleDrawLineGlow(map);
             if (survey) {
                 survey.onStyleLoad();
             }
@@ -155,6 +156,50 @@ async function initApp() {
             wrappedModes[key] = wrapDrawMode(baseModes[key]);
         });
         return wrappedModes;
+    }
+
+    function addDrawLineGlow(mapInstance) {
+        if (!mapInstance || typeof mapInstance.getSource !== 'function') return false;
+        const sourceId = 'mapbox-gl-draw-cold';
+        if (!mapInstance.getSource(sourceId)) return false;
+        const layerId = 'gl-draw-line-glow';
+        if (mapInstance.getLayer(layerId)) return true;
+
+        const glowLayer = {
+            id: layerId,
+            type: 'line',
+            source: sourceId,
+            filter: ['all', ['==', '$type', 'LineString'], ['==', 'meta', 'feature']],
+            layout: {
+                'line-cap': 'round',
+                'line-join': 'round'
+            },
+            paint: {
+                'line-color': 'magenta',
+                'line-width': 14,
+                'line-opacity': 0.6,
+                'line-blur': 6
+            }
+        };
+
+        let beforeId = null;
+        if (mapInstance.getLayer('gl-draw-line-inactive')) {
+            beforeId = 'gl-draw-line-inactive';
+        } else if (mapInstance.getLayer('gl-draw-line')) {
+            beforeId = 'gl-draw-line';
+        }
+        mapInstance.addLayer(glowLayer, beforeId || undefined);
+        return true;
+    }
+
+    function scheduleDrawLineGlow(mapInstance) {
+        if (addDrawLineGlow(mapInstance)) return;
+        const onSourceData = () => {
+            if (addDrawLineGlow(mapInstance)) {
+                mapInstance.off('sourcedata', onSourceData);
+            }
+        };
+        mapInstance.on('sourcedata', onSourceData);
     }
 
     const drawModes = buildDrawModes();
