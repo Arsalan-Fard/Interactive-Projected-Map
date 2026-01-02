@@ -21,6 +21,11 @@ const defaultState = {
         rearProjection: false,
         tuiMode: false,
         tagConfig: null,
+        drawingConfig: {
+            label: 'drawing line',
+            color: '#ff00ff',
+            tagId: 6
+        },
         stickerConfig: {
             count: MAX_STICKER_COUNT,
             colors: [...DEFAULT_STICKER_COLORS]
@@ -118,6 +123,9 @@ const els = {
     projectPill: document.getElementById('project-pill'),
     projectRearProjection: document.getElementById('project-rear-projection'),
     projectTuiMode: document.getElementById('project-tui-mode'),
+    drawingLabel: document.getElementById('drawing-label'),
+    drawingColor: document.getElementById('drawing-color'),
+    drawingTagId: document.getElementById('drawing-tag-id'),
     stickerCount: document.getElementById('sticker-count'),
     stickerColors: document.getElementById('sticker-colors'),
     tagConfig: document.getElementById('tag-config'),
@@ -164,6 +172,12 @@ const els = {
 
 const TAG_ID_OPTIONS = Array.from({ length: 5 }, (_, i) => i + 7);
 const TAG_IMAGE_PREFIX = '/generated_tags/tag36h11_id';
+const DEFAULT_DRAWING_CONFIG = {
+    label: 'drawing line',
+    color: '#ff00ff',
+    tagId: 6
+};
+const DRAWING_TAG_ID_OPTIONS = Array.from(new Set([DEFAULT_DRAWING_CONFIG.tagId, ...TAG_ID_OPTIONS])).sort((a, b) => a - b);
 const DEFAULT_TAG_GROUPS = {
     reach15: [
         { id: 'walk', label: 'Walk', enabled: true, tagId: null },
@@ -232,6 +246,24 @@ function normalizeTagConfig() {
         shortestPath: { items: mergeTagItems(DEFAULT_TAG_GROUPS.shortestPath, existing.shortestPath?.items) },
         tools: { items: mergeTagItems(DEFAULT_TAG_GROUPS.tools, existing.tools?.items) }
     };
+}
+
+function normalizeDrawingConfig() {
+    if (!state.project) return;
+    const existing = state.project.drawingConfig || {};
+    const label = typeof existing.label === 'string' && existing.label.trim().length > 0
+        ? existing.label
+        : DEFAULT_DRAWING_CONFIG.label;
+    let color = typeof existing.color === 'string' ? existing.color.trim() : '';
+    if (!/^#[0-9a-f]{6}$/i.test(color)) {
+        if (color.toLowerCase() === 'magenta' || color.toLowerCase() === 'fuchsia') {
+            color = DEFAULT_DRAWING_CONFIG.color;
+        } else {
+            color = DEFAULT_DRAWING_CONFIG.color;
+        }
+    }
+    const tagId = Number.isInteger(existing.tagId) ? existing.tagId : DEFAULT_DRAWING_CONFIG.tagId;
+    state.project.drawingConfig = { label, color, tagId };
 }
 
 function clampStickerCount(value) {
@@ -313,6 +345,7 @@ function mergeState(serverConfig) {
     }
 
     normalizeTagConfig();
+    normalizeDrawingConfig();
     normalizeStickerConfig();
 }
 
@@ -773,8 +806,63 @@ function renderProject() {
     if (els.projectTuiMode) {
         els.projectTuiMode.checked = !!state.project.tuiMode;
     }
+    renderDrawingConfig();
     renderStickerConfig();
     renderTagConfig();
+}
+
+function renderDrawingConfig() {
+    if (!els.drawingLabel || !els.drawingColor || !els.drawingTagId) return;
+    normalizeDrawingConfig();
+    const config = state.project.drawingConfig || DEFAULT_DRAWING_CONFIG;
+
+    els.drawingLabel.value = config.label || DEFAULT_DRAWING_CONFIG.label;
+    els.drawingColor.value = config.color || DEFAULT_DRAWING_CONFIG.color;
+
+    const usedTags = new Set();
+    const stickerTags = state.project.stickerConfig?.tags || [];
+    stickerTags.forEach(tagId => {
+        if (Number.isInteger(tagId)) usedTags.add(String(tagId));
+    });
+    const tagConfig = state.project.tagConfig || {};
+    (tagConfig.layers?.items || []).forEach(item => {
+        if (Number.isInteger(item.tagId)) usedTags.add(String(item.tagId));
+    });
+    (tagConfig.reach15?.items || []).forEach(item => {
+        if (Number.isInteger(item.tagId)) usedTags.add(String(item.tagId));
+    });
+    (tagConfig.shortestPath?.items || []).forEach(item => {
+        if (Number.isInteger(item.tagId)) usedTags.add(String(item.tagId));
+    });
+    (tagConfig.tools?.items || []).forEach(item => {
+        if (Number.isInteger(item.tagId)) usedTags.add(String(item.tagId));
+    });
+
+    const currentTag = Number.isInteger(config.tagId) ? String(config.tagId) : '';
+    if (currentTag) usedTags.delete(currentTag);
+
+    els.drawingTagId.innerHTML = '';
+    DRAWING_TAG_ID_OPTIONS.forEach(tagId => {
+        const option = document.createElement('option');
+        option.value = String(tagId);
+        option.textContent = `ID ${tagId}`;
+        if (usedTags.has(option.value)) {
+            option.disabled = true;
+            option.textContent = `ID ${tagId} (in use)`;
+        }
+        els.drawingTagId.appendChild(option);
+    });
+
+    if (Number.isInteger(config.tagId)) {
+        const desired = String(config.tagId);
+        const available = els.drawingTagId.querySelector(`option[value="${desired}"]`);
+        if (available) {
+            els.drawingTagId.value = desired;
+        } else {
+            state.project.drawingConfig.tagId = DEFAULT_DRAWING_CONFIG.tagId;
+            els.drawingTagId.value = String(DEFAULT_DRAWING_CONFIG.tagId);
+        }
+    }
 }
 
 function renderProjectDropdown() {
@@ -861,6 +949,11 @@ function renderStickerConfig() {
                 usedTags.add(String(item.tagId));
             }
         });
+
+        const drawingTagId = state.project.drawingConfig?.tagId;
+        if (Number.isInteger(drawingTagId)) {
+            usedTags.add(String(drawingTagId));
+        }
 
         return usedTags;
     };
@@ -1017,6 +1110,10 @@ function renderTagConfig() {
                 usedInStickers.add(String(tagId));
             }
         });
+        const drawingTagId = state.project.drawingConfig?.tagId;
+        if (Number.isInteger(drawingTagId)) {
+            usedInStickers.add(String(drawingTagId));
+        }
 
         tagSelects.forEach(select => {
             const current = select.value;
@@ -1658,6 +1755,7 @@ function buildAnswerTemplate() {
 
 function buildPreviewConfig() {
     normalizeTagConfig();
+    normalizeDrawingConfig();
     const selectedMap = state.maps.find(m => m.id === state.project.mapId) || state.maps[0];
     const overlayDetails = state.overlays;
     const questionFlow = state.questions.map((q, index) => ({
@@ -1870,6 +1968,28 @@ function initEvents() {
 
     els.projectTuiMode?.addEventListener('change', e => {
         state.project.tuiMode = e.target.checked;
+        markSaved('Unsaved changes');
+    });
+
+    els.drawingLabel?.addEventListener('input', e => {
+        normalizeDrawingConfig();
+        state.project.drawingConfig.label = e.target.value;
+        markSaved('Unsaved changes');
+    });
+
+    els.drawingColor?.addEventListener('input', e => {
+        normalizeDrawingConfig();
+        state.project.drawingConfig.color = e.target.value;
+        markSaved('Unsaved changes');
+    });
+
+    els.drawingTagId?.addEventListener('change', e => {
+        normalizeDrawingConfig();
+        const next = Number.parseInt(e.target.value, 10);
+        state.project.drawingConfig.tagId = Number.isFinite(next) ? next : DEFAULT_DRAWING_CONFIG.tagId;
+        renderDrawingConfig();
+        renderStickerConfig();
+        renderTagConfig();
         markSaved('Unsaved changes');
     });
 

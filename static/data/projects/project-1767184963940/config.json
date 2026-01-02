@@ -96,28 +96,19 @@
         ]
       }
     },
+    "drawingConfig": {
+      "label": "QQQ",
+      "color": "#00ff1e",
+      "tagId": 7
+    },
     "stickerConfig": {
-      "count": 10,
+      "count": 3,
       "colors": [
         "#FF6B6B",
         "#4ECDC4",
-        "#45B7D1",
-        "#FFA07A",
-        "#98D8C8",
-        "#F7DC6F",
-        "#BB8FCE",
-        "#85C1E2",
-        "#F8B739",
-        "#E74C3C"
+        "#45B7D1"
       ],
       "tags": [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
         null,
         null,
         null
@@ -126,16 +117,14 @@
   },
   "maps": [
     {
-      "id": "palaiseau-outdoor",
-      "label": "IP Paris Campus",
-      "style": "mapbox://styles/mapbox/light-v11",
+      "bearing": 40,
       "center": [
         2.2,
         48.714
       ],
-      "zoom": 15,
-      "pitch": 45,
-      "bearing": 40,
+      "description": "Base view for the campus and surroundings",
+      "id": "palaiseau-outdoor",
+      "label": "IP Paris Campus",
       "overlays": [
         "palaiseau-roads",
         "walking-network",
@@ -143,36 +132,36 @@
         "bus-lanes",
         "amenities"
       ],
-      "description": "Base view for the campus and surroundings"
+      "pitch": 45,
+      "style": "mapbox://styles/mapbox/light-v11",
+      "zoom": 15
     },
     {
-      "id": "telecom-floorplan-view",
-      "label": "Telecom indoor",
-      "style": "mapbox://styles/mapbox/light-v11",
+      "bearing": 0,
       "center": [
         2.2005,
         48.7138
       ],
-      "zoom": 17,
-      "pitch": 0,
-      "bearing": 0,
+      "description": "Image overlay for indoor exercises",
+      "id": "telecom-floorplan-view",
+      "label": "Telecom indoor",
       "overlays": [
         "telecom-floorplan"
       ],
-      "description": "Image overlay for indoor exercises"
+      "pitch": 0,
+      "style": "mapbox://styles/mapbox/light-v11",
+      "zoom": 17
     }
   ],
   "map": {
-    "id": "palaiseau-outdoor",
-    "label": "IP Paris Campus",
-    "style": "mapbox://styles/mapbox/light-v11",
+    "bearing": 40,
     "center": [
       2.2,
       48.714
     ],
-    "zoom": 15,
-    "pitch": 45,
-    "bearing": 40,
+    "description": "Base view for the campus and surroundings",
+    "id": "palaiseau-outdoor",
+    "label": "IP Paris Campus",
     "overlays": [
       "palaiseau-roads",
       "walking-network",
@@ -180,50 +169,52 @@
       "bus-lanes",
       "amenities"
     ],
-    "description": "Base view for the campus and surroundings"
+    "pitch": 45,
+    "style": "mapbox://styles/mapbox/light-v11",
+    "zoom": 15
   },
   "overlays": [
     {
+      "file": "/static/data/palaiseau_roads.geojson",
       "id": "palaiseau-roads",
       "label": "Road network",
-      "file": "/static/data/palaiseau_roads.geojson",
-      "type": "line",
-      "note": "OSM roads for the outdoor view"
+      "note": "OSM roads for the outdoor view",
+      "type": "line"
     },
     {
+      "file": "/static/data/walking_network.geojson",
       "id": "walking-network",
       "label": "Walking network",
-      "file": "/static/data/walking_network.geojson",
-      "type": "line",
-      "note": "Pedestrian paths used for routes"
+      "note": "Pedestrian paths used for routes",
+      "type": "line"
     },
     {
+      "file": "/static/data/mobility_infrastructure.geojson",
       "id": "mobility-infrastructure",
       "label": "Bike network",
-      "file": "/static/data/mobility_infrastructure.geojson",
-      "type": "line",
-      "note": "Cycleways and shared lanes"
+      "note": "Cycleways and shared lanes",
+      "type": "line"
     },
     {
+      "file": "/static/data/bus_lanes.geojson",
       "id": "bus-lanes",
       "label": "Bus lanes",
-      "file": "/static/data/bus_lanes.geojson",
-      "type": "line",
-      "note": "Transit priority lanes"
+      "note": "Transit priority lanes",
+      "type": "line"
     },
     {
+      "file": "/static/data/amenities.geojson",
       "id": "amenities",
       "label": "Amenities",
-      "file": "/static/data/amenities.geojson",
-      "type": "point",
-      "note": "Hospitals, schools, markets, libraries"
+      "note": "Hospitals, schools, markets, libraries",
+      "type": "point"
     },
     {
+      "file": "/static/data/images.jpg",
       "id": "telecom-floorplan",
       "label": "Telecom floorplan",
-      "file": "/static/data/images.jpg",
-      "type": "image",
-      "note": "Indoor overlay for the Telecom building"
+      "note": "Indoor overlay for the Telecom building",
+      "type": "image"
     }
   ],
   "questionFlow": [

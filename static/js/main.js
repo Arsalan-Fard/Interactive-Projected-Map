@@ -27,6 +27,7 @@ function applyStickerConfig(setupConfig) {
 
 async function initApp() {
     const setupConfig = await loadSetupConfig();
+    const drawLineColor = setupConfig?.project?.drawingConfig?.color || 'magenta';
 
     window.addEventListener('error', (e) => {
         console.error('[error]', e.message, e.filename, e.lineno, e.colno, e.error?.stack);
@@ -175,7 +176,7 @@ async function initApp() {
                 'line-join': 'round'
             },
             paint: {
-                'line-color': 'magenta',
+                'line-color': drawLineColor,
                 'line-width': 14,
                 'line-opacity': 0.6,
                 'line-blur': 6

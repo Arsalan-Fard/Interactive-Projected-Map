@@ -133,6 +133,29 @@
                             <div id="sticker-colors" class="flex flex-wrap gap-2"></div>
                         </div>
                     </div>
+
+                    <div class="form-section bg-bg-secondary border border-border-subtle rounded-lg p-6 mb-6">
+                        <div class="section-header flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-base font-semibold m-0">Drawing Settings</h3>
+                                <p class="text-xs text-text-muted m-0 mt-1">Configure the AprilTag and color used for the drawing tool.</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[11px] text-text-muted uppercase tracking-wider">Name</label>
+                                <input id="drawing-label" type="text" placeholder="drawing line" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[11px] text-text-muted uppercase tracking-wider">Color</label>
+                                <input id="drawing-color" type="color" value="#ff00ff" class="w-full h-10 px-2 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[11px] text-text-muted uppercase tracking-wider">AprilTag ID</label>
+                                <select id="drawing-tag-id" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary"></select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="project-subtab-panel hidden" data-subpanel="layers">

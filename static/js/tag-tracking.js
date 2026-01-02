@@ -82,6 +82,13 @@ function createSearchOverlay() {
 export function initTagTracking({ map, setupConfig, draw }) {
     if (!map) return null;
 
+    const drawingConfig = setupConfig?.project?.drawingConfig || {};
+    const drawingTagId = Number.isInteger(drawingConfig.tagId) ? drawingConfig.tagId : 6;
+    const drawingColorRaw = typeof drawingConfig.color === 'string' ? drawingConfig.color.trim() : '';
+    const drawingColor = /^#[0-9a-f]{6}$/i.test(drawingColorRaw) || drawingColorRaw.length > 0
+        ? drawingColorRaw
+        : '#ff00ff';
+
     const debugDot = createDebugDot();
     const blackHoles = {}; // Map to store black hole elements by ID
     const tagStates = new Map(); // tagId -> { hits, misses, visible, x, y }
@@ -94,9 +101,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
     }
 
     // Initialize special black holes
-    getBlackHole(5);
-    getBlackHole(6);
-    getBlackHole(11); // Keep 11 initialized for consistency if used
+    Array.from(new Set([5, drawingTagId, 11])).forEach(id => getBlackHole(id));
 
     const searchOverlay = createSearchOverlay();
 
@@ -106,7 +111,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
     let cooldownEndTime = 0;
 
     let lastTagClickTime = 0;
-    let tag6LostStart = null;
+    let drawingTagLostStart = null;
     let tagDrawingCoordinates = [];
     let lastTagDrawScreenPoint = null;
     let isCheckingPosition = false;
@@ -180,7 +185,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     'line-join': 'round'
                 },
                 paint: {
-                    'line-color': '#FF0000',
+                    'line-color': drawingColor,
                     'line-width': 4,
                     'line-opacity': 0.8
                 }
@@ -274,7 +279,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
             const hasTag = Array.from(visibleIds).some(id =>
                 id === 5
-                || id === 6
+                || id === drawingTagId
                 || layerTagIds.has(id)
                 || shortestTagIds.has(id)
                 || reachTagIds.has(id)
@@ -425,10 +430,10 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
                 if (setupConfig.project.tuiMode) {
                     // Update generic black hole for any detected tag (if needed by logic)
-                    // We only strictly need it for 5, 6, and layer tags.
+                    // We only strictly need it for 5, the drawing tag, and layer tags.
                     const isLayerTag = layerTagIds.has(tagId);
-                    
-                    if (tagId === 5 || tagId === 6 || isLayerTag) {
+                     
+                    if (tagId === 5 || tagId === drawingTagId || isLayerTag) {
                         const bh = getBlackHole(tagId);
                         bh.style.left = `${screenX}px`;
                         bh.style.top = `${screenY}px`;
@@ -486,10 +491,10 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     }
                 }
 
-                // --- Tag 6 Logic (Drawing) ---
-                if (tagId === 6 && isDetected) {
+                // --- Drawing Tag Logic ---
+                if (tagId === drawingTagId && isDetected) {
                     if (screenX > leftBound && screenX < rightBound) {
-                        tag6LostStart = null;
+                        drawingTagLostStart = null;
                         if (Date.now() - lastTagClickTime > 200) {
                             const lngLat = getMapCoordsFromScreen(map, screenX, screenY);
                             if (!lngLat) return;
@@ -637,11 +642,11 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 }
             });
 
-            // Tag 6 Lost Logic (Independent check)
-            if (!detectedIds.has(6)) {
-                if (!tag6LostStart) {
-                    tag6LostStart = Date.now();
-                } else if (Date.now() - tag6LostStart > 3000) {
+            // Drawing tag lost logic (independent check)
+            if (!detectedIds.has(drawingTagId)) {
+                if (!drawingTagLostStart) {
+                    drawingTagLostStart = Date.now();
+                } else if (Date.now() - drawingTagLostStart > 3000) {
                     if (tagDrawingCoordinates.length > 0) {
                         if (tagDrawingCoordinates.length > 1) {
                             const featureId = String(Date.now());
@@ -665,11 +670,11 @@ export function initTagTracking({ map, setupConfig, draw }) {
                         updateTagDrawingLayer();
                         lastTagDrawScreenPoint = null;
                     }
-                    tag6LostStart = null;
+                    drawingTagLostStart = null;
                 }
             } else {
-                // Tag 6 is present, reset lost timer
-                tag6LostStart = null;
+                // Drawing tag is present, reset lost timer
+                drawingTagLostStart = null;
             }
 
         } catch (error) {
