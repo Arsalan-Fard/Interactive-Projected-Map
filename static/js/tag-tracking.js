@@ -83,12 +83,48 @@ export function initTagTracking({ map, setupConfig, draw }) {
     if (!map) return null;
 
     const drawingConfig = setupConfig?.project?.drawingConfig || {};
-    const drawingPrimary = drawingConfig?.items?.[0] || drawingConfig;
-    const drawingTagId = Number.isInteger(drawingPrimary?.tagId) ? drawingPrimary.tagId : 6;
-    const drawingColorRaw = typeof drawingPrimary?.color === 'string' ? drawingPrimary.color.trim() : '';
-    const drawingColor = /^#[0-9a-f]{6}$/i.test(drawingColorRaw) || drawingColorRaw.length > 0
-        ? drawingColorRaw
-        : '#ff00ff';
+    const rawDrawingItems = Array.isArray(drawingConfig)
+        ? drawingConfig
+        : (Array.isArray(drawingConfig.items) ? drawingConfig.items : [drawingConfig]);
+
+    const drawingToolByTagId = new Map();
+    rawDrawingItems.forEach(item => {
+        if (!Number.isInteger(item?.tagId)) return;
+        if (drawingToolByTagId.has(item.tagId)) return;
+        drawingToolByTagId.set(item.tagId, {
+            tagId: item.tagId,
+            label: typeof item?.label === 'string' ? item.label : '',
+            color: typeof item?.color === 'string' ? item.color.trim() : '#ff00ff'
+        });
+    });
+    if (drawingToolByTagId.size === 0) {
+        drawingToolByTagId.set(6, { tagId: 6, label: 'drawing line', color: '#ff00ff' });
+    }
+
+    const drawingTagIds = new Set(drawingToolByTagId.keys());
+    const drawingStateByTagId = new Map(); // tagId -> { coordinates, lastScreenPoint, lastSampleTime, lostStart }
+
+    const DRAW_SOURCE_ID = 'tag-drawing-source';
+    const DRAW_LAYER_ID = 'tag-drawing-lines';
+    const DRAW_SAMPLE_INTERVAL_MS = 200;
+    const DRAW_LOST_TIMEOUT_MS = 3000;
+
+    const finishedDrawingQueue = [];
+    let lastDrawCommitTime = 0;
+    const DRAW_COMMIT_INTERVAL_MS = 250;
+
+    function getDrawingState(tagId) {
+        const existing = drawingStateByTagId.get(tagId);
+        if (existing) return existing;
+        const created = {
+            coordinates: [],
+            lastScreenPoint: null,
+            lastSampleTime: 0,
+            lostStart: null
+        };
+        drawingStateByTagId.set(tagId, created);
+        return created;
+    }
 
     const debugDot = createDebugDot();
     const blackHoles = {}; // Map to store black hole elements by ID
@@ -102,7 +138,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
     }
 
     // Initialize special black holes
-    Array.from(new Set([5, drawingTagId, 11])).forEach(id => getBlackHole(id));
+    Array.from(new Set([5, ...drawingTagIds, 11])).forEach(id => getBlackHole(id));
 
     const searchOverlay = createSearchOverlay();
 
@@ -111,10 +147,6 @@ export function initTagTracking({ map, setupConfig, draw }) {
     let searchStartTime = 0;
     let cooldownEndTime = 0;
 
-    let lastTagClickTime = 0;
-    let drawingTagLostStart = null;
-    let tagDrawingCoordinates = [];
-    let lastTagDrawScreenPoint = null;
     let isCheckingPosition = false;
 
     function updateTagStates(detectedTags) {
@@ -163,35 +195,68 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
     function updateTagDrawingLayer() {
         if (!map.isStyleLoaded()) return;
-        const source = map.getSource('tag-drawing-source');
-        const data = {
-            type: 'Feature',
-            properties: {},
-            geometry: {
-                type: 'LineString',
-                coordinates: tagDrawingCoordinates
-            }
-        };
+        const source = map.getSource(DRAW_SOURCE_ID);
+        const features = [];
 
-        if (source) {
-            source.setData(data);
-        } else {
-            map.addSource('tag-drawing-source', { type: 'geojson', data: data });
+        drawingStateByTagId.forEach((state, tagId) => {
+            const coords = state?.coordinates;
+            if (!Array.isArray(coords) || coords.length === 0) return;
+            const tool = drawingToolByTagId.get(tagId) || { tagId, label: '', color: '#ff00ff' };
+            features.push({
+                type: 'Feature',
+                properties: {
+                    tagId,
+                    label: tool.label || '',
+                    color: tool.color || '#ff00ff'
+                },
+                geometry: {
+                    type: 'LineString',
+                    coordinates: coords
+                }
+            });
+        });
+
+        const data = { type: 'FeatureCollection', features };
+
+        const ensureLayer = () => {
+            if (map.getLayer(DRAW_LAYER_ID)) return;
             map.addLayer({
-                id: 'tag-drawing-line',
+                id: DRAW_LAYER_ID,
                 type: 'line',
-                source: 'tag-drawing-source',
+                source: DRAW_SOURCE_ID,
                 layout: {
                     'line-cap': 'round',
                     'line-join': 'round'
                 },
                 paint: {
-                    'line-color': drawingColor,
+                    'line-color': ['coalesce', ['get', 'color'], '#ff00ff'],
                     'line-width': 4,
                     'line-opacity': 0.8
                 }
             });
+        };
+
+        if (source) {
+            source.setData(data);
+            ensureLayer();
+            return;
         }
+
+        map.addSource(DRAW_SOURCE_ID, { type: 'geojson', data });
+        ensureLayer();
+    }
+
+    function flushFinishedDrawings(now) {
+        if (!draw) return;
+        if (finishedDrawingQueue.length === 0) return;
+        if (now - lastDrawCommitTime < DRAW_COMMIT_INTERVAL_MS) return;
+        const next = finishedDrawingQueue.shift();
+        try {
+            draw.add(next);
+        } catch (error) {
+            console.error('Failed to add drawing to Mapbox Draw', error);
+        }
+        lastDrawCommitTime = now;
     }
 
     async function checkPosition() {
@@ -280,7 +345,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
             const hasTag = Array.from(visibleIds).some(id =>
                 id === 5
-                || id === drawingTagId
+                || drawingTagIds.has(id)
                 || layerTagIds.has(id)
                 || shortestTagIds.has(id)
                 || reachTagIds.has(id)
@@ -411,6 +476,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
             const reachOutsideMap = new Map();
             let eraserOutsideMap = false;
             const updatedStickerTags = new Set();
+            let drawingLayerDirty = false;
 
             for (const tagId of visibleIds) {
                 const state = tagStates.get(tagId);
@@ -431,10 +497,10 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
                 if (setupConfig.project.tuiMode) {
                     // Update generic black hole for any detected tag (if needed by logic)
-                    // We only strictly need it for 5, the drawing tag, and layer tags.
+                    // We only strictly need it for 5, drawing tags, and layer tags.
                     const isLayerTag = layerTagIds.has(tagId);
                      
-                    if (tagId === 5 || tagId === drawingTagId || isLayerTag) {
+                    if (tagId === 5 || drawingTagIds.has(tagId) || isLayerTag) {
                         const bh = getBlackHole(tagId);
                         bh.style.left = `${screenX}px`;
                         bh.style.top = `${screenY}px`;
@@ -492,22 +558,23 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     }
                 }
 
-                // --- Drawing Tag Logic ---
-                if (tagId === drawingTagId && isDetected) {
+                // --- Drawing Tags Logic ---
+                if (drawingTagIds.has(tagId) && isDetected) {
                     if (screenX > leftBound && screenX < rightBound) {
-                        drawingTagLostStart = null;
-                        if (Date.now() - lastTagClickTime > 200) {
+                        const drawingState = getDrawingState(tagId);
+                        drawingState.lostStart = null;
+                        if (now - drawingState.lastSampleTime > DRAW_SAMPLE_INTERVAL_MS) {
                             const lngLat = getMapCoordsFromScreen(map, screenX, screenY);
                             if (!lngLat) return;
-                            const dx = lastTagDrawScreenPoint ? screenX - lastTagDrawScreenPoint.x : 0;
-                            const dy = lastTagDrawScreenPoint ? screenY - lastTagDrawScreenPoint.y : 0;
+                            const dx = drawingState.lastScreenPoint ? screenX - drawingState.lastScreenPoint.x : 0;
+                            const dy = drawingState.lastScreenPoint ? screenY - drawingState.lastScreenPoint.y : 0;
                             const dist2 = dx * dx + dy * dy;
-                            if (!lastTagDrawScreenPoint || dist2 >= TAG_DRAW_MIN_DISTANCE_PX * TAG_DRAW_MIN_DISTANCE_PX) {
-                                tagDrawingCoordinates.push([lngLat.lng, lngLat.lat]);
-                                updateTagDrawingLayer();
-                                lastTagDrawScreenPoint = { x: screenX, y: screenY };
+                            if (!drawingState.lastScreenPoint || dist2 >= TAG_DRAW_MIN_DISTANCE_PX * TAG_DRAW_MIN_DISTANCE_PX) {
+                                drawingState.coordinates.push([lngLat.lng, lngLat.lat]);
+                                drawingState.lastScreenPoint = { x: screenX, y: screenY };
+                                drawingLayerDirty = true;
                             }
-                            lastTagClickTime = Date.now();
+                            drawingState.lastSampleTime = now;
                         }
                     }
                 }
@@ -643,40 +710,57 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 }
             });
 
-            // Drawing tag lost logic (independent check)
-            if (!detectedIds.has(drawingTagId)) {
-                if (!drawingTagLostStart) {
-                    drawingTagLostStart = Date.now();
-                } else if (Date.now() - drawingTagLostStart > 3000) {
-                    if (tagDrawingCoordinates.length > 0) {
-                        if (tagDrawingCoordinates.length > 1) {
-                            const featureId = String(Date.now());
-                            const feature = {
-                                id: featureId,
-                                type: 'Feature',
-                                properties: {},
-                                geometry: {
-                                    type: 'LineString',
-                                    coordinates: tagDrawingCoordinates
-                                }
-                            };
-                            if (draw) {
-                                draw.add(feature);
-                            } else {
-                                console.error('Mapbox Draw instance not found!');
-                            }
-                        }
-                        // Reset
-                        tagDrawingCoordinates = [];
-                        updateTagDrawingLayer();
-                        lastTagDrawScreenPoint = null;
-                    }
-                    drawingTagLostStart = null;
+            // Finalize drawings when their tags are lost for long enough
+            drawingTagIds.forEach(tagId => {
+                const drawingState = getDrawingState(tagId);
+                const coords = drawingState?.coordinates;
+                if (!Array.isArray(coords) || coords.length === 0) {
+                    drawingState.lostStart = null;
+                    return;
                 }
-            } else {
-                // Drawing tag is present, reset lost timer
-                drawingTagLostStart = null;
+
+                if (detectedIds.has(tagId)) {
+                    drawingState.lostStart = null;
+                    return;
+                }
+
+                if (!drawingState.lostStart) {
+                    drawingState.lostStart = now;
+                    return;
+                }
+
+                if (now - drawingState.lostStart <= DRAW_LOST_TIMEOUT_MS) {
+                    return;
+                }
+
+                if (coords.length > 1) {
+                    const tool = drawingToolByTagId.get(tagId) || { tagId, label: '', color: '#ff00ff' };
+                    finishedDrawingQueue.push({
+                        id: `${tagId}-${Date.now()}`,
+                        type: 'Feature',
+                        properties: {
+                            tagId,
+                            label: tool.label || '',
+                            color: tool.color || '#ff00ff'
+                        },
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: coords
+                        }
+                    });
+                }
+
+                drawingState.coordinates = [];
+                drawingState.lastScreenPoint = null;
+                drawingState.lastSampleTime = 0;
+                drawingState.lostStart = null;
+                drawingLayerDirty = true;
+            });
+
+            if (drawingLayerDirty) {
+                updateTagDrawingLayer();
             }
+            flushFinishedDrawings(now);
 
         } catch (error) {
             console.error('CheckPosition error:', error);

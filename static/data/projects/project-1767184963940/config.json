@@ -101,19 +101,19 @@
         {
           "id": "drawing-1",
           "label": "QQQ",
-          "color": "#00ff1e",
+          "color": "#006eff",
           "tagId": 8
         },
         {
           "id": "drawing-2",
           "label": "drawing line",
-          "color": "#0400ff",
+          "color": "#00ffbf",
           "tagId": 10
         },
         {
           "id": "drawing-3",
           "label": "drawing line",
-          "color": "#ff0000",
+          "color": "#ff0088",
           "tagId": 11
         }
       ]
