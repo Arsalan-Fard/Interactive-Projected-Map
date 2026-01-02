@@ -111,31 +111,40 @@
                     </div>
                 </div>
 
-                <div class="form-section bg-bg-secondary border border-border-subtle rounded-lg p-6 mb-6">
-                    <div class="section-header flex items-center justify-between mb-4">
-                        <div>
-                            <h3 class="text-base font-semibold m-0">Sticker Settings</h3>
-                            <p class="text-xs text-text-muted m-0 mt-1">Choose how many stickers are available and set their colors.</p>
+                <div class="bg-bg-secondary border border-border-subtle rounded-lg mb-6 px-6 py-2 flex gap-2 w-full">
+                    <button class="project-subtab-btn py-3 px-4 bg-transparent border-0 border-b-2 border-transparent text-text-secondary text-sm font-medium cursor-pointer transition-all duration-200 relative hover:text-text-primary [&.active]:text-accent-primary [&.active]:border-accent-primary active" data-subtab="inputs">Inputs</button>
+                    <button class="project-subtab-btn py-3 px-4 bg-transparent border-0 border-b-2 border-transparent text-text-secondary text-sm font-medium cursor-pointer transition-all duration-200 relative hover:text-text-primary [&.active]:text-accent-primary [&.active]:border-accent-primary" data-subtab="layers">Layers</button>
+                </div>
+
+                <div class="project-subtab-panel block" data-subpanel="inputs">
+                    <div class="form-section bg-bg-secondary border border-border-subtle rounded-lg p-6 mb-6">
+                        <div class="section-header flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-base font-semibold m-0">Sticker Settings</h3>
+                                <p class="text-xs text-text-muted m-0 mt-1">Choose how many stickers are available and set their colors.</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
-                        <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Sticker Count</label>
-                        <input id="sticker-count" type="number" min="1" max="10" step="1" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
-                    </div>
-                    <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center">
-                        <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Sticker Colors</label>
-                        <div id="sticker-colors" class="flex flex-wrap gap-2"></div>
+                        <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                            <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Sticker Count</label>
+                            <input id="sticker-count" type="number" min="1" max="10" step="1" class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
+                        </div>
+                        <div class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center">
+                            <label class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Sticker Colors</label>
+                            <div id="sticker-colors" class="flex flex-wrap gap-2"></div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-section bg-bg-secondary border border-border-subtle rounded-lg p-6">
-                    <div class="section-header flex items-center justify-between mb-4">
-                        <div>
-                            <h3 class="text-base font-semibold m-0">AprilTag Controls</h3>
-                            <p class="text-xs text-text-muted m-0 mt-1">Enable tools and assign AprilTag IDs per item.</p>
+                <div class="project-subtab-panel hidden" data-subpanel="layers">
+                    <div class="form-section bg-bg-secondary border border-border-subtle rounded-lg p-6">
+                        <div class="section-header flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-base font-semibold m-0">Layers</h3>
+                                <p class="text-xs text-text-muted m-0 mt-1">Enable tools and assign AprilTag IDs per item.</p>
+                            </div>
                         </div>
+                        <div id="tag-config" class="flex flex-col gap-6"></div>
                     </div>
-                    <div id="tag-config" class="flex flex-col gap-6"></div>
                 </div>
 
             </section>
