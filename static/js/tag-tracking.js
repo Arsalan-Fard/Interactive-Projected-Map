@@ -15,6 +15,7 @@ const BLACK_SCREEN_DURATION = 1000; // Stay black for 1s
 const COOLDOWN_DURATION = 2000; // Show map for 2s before trying again
 const HIT_THRESHOLD = 2;
 const MISS_THRESHOLD = 5;
+const TAG_DRAW_MIN_DISTANCE_PX = 10;
 
 function createDebugDot() {
     const debugDot = document.createElement('div');
@@ -107,6 +108,8 @@ export function initTagTracking({ map, setupConfig, draw }) {
     let lastTagClickTime = 0;
     let tag6LostStart = null;
     let tagDrawingCoordinates = [];
+    let lastTagDrawScreenPoint = null;
+    let isCheckingPosition = false;
 
     function updateTagStates(detectedTags) {
         const detectedIds = new Set();
@@ -186,6 +189,8 @@ export function initTagTracking({ map, setupConfig, draw }) {
     }
 
     async function checkPosition() {
+        if (isCheckingPosition) return;
+        isCheckingPosition = true;
         try {
             const now = Date.now();
             const response = await fetch('http://localhost:5000/api/position');
@@ -488,9 +493,14 @@ export function initTagTracking({ map, setupConfig, draw }) {
                         if (Date.now() - lastTagClickTime > 200) {
                             const lngLat = getMapCoordsFromScreen(map, screenX, screenY);
                             if (!lngLat) return;
-
-                            tagDrawingCoordinates.push([lngLat.lng, lngLat.lat]);
-                            updateTagDrawingLayer();
+                            const dx = lastTagDrawScreenPoint ? screenX - lastTagDrawScreenPoint.x : 0;
+                            const dy = lastTagDrawScreenPoint ? screenY - lastTagDrawScreenPoint.y : 0;
+                            const dist2 = dx * dx + dy * dy;
+                            if (!lastTagDrawScreenPoint || dist2 >= TAG_DRAW_MIN_DISTANCE_PX * TAG_DRAW_MIN_DISTANCE_PX) {
+                                tagDrawingCoordinates.push([lngLat.lng, lngLat.lat]);
+                                updateTagDrawingLayer();
+                                lastTagDrawScreenPoint = { x: screenX, y: screenY };
+                            }
                             lastTagClickTime = Date.now();
                         }
                     }
@@ -653,6 +663,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
                         // Reset
                         tagDrawingCoordinates = [];
                         updateTagDrawingLayer();
+                        lastTagDrawScreenPoint = null;
                     }
                     tag6LostStart = null;
                 }
@@ -663,6 +674,8 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
         } catch (error) {
             console.error('CheckPosition error:', error);
+        } finally {
+            isCheckingPosition = false;
         }
     }
 

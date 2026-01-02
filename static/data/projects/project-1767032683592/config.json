@@ -5,7 +5,7 @@
     "id": "project-1767032683592",
     "mapId": "palaiseau-outdoor",
     "rearProjection": false,
-    "tuiMode": true,
+    "tuiMode": false,
     "tagConfig": {
       "layers": {
         "items": [
