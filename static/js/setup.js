@@ -1765,11 +1765,41 @@ function switchTab(tabName) {
     });
 }
 
+function switchProjectSubtab(subtabName) {
+    if (!subtabName) return;
+
+    document.querySelectorAll('.project-subtab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.subtab === subtabName) {
+            btn.classList.add('active');
+        }
+    });
+
+    document.querySelectorAll('.project-subtab-panel').forEach(panel => {
+        if (panel.dataset.subpanel === subtabName) {
+            panel.classList.remove('hidden');
+            panel.classList.add('block');
+        } else {
+            panel.classList.remove('block');
+            panel.classList.add('hidden');
+        }
+    });
+}
+
 function initEvents() {
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
+
+    // Project sub-tabs
+    document.querySelectorAll('.project-subtab-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchProjectSubtab(btn.dataset.subtab));
+    });
+    const activeProjectSubtab = document.querySelector('.project-subtab-btn.active');
+    if (activeProjectSubtab) {
+        switchProjectSubtab(activeProjectSubtab.dataset.subtab);
+    }
 
     // Project dropdown
     els.projectDropdown?.addEventListener('change', e => {
