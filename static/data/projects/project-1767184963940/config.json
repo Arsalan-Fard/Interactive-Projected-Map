@@ -97,9 +97,26 @@
       }
     },
     "drawingConfig": {
-      "label": "QQQ",
-      "color": "#00ff1e",
-      "tagId": 7
+      "items": [
+        {
+          "id": "drawing-1",
+          "label": "QQQ",
+          "color": "#00ff1e",
+          "tagId": 8
+        },
+        {
+          "id": "drawing-2",
+          "label": "drawing line",
+          "color": "#0400ff",
+          "tagId": 10
+        },
+        {
+          "id": "drawing-3",
+          "label": "drawing line",
+          "color": "#ff0000",
+          "tagId": 11
+        }
+      ]
     },
     "stickerConfig": {
       "count": 3,
@@ -109,7 +126,7 @@
         "#45B7D1"
       ],
       "tags": [
-        null,
+        9,
         null,
         null
       ]

@@ -27,7 +27,9 @@ function applyStickerConfig(setupConfig) {
 
 async function initApp() {
     const setupConfig = await loadSetupConfig();
-    const drawLineColor = setupConfig?.project?.drawingConfig?.color || 'magenta';
+    const drawLineColor = setupConfig?.project?.drawingConfig?.items?.[0]?.color
+        || setupConfig?.project?.drawingConfig?.color
+        || 'magenta';
 
     window.addEventListener('error', (e) => {
         console.error('[error]', e.message, e.filename, e.lineno, e.colno, e.error?.stack);

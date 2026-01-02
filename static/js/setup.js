@@ -22,9 +22,9 @@ const defaultState = {
         tuiMode: false,
         tagConfig: null,
         drawingConfig: {
-            label: 'drawing line',
-            color: '#ff00ff',
-            tagId: 6
+            items: [
+                { id: 'drawing-1', label: 'drawing line', color: '#ff00ff', tagId: 6 }
+            ]
         },
         stickerConfig: {
             count: MAX_STICKER_COUNT,
@@ -123,9 +123,8 @@ const els = {
     projectPill: document.getElementById('project-pill'),
     projectRearProjection: document.getElementById('project-rear-projection'),
     projectTuiMode: document.getElementById('project-tui-mode'),
-    drawingLabel: document.getElementById('drawing-label'),
-    drawingColor: document.getElementById('drawing-color'),
-    drawingTagId: document.getElementById('drawing-tag-id'),
+    drawingSettingsList: document.getElementById('drawing-settings-list'),
+    addDrawingSetting: document.getElementById('add-drawing-setting'),
     stickerCount: document.getElementById('sticker-count'),
     stickerColors: document.getElementById('sticker-colors'),
     tagConfig: document.getElementById('tag-config'),
@@ -173,11 +172,12 @@ const els = {
 const TAG_ID_OPTIONS = Array.from({ length: 5 }, (_, i) => i + 7);
 const TAG_IMAGE_PREFIX = '/generated_tags/tag36h11_id';
 const DEFAULT_DRAWING_CONFIG = {
-    label: 'drawing line',
-    color: '#ff00ff',
-    tagId: 6
+    items: [
+        { id: 'drawing-1', label: 'drawing line', color: '#ff00ff', tagId: 6 }
+    ]
 };
-const DRAWING_TAG_ID_OPTIONS = Array.from(new Set([DEFAULT_DRAWING_CONFIG.tagId, ...TAG_ID_OPTIONS])).sort((a, b) => a - b);
+const DEFAULT_DRAWING_ITEM = DEFAULT_DRAWING_CONFIG.items[0];
+const DRAWING_TAG_ID_OPTIONS = Array.from(new Set([DEFAULT_DRAWING_ITEM.tagId, ...TAG_ID_OPTIONS])).sort((a, b) => a - b);
 const DEFAULT_TAG_GROUPS = {
     reach15: [
         { id: 'walk', label: 'Walk', enabled: true, tagId: null },
@@ -250,20 +250,42 @@ function normalizeTagConfig() {
 
 function normalizeDrawingConfig() {
     if (!state.project) return;
-    const existing = state.project.drawingConfig || {};
-    const label = typeof existing.label === 'string' && existing.label.trim().length > 0
-        ? existing.label
-        : DEFAULT_DRAWING_CONFIG.label;
-    let color = typeof existing.color === 'string' ? existing.color.trim() : '';
-    if (!/^#[0-9a-f]{6}$/i.test(color)) {
-        if (color.toLowerCase() === 'magenta' || color.toLowerCase() === 'fuchsia') {
-            color = DEFAULT_DRAWING_CONFIG.color;
-        } else {
-            color = DEFAULT_DRAWING_CONFIG.color;
-        }
+    const existing = state.project.drawingConfig;
+
+    let items = [];
+    if (Array.isArray(existing)) {
+        items = existing;
+    } else if (existing && Array.isArray(existing.items)) {
+        items = existing.items;
+    } else if (existing && (existing.label || existing.color || existing.tagId !== undefined)) {
+        items = [existing];
+    } else {
+        items = DEFAULT_DRAWING_CONFIG.items;
     }
-    const tagId = Number.isInteger(existing.tagId) ? existing.tagId : DEFAULT_DRAWING_CONFIG.tagId;
-    state.project.drawingConfig = { label, color, tagId };
+
+    const normalized = (Array.isArray(items) ? items : []).map((raw, index) => {
+        const fallbackId = `drawing-${index + 1}`;
+        const id = typeof raw?.id === 'string' && raw.id.trim().length > 0 ? raw.id : fallbackId;
+        const label = typeof raw?.label === 'string' && raw.label.trim().length > 0
+            ? raw.label
+            : DEFAULT_DRAWING_ITEM.label;
+        let color = typeof raw?.color === 'string' ? raw.color.trim() : '';
+        if (!/^#[0-9a-f]{6}$/i.test(color)) {
+            if (color.toLowerCase() === 'magenta' || color.toLowerCase() === 'fuchsia') {
+                color = DEFAULT_DRAWING_ITEM.color;
+            } else {
+                color = DEFAULT_DRAWING_ITEM.color;
+            }
+        }
+        const tagId = Number.isInteger(raw?.tagId) ? raw.tagId : DEFAULT_DRAWING_ITEM.tagId;
+        return { id, label, color, tagId };
+    });
+
+    if (normalized.length === 0) {
+        normalized.push({ ...DEFAULT_DRAWING_ITEM });
+    }
+
+    state.project.drawingConfig = { items: normalized };
 }
 
 function clampStickerCount(value) {
@@ -811,13 +833,18 @@ function renderProject() {
     renderTagConfig();
 }
 
-function renderDrawingConfig() {
-    if (!els.drawingLabel || !els.drawingColor || !els.drawingTagId) return;
-    normalizeDrawingConfig();
-    const config = state.project.drawingConfig || DEFAULT_DRAWING_CONFIG;
+function getAllDrawingTagIds() {
+    const items = state.project?.drawingConfig?.items;
+    if (!Array.isArray(items)) return [];
+    return items
+        .map(item => item?.tagId)
+        .filter(tagId => Number.isInteger(tagId));
+}
 
-    els.drawingLabel.value = config.label || DEFAULT_DRAWING_CONFIG.label;
-    els.drawingColor.value = config.color || DEFAULT_DRAWING_CONFIG.color;
+function renderDrawingConfig() {
+    if (!els.drawingSettingsList) return;
+    normalizeDrawingConfig();
+    const items = state.project.drawingConfig?.items || DEFAULT_DRAWING_CONFIG.items;
 
     const usedTags = new Set();
     const stickerTags = state.project.stickerConfig?.tags || [];
@@ -838,31 +865,125 @@ function renderDrawingConfig() {
         if (Number.isInteger(item.tagId)) usedTags.add(String(item.tagId));
     });
 
-    const currentTag = Number.isInteger(config.tagId) ? String(config.tagId) : '';
-    if (currentTag) usedTags.delete(currentTag);
+    els.drawingSettingsList.innerHTML = '';
 
-    els.drawingTagId.innerHTML = '';
-    DRAWING_TAG_ID_OPTIONS.forEach(tagId => {
-        const option = document.createElement('option');
-        option.value = String(tagId);
-        option.textContent = `ID ${tagId}`;
-        if (usedTags.has(option.value)) {
-            option.disabled = true;
-            option.textContent = `ID ${tagId} (in use)`;
+    const drawingTagOwner = new Map();
+    items.forEach((item, index) => {
+        if (!Number.isInteger(item?.tagId)) return;
+        const key = String(item.tagId);
+        if (!drawingTagOwner.has(key)) {
+            drawingTagOwner.set(key, index);
         }
-        els.drawingTagId.appendChild(option);
     });
 
-    if (Number.isInteger(config.tagId)) {
-        const desired = String(config.tagId);
-        const available = els.drawingTagId.querySelector(`option[value="${desired}"]`);
-        if (available) {
-            els.drawingTagId.value = desired;
+    items.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = 'flex flex-col lg:flex-row lg:items-end gap-3 p-3 bg-bg-tertiary border border-border-subtle rounded-md';
+
+        const nameWrap = document.createElement('div');
+        nameWrap.className = 'flex flex-col gap-1 flex-1 min-w-[180px]';
+        const nameLabel = document.createElement('label');
+        nameLabel.className = 'text-[11px] text-text-muted uppercase tracking-wider';
+        nameLabel.textContent = 'Name';
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.value = item.label || DEFAULT_DRAWING_ITEM.label;
+        nameInput.className = 'w-full h-10 px-3 bg-bg-secondary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary';
+        nameInput.addEventListener('input', (e) => {
+            state.project.drawingConfig.items[index].label = e.target.value;
+            markSaved('Unsaved changes');
+        });
+        nameWrap.appendChild(nameLabel);
+        nameWrap.appendChild(nameInput);
+
+        const colorWrap = document.createElement('div');
+        colorWrap.className = 'flex flex-col gap-1';
+        const colorLabel = document.createElement('label');
+        colorLabel.className = 'text-[11px] text-text-muted uppercase tracking-wider';
+        colorLabel.textContent = 'Color';
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.value = item.color || DEFAULT_DRAWING_ITEM.color;
+        colorInput.className = 'w-full h-10 px-2 bg-bg-secondary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary';
+        colorInput.addEventListener('input', (e) => {
+            state.project.drawingConfig.items[index].color = e.target.value;
+            markSaved('Unsaved changes');
+        });
+        colorWrap.appendChild(colorLabel);
+        colorWrap.appendChild(colorInput);
+
+        const tagWrap = document.createElement('div');
+        tagWrap.className = 'flex flex-col gap-1';
+        const tagLabel = document.createElement('label');
+        tagLabel.className = 'text-[11px] text-text-muted uppercase tracking-wider';
+        tagLabel.textContent = 'AprilTag ID';
+        const tagSelect = document.createElement('select');
+        tagSelect.className = 'w-full h-10 px-3 bg-bg-secondary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary';
+
+        const currentTag = Number.isInteger(item.tagId) ? String(item.tagId) : '';
+
+        DRAWING_TAG_ID_OPTIONS.forEach(tagId => {
+            const option = document.createElement('option');
+            option.value = String(tagId);
+            option.textContent = `ID ${tagId}`;
+
+            const ownerIndex = drawingTagOwner.get(option.value);
+            const usedByOtherDrawing = ownerIndex !== undefined && ownerIndex !== index;
+            const isUsed = usedTags.has(option.value) || usedByOtherDrawing;
+            if (isUsed) {
+                option.disabled = true;
+                option.textContent = `ID ${tagId} (in use)`;
+            }
+
+            tagSelect.appendChild(option);
+        });
+
+        const desired = currentTag || String(DEFAULT_DRAWING_ITEM.tagId);
+        const available = tagSelect.querySelector(`option[value="${desired}"]`);
+        if (available && !available.disabled) {
+            tagSelect.value = desired;
+            state.project.drawingConfig.items[index].tagId = Number.parseInt(desired, 10);
         } else {
-            state.project.drawingConfig.tagId = DEFAULT_DRAWING_CONFIG.tagId;
-            els.drawingTagId.value = String(DEFAULT_DRAWING_CONFIG.tagId);
+            const firstAvailable = Array.from(tagSelect.options).find(opt => !opt.disabled) || null;
+            if (firstAvailable) {
+                tagSelect.value = firstAvailable.value;
+                state.project.drawingConfig.items[index].tagId = Number.parseInt(firstAvailable.value, 10);
+            }
         }
-    }
+
+        tagSelect.addEventListener('change', (e) => {
+            const next = Number.parseInt(e.target.value, 10);
+            state.project.drawingConfig.items[index].tagId = Number.isFinite(next) ? next : DEFAULT_DRAWING_ITEM.tagId;
+            renderDrawingConfig();
+            renderStickerConfig();
+            renderTagConfig();
+            markSaved('Unsaved changes');
+        });
+
+        tagWrap.appendChild(tagLabel);
+        tagWrap.appendChild(tagSelect);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'h-10 px-3 text-[12px] border border-border-subtle rounded-md text-accent-danger hover:text-white hover:bg-accent-danger hover:border-accent-danger disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-accent-danger';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.disabled = items.length <= 1;
+        deleteBtn.addEventListener('click', () => {
+            if (state.project.drawingConfig.items.length <= 1) return;
+            state.project.drawingConfig.items.splice(index, 1);
+            normalizeDrawingConfig();
+            renderDrawingConfig();
+            renderStickerConfig();
+            renderTagConfig();
+            markSaved('Unsaved changes');
+        });
+
+        row.appendChild(nameWrap);
+        row.appendChild(colorWrap);
+        row.appendChild(tagWrap);
+        row.appendChild(deleteBtn);
+        els.drawingSettingsList.appendChild(row);
+    });
 }
 
 function renderProjectDropdown() {
@@ -950,10 +1071,7 @@ function renderStickerConfig() {
             }
         });
 
-        const drawingTagId = state.project.drawingConfig?.tagId;
-        if (Number.isInteger(drawingTagId)) {
-            usedTags.add(String(drawingTagId));
-        }
+        getAllDrawingTagIds().forEach(tagId => usedTags.add(String(tagId)));
 
         return usedTags;
     };
@@ -1110,10 +1228,7 @@ function renderTagConfig() {
                 usedInStickers.add(String(tagId));
             }
         });
-        const drawingTagId = state.project.drawingConfig?.tagId;
-        if (Number.isInteger(drawingTagId)) {
-            usedInStickers.add(String(drawingTagId));
-        }
+        getAllDrawingTagIds().forEach(tagId => usedInStickers.add(String(tagId)));
 
         tagSelects.forEach(select => {
             const current = select.value;
@@ -1971,22 +2086,16 @@ function initEvents() {
         markSaved('Unsaved changes');
     });
 
-    els.drawingLabel?.addEventListener('input', e => {
+    els.addDrawingSetting?.addEventListener('click', () => {
         normalizeDrawingConfig();
-        state.project.drawingConfig.label = e.target.value;
-        markSaved('Unsaved changes');
-    });
-
-    els.drawingColor?.addEventListener('input', e => {
-        normalizeDrawingConfig();
-        state.project.drawingConfig.color = e.target.value;
-        markSaved('Unsaved changes');
-    });
-
-    els.drawingTagId?.addEventListener('change', e => {
-        normalizeDrawingConfig();
-        const next = Number.parseInt(e.target.value, 10);
-        state.project.drawingConfig.tagId = Number.isFinite(next) ? next : DEFAULT_DRAWING_CONFIG.tagId;
+        const items = state.project.drawingConfig.items;
+        const nextIndex = items.length + 1;
+        items.push({
+            id: `drawing-${nextIndex}`,
+            label: DEFAULT_DRAWING_ITEM.label,
+            color: DEFAULT_DRAWING_ITEM.color,
+            tagId: DEFAULT_DRAWING_ITEM.tagId
+        });
         renderDrawingConfig();
         renderStickerConfig();
         renderTagConfig();

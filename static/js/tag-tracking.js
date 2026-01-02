@@ -83,8 +83,9 @@ export function initTagTracking({ map, setupConfig, draw }) {
     if (!map) return null;
 
     const drawingConfig = setupConfig?.project?.drawingConfig || {};
-    const drawingTagId = Number.isInteger(drawingConfig.tagId) ? drawingConfig.tagId : 6;
-    const drawingColorRaw = typeof drawingConfig.color === 'string' ? drawingConfig.color.trim() : '';
+    const drawingPrimary = drawingConfig?.items?.[0] || drawingConfig;
+    const drawingTagId = Number.isInteger(drawingPrimary?.tagId) ? drawingPrimary.tagId : 6;
+    const drawingColorRaw = typeof drawingPrimary?.color === 'string' ? drawingPrimary.color.trim() : '';
     const drawingColor = /^#[0-9a-f]{6}$/i.test(drawingColorRaw) || drawingColorRaw.length > 0
         ? drawingColorRaw
         : '#ff00ff';
