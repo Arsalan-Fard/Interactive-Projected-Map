@@ -31,6 +31,24 @@ async function initApp() {
         || setupConfig?.project?.drawingConfig?.color
         || 'magenta';
 
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const debugEnabled = params.get('debug') === '1' || window.localStorage?.getItem('tm_debug') === '1';
+        if (debugEnabled) {
+            const root = globalThis.__tmDebug || (globalThis.__tmDebug = {});
+            root.setupConfig = setupConfig;
+            root.dumpDrawGlow = (mapInstance) => {
+                try {
+                    console.log('[tm debug] gl-draw-line-glow paint', mapInstance?.getPaintProperty?.('gl-draw-line-glow', 'line-color'));
+                } catch (error) {
+                    console.warn('[tm debug] dumpDrawGlow failed', error);
+                }
+            };
+        }
+    } catch {
+        // ignore
+    }
+
     window.addEventListener('error', (e) => {
         console.error('[error]', e.message, e.filename, e.lineno, e.colno, e.error?.stack);
     });
@@ -89,6 +107,17 @@ async function initApp() {
             }
         }
     });
+
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const debugEnabled = params.get('debug') === '1' || window.localStorage?.getItem('tm_debug') === '1';
+        if (debugEnabled) {
+            const root = globalThis.__tmDebug || (globalThis.__tmDebug = {});
+            root.map = map;
+        }
+    } catch {
+        // ignore
+    }
 
     function getClientPointFromEvent(e) {
         const source = e?.originalEvent || e;
@@ -172,13 +201,13 @@ async function initApp() {
             id: layerId,
             type: 'line',
             source: sourceId,
-            filter: ['all', ['==', '$type', 'LineString'], ['==', 'meta', 'feature']],
+            filter: ['all', ['==', '$type', 'LineString'], ['==', 'meta', 'feature'], ['!=', ['get', 'tm_source'], 'tag']],
             layout: {
                 'line-cap': 'round',
                 'line-join': 'round'
             },
             paint: {
-                'line-color': drawLineColor,
+                'line-color': ['coalesce', ['get', 'color'], drawLineColor],
                 'line-width': 14,
                 'line-opacity': 0.6,
                 'line-blur': 6
@@ -211,6 +240,17 @@ async function initApp() {
         ...(drawModes ? { modes: drawModes } : {})
     });
     map.addControl(draw);
+
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const debugEnabled = params.get('debug') === '1' || window.localStorage?.getItem('tm_debug') === '1';
+        if (debugEnabled) {
+            const root = globalThis.__tmDebug || (globalThis.__tmDebug = {});
+            root.draw = draw;
+        }
+    } catch {
+        // ignore
+    }
 
     initTagTracking({ map, setupConfig, draw });
 

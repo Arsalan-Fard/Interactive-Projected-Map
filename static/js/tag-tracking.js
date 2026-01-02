@@ -103,15 +103,68 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
     const drawingTagIds = new Set(drawingToolByTagId.keys());
     const drawingStateByTagId = new Map(); // tagId -> { coordinates, lastScreenPoint, lastSampleTime, lostStart }
+    const finalizedDrawingFeatures = []; // List of finished lines (still rendered with custom colors)
+    const TM_SOURCE_KEY = 'tm_source';
+    const TM_SOURCE_TAG = 'tag';
 
     const DRAW_SOURCE_ID = 'tag-drawing-source';
     const DRAW_LAYER_ID = 'tag-drawing-lines';
+    const DRAW_GLOW_LAYER_ID = 'tag-drawing-lines-glow';
     const DRAW_SAMPLE_INTERVAL_MS = 200;
     const DRAW_LOST_TIMEOUT_MS = 3000;
 
     const finishedDrawingQueue = [];
     let lastDrawCommitTime = 0;
     const DRAW_COMMIT_INTERVAL_MS = 250;
+
+    const debugEnabled = (() => {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('debug') === '1' || window.localStorage?.getItem('tm_debug') === '1';
+        } catch {
+            return false;
+        }
+    })();
+
+    let lastTagDrawingData = null;
+
+    if (debugEnabled) {
+        const root = globalThis.__tmDebug || (globalThis.__tmDebug = {});
+        root.tagTracking = {
+            dumpTagDrawing() {
+                const summary = (lastTagDrawingData?.features || []).map(f => ({
+                    tagId: f?.properties?.tagId,
+                    color: f?.properties?.color,
+                    tmSource: f?.properties?.[TM_SOURCE_KEY],
+                    points: Array.isArray(f?.geometry?.coordinates) ? f.geometry.coordinates.length : 0
+                }));
+                console.log('[tm debug] tag drawing features', summary);
+                try {
+                    console.log('[tm debug] layer paint (glow)', map.getPaintProperty?.(DRAW_GLOW_LAYER_ID, 'line-color'));
+                    console.log('[tm debug] layer paint (glow blur)', map.getPaintProperty?.(DRAW_GLOW_LAYER_ID, 'line-blur'));
+                    console.log('[tm debug] layer paint (line)', map.getPaintProperty?.(DRAW_LAYER_ID, 'line-color'));
+                } catch (error) {
+                    console.warn('[tm debug] paint property read failed', error);
+                }
+            },
+            setTagGlowBlur(value) {
+                try {
+                    map.setPaintProperty?.(DRAW_GLOW_LAYER_ID, 'line-blur', value);
+                    console.log('[tm debug] set glow blur', value);
+                } catch (error) {
+                    console.warn('[tm debug] set glow blur failed', error);
+                }
+            },
+            excludeFromDrawLayers() {
+                try {
+                    excludeTagDrawingsFromDrawLineLayers();
+                    console.log('[tm debug] applied draw-layer exclusion filter');
+                } catch (error) {
+                    console.warn('[tm debug] draw-layer exclusion failed', error);
+                }
+            }
+        };
+    }
 
     function getDrawingState(tagId) {
         const existing = drawingStateByTagId.get(tagId);
@@ -198,6 +251,11 @@ export function initTagTracking({ map, setupConfig, draw }) {
         const source = map.getSource(DRAW_SOURCE_ID);
         const features = [];
 
+        finalizedDrawingFeatures.forEach(feature => {
+            if (!feature) return;
+            features.push(feature);
+        });
+
         drawingStateByTagId.forEach((state, tagId) => {
             const coords = state?.coordinates;
             if (!Array.isArray(coords) || coords.length === 0) return;
@@ -207,7 +265,8 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 properties: {
                     tagId,
                     label: tool.label || '',
-                    color: tool.color || '#ff00ff'
+                    color: tool.color || '#ff00ff',
+                    [TM_SOURCE_KEY]: TM_SOURCE_TAG
                 },
                 geometry: {
                     type: 'LineString',
@@ -217,33 +276,56 @@ export function initTagTracking({ map, setupConfig, draw }) {
         });
 
         const data = { type: 'FeatureCollection', features };
+        lastTagDrawingData = data;
 
-        const ensureLayer = () => {
-            if (map.getLayer(DRAW_LAYER_ID)) return;
-            map.addLayer({
-                id: DRAW_LAYER_ID,
-                type: 'line',
-                source: DRAW_SOURCE_ID,
-                layout: {
-                    'line-cap': 'round',
-                    'line-join': 'round'
-                },
-                paint: {
-                    'line-color': ['coalesce', ['get', 'color'], '#ff00ff'],
-                    'line-width': 4,
-                    'line-opacity': 0.8
-                }
-            });
+        const ensureLayers = () => {
+            if (!map.getLayer(DRAW_GLOW_LAYER_ID)) {
+                map.addLayer({
+                    id: DRAW_GLOW_LAYER_ID,
+                    type: 'line',
+                    source: DRAW_SOURCE_ID,
+                    layout: {
+                        'line-cap': 'round',
+                        'line-join': 'round'
+                    },
+                    paint: {
+                        'line-color': ['coalesce', ['get', 'color'], '#ff00ff'],
+                        'line-width': 14,
+                        'line-opacity': 0.5,
+                        'line-blur': 6
+                    }
+                });
+            }
+
+            if (!map.getLayer(DRAW_LAYER_ID)) {
+                map.addLayer(
+                    {
+                        id: DRAW_LAYER_ID,
+                        type: 'line',
+                        source: DRAW_SOURCE_ID,
+                        layout: {
+                            'line-cap': 'round',
+                            'line-join': 'round'
+                        },
+                        paint: {
+                            'line-color': ['coalesce', ['get', 'color'], '#ff00ff'],
+                            'line-width': 4,
+                            'line-opacity': 0.85
+                        }
+                    },
+                    undefined
+                );
+            }
         };
 
         if (source) {
             source.setData(data);
-            ensureLayer();
+            ensureLayers();
             return;
         }
 
         map.addSource(DRAW_SOURCE_ID, { type: 'geojson', data });
-        ensureLayer();
+        ensureLayers();
     }
 
     function flushFinishedDrawings(now) {
@@ -257,6 +339,38 @@ export function initTagTracking({ map, setupConfig, draw }) {
             console.error('Failed to add drawing to Mapbox Draw', error);
         }
         lastDrawCommitTime = now;
+    }
+
+    function excludeTagDrawingsFromDrawLineLayers() {
+        if (!map?.getStyle || !map?.getLayer || !map?.setFilter) return;
+        const style = map.getStyle();
+        const layers = style?.layers || [];
+        const excludeExpr = ['!=', ['get', TM_SOURCE_KEY], TM_SOURCE_TAG];
+
+        layers.forEach(layer => {
+            const id = layer?.id;
+            if (typeof id !== 'string') return;
+            if (!id.startsWith('gl-draw-line')) return;
+
+            const current = map.getFilter(id);
+            if (!current) {
+                map.setFilter(id, excludeExpr);
+                return;
+            }
+            map.setFilter(id, ['all', current, excludeExpr]);
+        });
+    }
+
+    if (map?.on) {
+        map.on('style.load', () => {
+            excludeTagDrawingsFromDrawLineLayers();
+            updateTagDrawingLayer();
+        });
+    }
+
+    if (map?.isStyleLoaded?.()) {
+        excludeTagDrawingsFromDrawLineLayers();
+        updateTagDrawingLayer();
     }
 
     async function checkPosition() {
@@ -735,19 +849,22 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
                 if (coords.length > 1) {
                     const tool = drawingToolByTagId.get(tagId) || { tagId, label: '', color: '#ff00ff' };
-                    finishedDrawingQueue.push({
+                    const feature = {
                         id: `${tagId}-${Date.now()}`,
                         type: 'Feature',
                         properties: {
                             tagId,
                             label: tool.label || '',
-                            color: tool.color || '#ff00ff'
+                            color: tool.color || '#ff00ff',
+                            [TM_SOURCE_KEY]: TM_SOURCE_TAG
                         },
                         geometry: {
                             type: 'LineString',
                             coordinates: coords
                         }
-                    });
+                    };
+                    finalizedDrawingFeatures.push(feature);
+                    finishedDrawingQueue.push(feature);
                 }
 
                 drawingState.coordinates = [];
