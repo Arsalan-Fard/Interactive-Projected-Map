@@ -15,3 +15,115 @@
     display: flex !important;
     flex-direction: column;
 }
+
+#workshop-bars {
+    position: absolute;
+    inset: 0;
+    display: none;
+    pointer-events: none;
+    z-index: 150;
+}
+
+body.workshop-mode #workshop-bars {
+    display: block;
+}
+
+body.workshop-mode #left-sidebar,
+body.workshop-mode #right-sidebar {
+    display: none;
+}
+
+.workshop-bar {
+    position: absolute;
+    pointer-events: auto;
+    transform-origin: center;
+}
+
+.workshop-bar--top {
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%) rotate(180deg);
+}
+
+.workshop-bar--bottom {
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.workshop-bar--left {
+    left: 35px;
+    top: 25%;
+    transform: translateY(-50%)  rotate(90deg);
+    transform-origin: left center;
+}
+
+.workshop-bar--right {
+    right: 35px;
+    top: 25%;
+    transform: translateY(-50%) rotate(-90deg);
+    transform-origin: right center;
+}
+
+.workshop-panel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(15, 15, 20, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+}
+
+.workshop-stickers {
+    display: flex;
+    gap: 6px;
+}
+
+.workshop-btn {
+    min-width: 54px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    color: #e6edf3;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+}
+
+.workshop-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.workshop-btn.active {
+    background: linear-gradient(to bottom, rgba(70, 130, 255, 0.4), rgba(70, 130, 255, 0.2));
+    border-color: rgba(100, 160, 255, 0.8);
+    color: #ffffff;
+}
+
+.workshop-sticker {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 9999px;
+    cursor: pointer;
+    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4), 0 4px 8px rgba(0, 0, 0, 0.6);
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.workshop-sticker:hover {
+    transform: scale(1.12);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.workshop-sticker:active {
+    transform: scale(1.2);
+    border-width: 3px;
+    border-color: #ffffff;
+    box-shadow: 0 0 20px currentColor;
+}

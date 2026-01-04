@@ -345,7 +345,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
         if (!map?.getStyle || !map?.getLayer || !map?.setFilter) return;
         const style = map.getStyle();
         const layers = style?.layers || [];
-        const excludeExpr = ['!=', ['get', TM_SOURCE_KEY], TM_SOURCE_TAG];
+        const excludeExpr = ['!=', TM_SOURCE_KEY, TM_SOURCE_TAG];
 
         layers.forEach(layer => {
             const id = layer?.id;

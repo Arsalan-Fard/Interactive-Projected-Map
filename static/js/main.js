@@ -14,8 +14,10 @@ function applyStickerConfig(setupConfig) {
 
     const buttons = Array.from(document.querySelectorAll('.point-btn'));
     buttons.forEach((btn, index) => {
-        if (index < count) {
-            const color = colors[index] || btn.dataset.color || '#ffffff';
+        const rawIndex = Number.parseInt(btn.dataset.stickerIndex, 10);
+        const stickerIndex = Number.isFinite(rawIndex) ? rawIndex : index;
+        if (stickerIndex < count) {
+            const color = colors[stickerIndex] || btn.dataset.color || '#ffffff';
             btn.style.display = '';
             btn.dataset.color = color;
             btn.style.backgroundColor = color;
@@ -67,6 +69,9 @@ async function initApp() {
 
     if (setupConfig.project.tuiMode) {
         document.body.classList.add('tui-mode');
+    }
+    if (setupConfig.project.workshopMode) {
+        document.body.classList.add('workshop-mode');
     }
 
     applyTagConfigVisibility(setupConfig);
@@ -201,7 +206,7 @@ async function initApp() {
             id: layerId,
             type: 'line',
             source: sourceId,
-            filter: ['all', ['==', '$type', 'LineString'], ['==', 'meta', 'feature'], ['!=', ['get', 'tm_source'], 'tag']],
+            filter: ['all', ['==', '$type', 'LineString'], ['==', 'meta', 'feature'], ['!=', 'tm_source', 'tag']],
             layout: {
                 'line-cap': 'round',
                 'line-join': 'round'
@@ -254,8 +259,7 @@ async function initApp() {
 
     initTagTracking({ map, setupConfig, draw });
 
-    const drawBtn = document.getElementById('btn-draw');
-    const surfaceBtn = document.getElementById('btn-surface');
+    const drawButtons = Array.from(document.querySelectorAll('[data-draw-mode]'));
 
     function setDrawMode(targetMode) {
         const mode = draw.getMode();
@@ -267,21 +271,20 @@ async function initApp() {
     }
 
     function syncDrawButtons(mode) {
-        if (drawBtn) drawBtn.classList.toggle('active', mode === 'draw_line_string');
-        if (surfaceBtn) surfaceBtn.classList.toggle('active', mode === 'draw_polygon');
-    }
-
-    if (drawBtn) {
-        drawBtn.addEventListener('click', () => {
-            setDrawMode('draw_line_string');
+        drawButtons.forEach(btn => {
+            const targetMode = btn.dataset.drawMode;
+            btn.classList.toggle('active', targetMode === mode);
         });
     }
 
-    if (surfaceBtn) {
-        surfaceBtn.addEventListener('click', () => {
-            setDrawMode('draw_polygon');
+    drawButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetMode = btn.dataset.drawMode;
+            if (targetMode) {
+                setDrawMode(targetMode);
+            }
         });
-    }
+    });
 
     map.on('draw.modechange', (e) => {
         console.log('Draw mode changed to:', e.mode);

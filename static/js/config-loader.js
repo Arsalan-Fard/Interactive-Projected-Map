@@ -15,7 +15,8 @@ export const fallbackConfig = {
         name: 'Default',
         location: 'Palaiseau',
         mapId: 'palaiseau-outdoor',
-        rearProjection: false
+        rearProjection: false,
+        workshopMode: false
     },
     maps: [
         {

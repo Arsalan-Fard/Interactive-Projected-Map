@@ -20,6 +20,7 @@ const defaultState = {
         mapId: 'palaiseau-outdoor',
         rearProjection: false,
         tuiMode: false,
+        workshopMode: false,
         tagConfig: null,
         drawingConfig: {
             items: [
@@ -123,6 +124,7 @@ const els = {
     projectPill: document.getElementById('project-pill'),
     projectRearProjection: document.getElementById('project-rear-projection'),
     projectTuiMode: document.getElementById('project-tui-mode'),
+    projectWorkshopMode: document.getElementById('workshop-mode'),
     drawingSettingsList: document.getElementById('drawing-settings-list'),
     addDrawingSetting: document.getElementById('add-drawing-setting'),
     stickerCount: document.getElementById('sticker-count'),
@@ -827,6 +829,9 @@ function renderProject() {
     }
     if (els.projectTuiMode) {
         els.projectTuiMode.checked = !!state.project.tuiMode;
+    }
+    if (els.projectWorkshopMode) {
+        els.projectWorkshopMode.checked = !!state.project.workshopMode;
     }
     renderDrawingConfig();
     renderStickerConfig();
@@ -2083,6 +2088,11 @@ function initEvents() {
 
     els.projectTuiMode?.addEventListener('change', e => {
         state.project.tuiMode = e.target.checked;
+        markSaved('Unsaved changes');
+    });
+
+    els.projectWorkshopMode?.addEventListener('change', e => {
+        state.project.workshopMode = e.target.checked;
         markSaved('Unsaved changes');
     });
 
