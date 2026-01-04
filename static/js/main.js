@@ -5,6 +5,18 @@ import { initTagTracking } from './tag-tracking.js';
 import { fallbackConfig, loadSetupConfig } from './config-loader.js';
 import { initMap } from './map-setup.js';
 
+function getReadableTextColor(hex) {
+    const value = typeof hex === 'string' ? hex.trim() : '';
+    if (!/^#[0-9a-f]{6}$/i.test(value)) {
+        return '#ffffff';
+    }
+    const r = parseInt(value.slice(1, 3), 16);
+    const g = parseInt(value.slice(3, 5), 16);
+    const b = parseInt(value.slice(5, 7), 16);
+    const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    return luminance > 0.6 ? '#111111' : '#ffffff';
+}
+
 function applyStickerConfig(setupConfig) {
     const config = setupConfig?.project?.stickerConfig;
     if (!config) return;
@@ -12,7 +24,7 @@ function applyStickerConfig(setupConfig) {
     const rawCount = Number.isInteger(config.count) ? config.count : colors.length;
     const count = Math.max(0, rawCount);
 
-    const buttons = Array.from(document.querySelectorAll('.point-btn'));
+    const buttons = Array.from(document.querySelectorAll('.point-btn[data-sticker-index]'));
     buttons.forEach((btn, index) => {
         const rawIndex = Number.parseInt(btn.dataset.stickerIndex, 10);
         const stickerIndex = Number.isFinite(rawIndex) ? rawIndex : index;
@@ -24,6 +36,43 @@ function applyStickerConfig(setupConfig) {
         } else {
             btn.style.display = 'none';
         }
+    });
+}
+
+function applyTagSettings(setupConfig) {
+    const panel = document.getElementById('tag-settings-panel');
+    const list = document.getElementById('tag-settings-list');
+    if (!panel || !list) return;
+
+    const tagButtonColor = '#6b7280';
+    const config = setupConfig?.project?.tagSettings || {};
+    const rawItems = Array.isArray(config.items) ? config.items : [];
+    const count = Number.isInteger(config.count) ? config.count : rawItems.length;
+    const items = rawItems.slice(0, count);
+
+    if (!items.length) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    panel.style.display = '';
+    list.innerHTML = '';
+
+    items.forEach((item, index) => {
+        const color = tagButtonColor;
+        const labelText = item?.label?.trim() || `Tag ${index + 1}`;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = `tag-setting-btn-${index + 1}`;
+        btn.dataset.color = color;
+        btn.dataset.label = labelText;
+        btn.className = 'point-btn tag-setting-btn w-full px-3 py-2 rounded-md border border-white/15 bg-white/5 text-white/85 text-xs font-semibold text-left cursor-grab active:cursor-grabbing select-none';
+        btn.textContent = labelText;
+        btn.style.backgroundColor = color;
+        btn.style.color = getReadableTextColor(color);
+
+        list.appendChild(btn);
     });
 }
 
@@ -76,6 +125,7 @@ async function initApp() {
 
     applyTagConfigVisibility(setupConfig);
     applyStickerConfig(setupConfig);
+    applyTagSettings(setupConfig);
 
     async function refreshTagConfig() {
         try {

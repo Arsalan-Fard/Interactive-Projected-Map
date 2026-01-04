@@ -24,9 +24,22 @@ const FLOATING_BUTTON_STYLE = {
 const ROUTE_UPDATE_INTERVAL = 250;
 const REACH_UPDATE_INTERVAL = 500;
 const ERASER_UPDATE_INTERVAL = 200;
+const TAG_BUTTON_COLOR = '#6b7280';
 let lastRouteUpdate = 0;
 const lastReachUpdate = new Map();
 let lastEraserUpdate = 0;
+
+function getReadableTextColor(hex) {
+    const value = typeof hex === 'string' ? hex.trim() : '';
+    if (!/^#[0-9a-f]{6}$/i.test(value)) {
+        return '#ffffff';
+    }
+    const r = parseInt(value.slice(1, 3), 16);
+    const g = parseInt(value.slice(3, 5), 16);
+    const b = parseInt(value.slice(5, 7), 16);
+    const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    return luminance > 0.6 ? '#111111' : '#ffffff';
+}
 
 async function getRoute(map) {
     if (!pointA || !pointB) {
@@ -475,6 +488,49 @@ export function resetShortestPathButton(map, label) {
     }
 }
 
+function attachMarkerDragHandlers(map, marker, element) {
+    const syncPosition = () => {
+        const pos = marker.getLngLat();
+        element.dataset.lng = pos.lng;
+        element.dataset.lat = pos.lat;
+    };
+
+    syncPosition();
+
+    let isDraggingMarker = false;
+    const dragMoveHandler = (ev) => {
+        if (!isDraggingMarker) return;
+        const coords = getMapCoordsFromScreen(map, ev.clientX, ev.clientY);
+        if (!coords) return;
+        marker.setLngLat(coords);
+        element.dataset.lng = coords.lng;
+        element.dataset.lat = coords.lat;
+    };
+
+    const dragUpHandler = () => {
+        if (!isDraggingMarker) return;
+        isDraggingMarker = false;
+        document.removeEventListener('mousemove', dragMoveHandler);
+        document.removeEventListener('mouseup', dragUpHandler);
+        if (map && map.dragPan) map.dragPan.enable();
+    };
+
+    element.addEventListener('mousedown', (ev) => {
+        if (ev.button !== 0) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        isDraggingMarker = true;
+        if (map && map.dragPan) map.dragPan.disable();
+        document.addEventListener('mousemove', dragMoveHandler);
+        document.addEventListener('mouseup', dragUpHandler);
+    });
+
+    element.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        marker.remove();
+    });
+}
+
 function createStickerMarker(map, lngLat, color, typeId, questionId) {
     const sticker = document.createElement('div');
     Object.assign(sticker.style, {
@@ -500,75 +556,94 @@ function createStickerMarker(map, lngLat, color, typeId, questionId) {
         .addTo(map);
 
     sticker._marker = marker;
+    attachMarkerDragHandlers(map, marker, sticker);
+}
 
-    const syncPosition = () => {
-        const pos = marker.getLngLat();
-        sticker.dataset.lng = pos.lng;
-        sticker.dataset.lat = pos.lat;
-    };
-
-    syncPosition();
-
-    let isDraggingSticker = false;
-    const dragMoveHandler = (ev) => {
-        if (!isDraggingSticker) return;
-        const coords = getMapCoordsFromScreen(map, ev.clientX, ev.clientY);
-        if (!coords) return;
-        marker.setLngLat(coords);
-        sticker.dataset.lng = coords.lng;
-        sticker.dataset.lat = coords.lat;
-    };
-
-    const dragUpHandler = () => {
-        if (!isDraggingSticker) return;
-        isDraggingSticker = false;
-        document.removeEventListener('mousemove', dragMoveHandler);
-        document.removeEventListener('mouseup', dragUpHandler);
-        if (map && map.dragPan) map.dragPan.enable();
-    };
-
-    sticker.addEventListener('mousedown', (ev) => {
-        if (ev.button !== 0) return;
-        ev.preventDefault();
-        ev.stopPropagation();
-        isDraggingSticker = true;
-        if (map && map.dragPan) map.dragPan.disable();
-        document.addEventListener('mousemove', dragMoveHandler);
-        document.addEventListener('mouseup', dragUpHandler);
+function createTagButtonMarker(map, lngLat, label, typeId, color) {
+    const background = typeof color === 'string' && color.trim().length > 0 ? color : TAG_BUTTON_COLOR;
+    const textColor = getReadableTextColor(background);
+    const tagEl = document.createElement('div');
+    Object.assign(tagEl.style, {
+        padding: '6px 10px',
+        backgroundColor: background,
+        border: '1px solid rgba(0, 0, 0, 0.35)',
+        borderRadius: '6px',
+        color: textColor,
+        fontSize: '11px',
+        fontWeight: '600',
+        lineHeight: '1',
+        whiteSpace: 'nowrap',
+        cursor: 'move',
+        boxShadow: '0 4px 10px rgba(0, 0, 0, 0.45)',
+        userSelect: 'none'
     });
+    tagEl.textContent = label || 'Tag';
+    tagEl.dataset.typeId = typeId;
+    tagEl.dataset.label = label || '';
+    tagEl.dataset.color = background;
+    tagEl.classList.add('draggable-tag');
 
-    sticker.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        marker.remove();
-    });
+    const marker = new mapboxgl.Marker({ element: tagEl, draggable: false })
+        .setLngLat(lngLat)
+        .addTo(map);
+
+    tagEl._marker = marker;
+    attachMarkerDragHandlers(map, marker, tagEl);
 }
 
 export function initDraggableStickers(map, getQuestionId) {
     const stickerButtons = document.querySelectorAll('.point-btn');
 
     stickerButtons.forEach(btn => {
+        const isTagSetting = btn.classList.contains('tag-setting-btn');
+        const label = btn.dataset.label || btn.textContent.trim() || 'Tag';
+
         btn.addEventListener('mousedown', (e) => {
             e.preventDefault();
 
             // Create a drag ghost
             const ghost = document.createElement('div');
-            const color = btn.dataset.color;
+            const color = isTagSetting ? TAG_BUTTON_COLOR : btn.dataset.color;
+            const textColor = getReadableTextColor(color);
 
-            Object.assign(ghost.style, {
-                position: 'absolute',
-                left: e.pageX + 'px',
-                top: e.pageY + 'px',
-                width: '20px',
-                height: '20px',
-                backgroundColor: color,
-                borderRadius: '50%',
-                border: '2px solid white',
-                cursor: 'move',
-                zIndex: '1000',
-                transform: 'translate(-50%, -50%)',
-                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
-                userSelect: 'none'
-            });
+            if (isTagSetting) {
+                ghost.textContent = label;
+                Object.assign(ghost.style, {
+                    position: 'absolute',
+                    left: e.pageX + 'px',
+                    top: e.pageY + 'px',
+                    padding: '6px 10px',
+                    backgroundColor: color || '#666666',
+                    border: '1px solid rgba(0, 0, 0, 0.35)',
+                    borderRadius: '6px',
+                    color: textColor,
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    lineHeight: '1',
+                    whiteSpace: 'nowrap',
+                    cursor: 'move',
+                    zIndex: '1000',
+                    transform: 'translate(-50%, -50%)',
+                    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.45)',
+                    userSelect: 'none'
+                });
+            } else {
+                Object.assign(ghost.style, {
+                    position: 'absolute',
+                    left: e.pageX + 'px',
+                    top: e.pageY + 'px',
+                    width: '20px',
+                    height: '20px',
+                    backgroundColor: color,
+                    borderRadius: '50%',
+                    border: '2px solid white',
+                    cursor: 'move',
+                    zIndex: '1000',
+                    transform: 'translate(-50%, -50%)',
+                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
+                    userSelect: 'none'
+                });
+            }
 
             document.body.appendChild(ghost);
 
@@ -588,8 +663,12 @@ export function initDraggableStickers(map, getQuestionId) {
                 ghost.remove();
                 const coords = getMapCoordsFromScreen(map, ev.clientX, ev.clientY);
                 if (!coords) return;
-                const questionId = typeof getQuestionId === 'function' ? getQuestionId() : null;
-                createStickerMarker(map, coords, color, btn.id, questionId);
+                if (isTagSetting) {
+                    createTagButtonMarker(map, coords, label, btn.id, color);
+                } else {
+                    const questionId = typeof getQuestionId === 'function' ? getQuestionId() : null;
+                    createStickerMarker(map, coords, color, btn.id, questionId);
+                }
             };
 
             document.addEventListener('mousemove', moveHandler);
@@ -598,6 +677,7 @@ export function initDraggableStickers(map, getQuestionId) {
 
         // Add double-click to remove stickers from map
         btn.addEventListener('dblclick', (e) => {
+            if (isTagSetting) return;
             e.preventDefault();
             // Remove all stickers of this color from the map
             const allStickers = document.querySelectorAll('.draggable-sticker');

@@ -16,6 +16,18 @@ const COOLDOWN_DURATION = 2000; // Show map for 2s before trying again
 const HIT_THRESHOLD = 2;
 const MISS_THRESHOLD = 5;
 const TAG_DRAW_MIN_DISTANCE_PX = 10;
+const TAG_SETTINGS_COLORS = [
+    '#FF6B6B',
+    '#4ECDC4',
+    '#45B7D1',
+    '#FFA07A',
+    '#98D8C8',
+    '#F7DC6F',
+    '#BB8FCE',
+    '#85C1E2',
+    '#F8B739',
+    '#E74C3C'
+];
 
 function createDebugDot() {
     const debugDot = document.createElement('div');
@@ -457,6 +469,22 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 }
             });
 
+            const tagSettingsConfig = setupConfig?.project?.tagSettings || {};
+            const tagSettingsItems = Array.isArray(tagSettingsConfig.items) ? tagSettingsConfig.items : [];
+            const tagSettingsCount = Number.isInteger(tagSettingsConfig.count)
+                ? tagSettingsConfig.count
+                : tagSettingsItems.length;
+            const tagSettingsPalette = stickerColors.length ? stickerColors : TAG_SETTINGS_COLORS;
+            const tagSettingsTagMap = new Map(); // tagId -> { index, color }
+            const tagSettingsTagIds = new Set();
+            tagSettingsItems.slice(0, tagSettingsCount).forEach((item, index) => {
+                if (!Number.isInteger(item?.tagId)) return;
+                if (tagSettingsTagMap.has(item.tagId)) return;
+                const color = tagSettingsPalette[index % tagSettingsPalette.length] || '#cccccc';
+                tagSettingsTagMap.set(item.tagId, { index, color });
+                tagSettingsTagIds.add(item.tagId);
+            });
+
             const hasTag = Array.from(visibleIds).some(id =>
                 id === 5
                 || drawingTagIds.has(id)
@@ -465,6 +493,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 || reachTagIds.has(id)
                 || toolTagIds.has(id)
                 || stickerTagIds.has(id)
+                || tagSettingsTagIds.has(id)
             );
 
             if (hasTag) {
@@ -726,10 +755,12 @@ export function initTagTracking({ map, setupConfig, draw }) {
 
                 // --- Sticker Logic ---
                 const stickerData = stickerTagMap.get(tagId);
-                if (stickerData) {
+                const tagSettingsData = tagSettingsTagMap.get(tagId);
+                const activeData = stickerData || tagSettingsData;
+                if (activeData) {
                     if (screenX > leftBound && screenX < rightBound) {
                         if (isDetected) {
-                            setStickerPosition(map, tagId, stickerData.index, stickerData.color, screenX, screenY);
+                            setStickerPosition(map, tagId, activeData.index, activeData.color, screenX, screenY);
                         }
                         updatedStickerTags.add(tagId);
                     }
@@ -808,7 +839,8 @@ export function initTagTracking({ map, setupConfig, draw }) {
             }
 
             // Remove sticker markers that were not updated this frame
-            stickerTagIds.forEach(tagId => {
+            const allStickerTags = new Set([...stickerTagIds, ...tagSettingsTagIds]);
+            allStickerTags.forEach(tagId => {
                 if (!updatedStickerTags.has(tagId)) {
                     removeStickerMarker(tagId);
                 }

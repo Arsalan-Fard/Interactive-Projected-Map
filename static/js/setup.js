@@ -11,6 +11,8 @@ const DEFAULT_STICKER_COLORS = [
     '#E74C3C'
 ];
 const MAX_STICKER_COUNT = DEFAULT_STICKER_COLORS.length;
+const DEFAULT_TAG_SETTINGS_COUNT = 10;
+const MAX_TAG_SETTINGS_COUNT = 50;
 
 const defaultState = {
     project: {
@@ -21,6 +23,10 @@ const defaultState = {
         rearProjection: false,
         tuiMode: false,
         workshopMode: false,
+        tagSettings: {
+            count: DEFAULT_TAG_SETTINGS_COUNT,
+            items: []
+        },
         tagConfig: null,
         drawingConfig: {
             items: [
@@ -129,6 +135,8 @@ const els = {
     addDrawingSetting: document.getElementById('add-drawing-setting'),
     stickerCount: document.getElementById('sticker-count'),
     stickerColors: document.getElementById('sticker-colors'),
+    tagSettingsCount: document.getElementById('tag-count'),
+    tagSettingsLabels: document.getElementById('tag-labels'),
     tagConfig: document.getElementById('tag-config'),
     mapList: document.getElementById('map-list'),
     mapStyle: document.getElementById('map-style'),
@@ -172,6 +180,7 @@ const els = {
 };
 
 const TAG_ID_OPTIONS = Array.from({ length: 43 }, (_, i) => i + 7);
+const TAG_SETTINGS_ID_OPTIONS = Array.from({ length: 50 }, (_, i) => i);
 const TAG_IMAGE_PREFIX = '/generated_tags/tag36h11_id';
 const DEFAULT_DRAWING_CONFIG = {
     items: [
@@ -328,6 +337,38 @@ function normalizeStickerConfig() {
     };
 }
 
+function clampTagSettingsCount(value) {
+    if (!Number.isFinite(value)) return 1;
+    return Math.max(1, Math.min(MAX_TAG_SETTINGS_COUNT, value));
+}
+
+function normalizeTagSettings() {
+    if (!state.project) return;
+    const existing = state.project.tagSettings || {};
+    let count = Number.isInteger(existing.count) ? existing.count : null;
+    const rawItems = Array.isArray(existing.items) ? existing.items : [];
+
+    if (!count) {
+        count = rawItems.length > 0 ? rawItems.length : DEFAULT_TAG_SETTINGS_COUNT;
+    }
+
+    count = clampTagSettingsCount(count);
+    const items = rawItems.slice(0, count).map(item => {
+        const label = typeof item?.label === 'string' ? item.label.trim() : '';
+        const tagId = Number.isInteger(item?.tagId) ? item.tagId : null;
+        return { label, tagId };
+    });
+
+    while (items.length < count) {
+        items.push({ label: '', tagId: null });
+    }
+
+    state.project.tagSettings = {
+        count,
+        items: items.slice(0, count)
+    };
+}
+
 function parseCenter(value) {
     const parts = value.split(',').map(v => parseFloat(v.trim()));
     if (parts.length === 2 && parts.every(v => Number.isFinite(v))) {
@@ -371,6 +412,7 @@ function mergeState(serverConfig) {
     normalizeTagConfig();
     normalizeDrawingConfig();
     normalizeStickerConfig();
+    normalizeTagSettings();
 }
 
 async function loadProjectsList() {
@@ -835,6 +877,7 @@ function renderProject() {
     }
     renderDrawingConfig();
     renderStickerConfig();
+    renderTagSettings();
     renderTagConfig();
 }
 
@@ -1024,6 +1067,16 @@ function updateStickerCount(nextCount) {
     state.project.stickerConfig = { count, colors };
 }
 
+function updateTagSettingsCount(nextCount) {
+    normalizeTagSettings();
+    const count = clampTagSettingsCount(nextCount);
+    const items = Array.isArray(state.project.tagSettings.items) ? state.project.tagSettings.items.slice(0, count) : [];
+    while (items.length < count) {
+        items.push({ label: '', tagId: null });
+    }
+    state.project.tagSettings = { count, items: items.slice(0, count) };
+}
+
 function renderStickerConfig() {
     if (!els.stickerCount || !els.stickerColors) return;
     normalizeStickerConfig();
@@ -1208,6 +1261,100 @@ function renderStickerConfig() {
     });
 
     updateTagSelects();
+}
+
+function renderTagSettings() {
+    if (!els.tagSettingsCount || !els.tagSettingsLabels) return;
+    normalizeTagSettings();
+    const config = state.project.tagSettings || { count: 0, items: [] };
+    const count = clampTagSettingsCount(config.count);
+    const items = Array.isArray(config.items) ? config.items.slice(0, count) : [];
+
+    while (items.length < count) {
+        items.push({ label: '', tagId: null });
+    }
+    state.project.tagSettings.items = items.slice(0, count);
+
+    els.tagSettingsCount.value = count;
+    els.tagSettingsLabels.innerHTML = '';
+
+    items.forEach((item, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex flex-col gap-2 w-full sm:w-[240px]';
+
+        const labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.value = item.label || '';
+        labelInput.placeholder = `Label ${index + 1}`;
+        labelInput.className = 'w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary';
+        labelInput.addEventListener('input', (e) => {
+            state.project.tagSettings.items[index].label = e.target.value;
+            markSaved('Unsaved changes');
+        });
+
+        const select = document.createElement('select');
+        select.className = 'w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm cursor-pointer transition-colors duration-200 hover:border-border-focus focus:outline-none focus:border-accent-primary';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Select AprilTag ID';
+        select.appendChild(placeholder);
+
+        TAG_SETTINGS_ID_OPTIONS.forEach(tagId => {
+            const option = document.createElement('option');
+            option.value = String(tagId);
+            option.textContent = `ID ${tagId}`;
+            select.appendChild(option);
+        });
+
+        if (Number.isInteger(item.tagId)) {
+            select.value = String(item.tagId);
+        } else {
+            select.value = '';
+        }
+
+        select.addEventListener('change', () => {
+            const next = Number.parseInt(select.value, 10);
+            state.project.tagSettings.items[index].tagId = Number.isFinite(next) ? next : null;
+            markSaved('Unsaved changes');
+        });
+
+        const preview = document.createElement('div');
+        preview.className = 'w-[56px] h-[56px] bg-bg-tertiary border border-border-subtle rounded-md flex items-center justify-center overflow-hidden';
+        const img = document.createElement('img');
+        img.className = 'w-full h-full object-contain';
+        img.alt = item.label ? `${item.label} tag` : `Tag ${index + 1}`;
+        const placeholderText = document.createElement('span');
+        placeholderText.className = 'text-[9px] text-text-muted uppercase tracking-wider';
+        placeholderText.textContent = 'No tag';
+        preview.appendChild(img);
+        preview.appendChild(placeholderText);
+
+        const updatePreview = () => {
+            const tagValue = state.project.tagSettings.items[index].tagId;
+            if (Number.isInteger(tagValue)) {
+                img.src = getTagImageSrc(tagValue);
+                img.style.display = 'block';
+                placeholderText.style.display = 'none';
+            } else {
+                img.src = '';
+                img.style.display = 'none';
+                placeholderText.style.display = 'block';
+            }
+        };
+
+        updatePreview();
+
+        select.addEventListener('change', updatePreview);
+        labelInput.addEventListener('input', () => {
+            img.alt = labelInput.value ? `${labelInput.value} tag` : `Tag ${index + 1}`;
+        });
+
+        wrapper.appendChild(labelInput);
+        wrapper.appendChild(select);
+        wrapper.appendChild(preview);
+        els.tagSettingsLabels.appendChild(wrapper);
+    });
 }
 
 function renderTagConfig() {
@@ -2088,6 +2235,18 @@ function initEvents() {
 
     els.projectTuiMode?.addEventListener('change', e => {
         state.project.tuiMode = e.target.checked;
+        markSaved('Unsaved changes');
+    });
+
+    els.tagSettingsCount?.addEventListener('input', e => {
+        const raw = Number.parseInt(e.target.value, 10);
+        if (!Number.isFinite(raw)) return;
+        const nextCount = clampTagSettingsCount(raw);
+        if (nextCount !== raw) {
+            e.target.value = nextCount;
+        }
+        updateTagSettingsCount(nextCount);
+        renderTagSettings();
         markSaved('Unsaved changes');
     });
 
