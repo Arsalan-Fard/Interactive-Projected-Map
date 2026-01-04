@@ -6,7 +6,7 @@
     "mapId": "palaiseau-outdoor",
     "rearProjection": false,
     "tuiMode": false,
-    "workshopMode": false,
+    "workshopMode": true,
     "tagSettings": {
       "count": 3,
       "items": [

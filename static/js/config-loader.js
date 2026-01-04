@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { getDefaultStickerConfig } from './sticker-defaults.js';
 
 const fallbackOverlays = [
     'palaiseau-roads',
@@ -16,7 +17,8 @@ export const fallbackConfig = {
         location: 'Palaiseau',
         mapId: 'palaiseau-outdoor',
         rearProjection: false,
-        workshopMode: false
+        workshopMode: false,
+        stickerConfig: getDefaultStickerConfig()
     },
     maps: [
         {
@@ -45,6 +47,34 @@ export const fallbackConfig = {
     ]
 };
 
+function normalizeStickerConfig(existing) {
+    const defaults = getDefaultStickerConfig();
+    const fallbackColors = defaults.colors;
+    const colors = Array.isArray(existing?.colors) ? existing.colors.slice(0, fallbackColors.length) : [];
+    let count = Number.isInteger(existing?.count) ? existing.count : null;
+
+    if (!count) {
+        count = colors.length > 0 ? colors.length : fallbackColors.length;
+    }
+
+    count = Math.max(1, Math.min(fallbackColors.length, count));
+
+    while (colors.length < count) {
+        colors.push(fallbackColors[colors.length] || '#cccccc');
+    }
+
+    const tags = Array.isArray(existing?.tags) ? existing.tags.slice(0, count) : [];
+    while (tags.length < count) {
+        tags.push(null);
+    }
+
+    return {
+        count,
+        colors: colors.slice(0, count),
+        tags
+    };
+}
+
 function normalizeConfig(raw) {
     const project = raw?.project || fallbackConfig.project;
     let selectedMap = raw?.map;
@@ -72,7 +102,10 @@ function normalizeConfig(raw) {
     const questionFlow = derivedQuestionFlow() || fallbackConfig.questionFlow;
 
     return {
-        project,
+        project: {
+            ...project,
+            stickerConfig: normalizeStickerConfig(project?.stickerConfig)
+        },
         maps: raw?.maps || fallbackConfig.maps,
         map: {
             style: selectedMap.style || fallbackConfig.maps[0].style,

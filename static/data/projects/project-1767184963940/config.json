@@ -1,11 +1,57 @@
 {
   "project": {
-    "name": "Latestt",
+    "name": "Latestts",
     "location": "",
     "id": "project-1767184963940",
     "mapId": "palaiseau-outdoor",
     "rearProjection": false,
     "tuiMode": true,
+    "workshopMode": false,
+    "tagSettings": {
+      "count": 10,
+      "items": [
+        {
+          "label": "",
+          "tagId": null
+        },
+        {
+          "label": "",
+          "tagId": null
+        },
+        {
+          "label": "",
+          "tagId": null
+        },
+        {
+          "label": "",
+          "tagId": null
+        },
+        {
+          "label": "",
+          "tagId": null
+        },
+        {
+          "label": "",
+          "tagId": null
+        },
+        {
+          "label": "",
+          "tagId": null
+        },
+        {
+          "label": "",
+          "tagId": null
+        },
+        {
+          "label": "",
+          "tagId": null
+        },
+        {
+          "label": "",
+          "tagId": null
+        }
+      ]
+    },
     "tagConfig": {
       "layers": {
         "items": [
