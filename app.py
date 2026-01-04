@@ -8,6 +8,7 @@ import time
 import shutil
 
 CONFIG_ROOT = os.path.join(os.path.dirname(__file__), 'static', 'data', 'projects')
+ISOVIST_ROOT = os.path.join(os.path.dirname(__file__), 'Isovist-VGA')
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
@@ -394,6 +395,15 @@ export const CONFIG = {{
 def serve_generated_tags(filename):
     tags_dir = os.path.join(app.root_path, 'generated_tags')
     return send_from_directory(tags_dir, filename)
+
+# Serve Isovist-VGA demo files
+@app.route('/Isovist-VGA')
+def isovist_index():
+    return send_from_directory(ISOVIST_ROOT, 'index.html')
+
+@app.route('/Isovist-VGA/<path:filename>')
+def isovist_assets(filename):
+    return send_from_directory(ISOVIST_ROOT, filename)
 
 # Static File Serving (Must come AFTER API routes)
 @app.route('/')

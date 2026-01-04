@@ -5,7 +5,7 @@ from moms_apriltag import TagGenerator2
 from PIL import Image
 
 TAG_FAMILY = "tag36h11" #"tag25h9"
-TAG_IDS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]     # which tags to generate
+TAG_IDS = [i for i in range (0,50)]     # which tags to generate
 INNER_SIZE_PX = 1000          # size of the tag itself (without margin)
 MARGIN_RATIO = 0.2           # margin around the tag (25% of tag size)
 
@@ -37,7 +37,7 @@ def make_png(tag_array, tag_id, margin_ratio):
     canvas = Image.new("L", (canvas_size, canvas_size), color=255)
     canvas.paste(tag_img, (margin, margin))
 
-    filename = f"generated_tags/{TAG_FAMILY}_id{tag_id:02d}.png"
+    filename = f"../generated_tags/{TAG_FAMILY}_id{tag_id:02d}.png"
     canvas.save(filename, dpi=(300, 300)) 
     print(f"Saved {filename} (size: {canvas_size}x{canvas_size} pixels)")
 

@@ -169,7 +169,7 @@ const els = {
     responsesFilterEnd: document.getElementById('responses-filter-end'),
 };
 
-const TAG_ID_OPTIONS = Array.from({ length: 5 }, (_, i) => i + 7);
+const TAG_ID_OPTIONS = Array.from({ length: 43 }, (_, i) => i + 7);
 const TAG_IMAGE_PREFIX = '/generated_tags/tag36h11_id';
 const DEFAULT_DRAWING_CONFIG = {
     items: [
@@ -897,7 +897,7 @@ function renderDrawingConfig() {
         nameWrap.appendChild(nameInput);
 
         const colorWrap = document.createElement('div');
-        colorWrap.className = 'flex flex-col gap-1';
+        colorWrap.className = 'flex flex-col gap-1 lg:min-w-[160px]';
         const colorLabel = document.createElement('label');
         colorLabel.className = 'text-[11px] text-text-muted uppercase tracking-wider';
         colorLabel.textContent = 'Color';
@@ -913,7 +913,7 @@ function renderDrawingConfig() {
         colorWrap.appendChild(colorInput);
 
         const tagWrap = document.createElement('div');
-        tagWrap.className = 'flex flex-col gap-1';
+        tagWrap.className = 'flex flex-col gap-1 lg:min-w-[160px]';
         const tagLabel = document.createElement('label');
         tagLabel.className = 'text-[11px] text-text-muted uppercase tracking-wider';
         tagLabel.textContent = 'AprilTag ID';
