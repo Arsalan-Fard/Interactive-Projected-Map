@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { getReadableTextColor } from './color-utils.js';
 
 let pointA = null;
 let pointB = null;
@@ -31,18 +32,6 @@ let lastRouteUpdate = 0;
 const lastReachUpdate = new Map();
 let lastIsovistUpdate = 0;
 let lastEraserUpdate = 0;
-
-function getReadableTextColor(hex) {
-    const value = typeof hex === 'string' ? hex.trim() : '';
-    if (!/^#[0-9a-f]{6}$/i.test(value)) {
-        return '#ffffff';
-    }
-    const r = parseInt(value.slice(1, 3), 16);
-    const g = parseInt(value.slice(3, 5), 16);
-    const b = parseInt(value.slice(5, 7), 16);
-    const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-    return luminance > 0.6 ? '#111111' : '#ffffff';
-}
 
 async function getRoute(map) {
     if (!pointA || !pointB) {
@@ -148,6 +137,75 @@ function resetDraggableButton(btn) {
     } else {
         btn.style.cssText = '';
     }
+}
+
+function getButtonCenter(btn) {
+    if (!btn) return null;
+    const rect = btn.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+function positionFloatingButton(map, btn, clientX, clientY) {
+    if (!btn) return null;
+    const coords = getMapCoordsFromScreen(map, clientX, clientY);
+    if (!coords) return null;
+    floatDraggableButton(btn, clientX, clientY);
+    return coords;
+}
+
+function attachFloatingDrag(btn, map, { getDropData, onDrop, onReset }) {
+    if (!btn) return;
+
+    btn.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        floatDraggableButton(btn, e.clientX, e.clientY);
+
+        let isDragging = true;
+        let didMove = false;
+
+        const moveHandler = (ev) => {
+            if (!isDragging) return;
+            didMove = true;
+            btn.style.left = ev.clientX + 'px';
+            btn.style.top = ev.clientY + 'px';
+        };
+
+        const upHandler = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            document.removeEventListener('mousemove', moveHandler);
+            document.removeEventListener('mouseup', upHandler);
+
+            if (didMove) {
+                btn.dataset.dragged = '1';
+                setTimeout(() => {
+                    delete btn.dataset.dragged;
+                }, 0);
+            }
+
+            if (typeof getDropData !== 'function') return;
+            const center = getButtonCenter(btn);
+            if (!center) return;
+            const dropData = getDropData(center);
+            if (!dropData) return;
+            if (typeof onDrop === 'function') {
+                onDrop(dropData);
+            }
+        };
+
+        document.addEventListener('mousemove', moveHandler);
+        document.addEventListener('mouseup', upHandler);
+    });
+
+    btn.addEventListener('dblclick', (e) => {
+        if (!isFloatingButton(btn)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof onReset === 'function') {
+            onReset();
+        }
+    });
 }
 
 function maybeUpdateRoute(map) {
@@ -379,11 +437,8 @@ function getDrawLineFeatureIdAtPoint(map, draw, point, hitRadius = 10) {
 
 export function setShortestPathButtonPosition(map, label, clientX, clientY) {
     const btn = getShortestPathButton(label);
-    if (!btn) return false;
-    const coords = getMapCoordsFromScreen(map, clientX, clientY);
+    const coords = positionFloatingButton(map, btn, clientX, clientY);
     if (!coords) return false;
-
-    floatDraggableButton(btn, clientX, clientY);
 
     if (label === 'A') {
         pointA = coords;
@@ -441,22 +496,16 @@ function maybeUpdateReach(mode, coords) {
 
 export function setReachButtonPosition(map, mode, clientX, clientY) {
     const btn = getReachButton(mode);
-    if (!btn) return false;
-    const coords = getMapCoordsFromScreen(map, clientX, clientY);
+    const coords = positionFloatingButton(map, btn, clientX, clientY);
     if (!coords) return false;
-
-    floatDraggableButton(btn, clientX, clientY);
     maybeUpdateReach(mode, coords);
     return true;
 }
 
 export function setIsovistButtonPosition(map, clientX, clientY) {
     const btn = getIsovistButton();
-    if (!btn) return false;
-    const coords = getMapCoordsFromScreen(map, clientX, clientY);
+    const coords = positionFloatingButton(map, btn, clientX, clientY);
     if (!coords) return false;
-
-    floatDraggableButton(btn, clientX, clientY);
     maybeUpdateIsovist(coords);
     return true;
 }
@@ -961,58 +1010,20 @@ export function initIsovistDraggable(map, options = {}) {
     const btn = getIsovistButton();
     if (!btn) return;
 
-    btn.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return;
-        e.preventDefault();
-        floatDraggableButton(btn, e.clientX, e.clientY);
-
-        let isDragging = true;
-        let didMove = false;
-
-        const moveHandler = (ev) => {
-            if (!isDragging) return;
-            didMove = true;
-            btn.style.left = ev.clientX + 'px';
-            btn.style.top = ev.clientY + 'px';
-        };
-
-        const upHandler = () => {
-            if (!isDragging) return;
-            isDragging = false;
-            document.removeEventListener('mousemove', moveHandler);
-            document.removeEventListener('mouseup', upHandler);
-
-            if (didMove) {
-                btn.dataset.dragged = '1';
-                setTimeout(() => {
-                    delete btn.dataset.dragged;
-                }, 0);
-            }
-
-            const rect = btn.getBoundingClientRect();
-            const center = [rect.left + rect.width / 2, rect.top + rect.height / 2];
-            const coords = getMapCoordsFromScreen(map, center[0], center[1]);
-            if (!coords) return;
-
+    attachFloatingDrag(btn, map, {
+        getDropData: (center) => getMapCoordsFromScreen(map, center.x, center.y),
+        onDrop: (coords) => {
             if (typeof onDrop === 'function') {
                 onDrop(coords);
             } else {
                 maybeUpdateIsovist(coords);
             }
-        };
-
-        document.addEventListener('mousemove', moveHandler);
-        document.addEventListener('mouseup', upHandler);
-    });
-
-    btn.addEventListener('dblclick', (e) => {
-        const isFloating = isFloatingButton(btn);
-        if (!isFloating) return;
-        e.preventDefault();
-        e.stopPropagation();
-        resetIsovistButton();
-        if (typeof onReset === 'function') {
-            onReset();
+        },
+        onReset: () => {
+            resetIsovistButton();
+            if (typeof onReset === 'function') {
+                onReset();
+            }
         }
     });
 }
@@ -1030,117 +1041,38 @@ export function initReachDraggables(map, options = {}) {
         const btn = document.getElementById(id);
         if (!btn) return;
 
-        btn.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return;
-            e.preventDefault();
-            floatDraggableButton(btn, e.clientX, e.clientY);
-
-            let isDragging = true;
-            let didMove = false;
-
-            const moveHandler = (ev) => {
-                if (!isDragging) return;
-                didMove = true;
-                btn.style.left = ev.clientX + 'px';
-                btn.style.top = ev.clientY + 'px';
-            };
-
-            const upHandler = (ev) => {
-                if (!isDragging) return;
-                isDragging = false;
-                document.removeEventListener('mousemove', moveHandler);
-                document.removeEventListener('mouseup', upHandler);
-
-                if (didMove) {
-                    btn.dataset.dragged = '1';
-                    setTimeout(() => {
-                        delete btn.dataset.dragged;
-                    }, 0);
-                }
-
-                const rect = btn.getBoundingClientRect();
-                const center = [rect.left + rect.width / 2, rect.top + rect.height / 2];
-                const coords = getMapCoordsFromScreen(map, center[0], center[1]);
-                if (!coords) return;
-
+        attachFloatingDrag(btn, map, {
+            getDropData: (center) => getMapCoordsFromScreen(map, center.x, center.y),
+            onDrop: (coords) => {
                 if (typeof onDrop === 'function') {
                     onDrop(mode, coords);
                 }
-            };
-
-            document.addEventListener('mousemove', moveHandler);
-            document.addEventListener('mouseup', upHandler);
-        });
-
-        btn.addEventListener('dblclick', (e) => {
-            const isFloating = isFloatingButton(btn);
-            if (!isFloating) return;
-            e.preventDefault();
-            e.stopPropagation();
-            resetDraggableButton(btn);
-            if (typeof onReset === 'function') {
-                onReset(mode);
+            },
+            onReset: () => {
+                resetDraggableButton(btn);
+                if (typeof onReset === 'function') {
+                    onReset(mode);
+                }
             }
         });
     });
 }
 
 export function initDrawEraser(map, draw) {
-    
-
     const btn = document.getElementById('btn-sticker-eraser');
     if (!btn || !map || !draw) return;
 
-    btn.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return;
-        e.preventDefault();
-        floatDraggableButton(btn, e.clientX, e.clientY);
-
-        let isDragging = true;
-        let didMove = false;
-
-        const moveHandler = (ev) => {
-            if (!isDragging) return;
-            didMove = true;
-            btn.style.left = ev.clientX + 'px';
-            btn.style.top = ev.clientY + 'px';
-        };
-
-        const upHandler = () => {
-            if (!isDragging) return;
-            isDragging = false;
-            document.removeEventListener('mousemove', moveHandler);
-            document.removeEventListener('mouseup', upHandler);
-
-            if (didMove) {
-                btn.dataset.dragged = '1';
-                setTimeout(() => {
-                    delete btn.dataset.dragged;
-                }, 0);
-            }
-
-            const rect = btn.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const point = getMapPointFromScreen(map, centerX, centerY);
-            if (!point) return;
-
+    attachFloatingDrag(btn, map, {
+        getDropData: (center) => getMapPointFromScreen(map, center.x, center.y),
+        onDrop: (point) => {
             const featureId = getDrawLineFeatureIdAtPoint(map, draw, point);
             if (!featureId) return;
-
             draw.changeMode('simple_select', { featureIds: [featureId] });
             draw.delete(featureId);
-        };
-
-        document.addEventListener('mousemove', moveHandler);
-        document.addEventListener('mouseup', upHandler);
-    });
-
-    btn.addEventListener('dblclick', (e) => {
-        if (!isFloatingButton(btn)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        resetDraggableButton(btn);
+        },
+        onReset: () => {
+            resetDraggableButton(btn);
+        }
     });
 }
 

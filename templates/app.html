@@ -156,30 +156,9 @@
                 <div class="workshop-panel">
                     <button type="button" class="workshop-btn" data-draw-mode="draw_line_string">Line</button>
                     <div class="workshop-stickers">
-                        <button id="workshop-top-sticker-1" class="point-btn workshop-sticker" data-sticker-index="0"></button>
-                        <button id="workshop-top-sticker-2" class="point-btn workshop-sticker" data-sticker-index="1"></button>
-                        <button id="workshop-top-sticker-3" class="point-btn workshop-sticker" data-sticker-index="2"></button>
-                        <button id="workshop-top-sticker-4" class="point-btn workshop-sticker" data-sticker-index="3"></button>
-                        <button id="workshop-top-sticker-5" class="point-btn workshop-sticker" data-sticker-index="4"></button>
-                        <button id="workshop-top-sticker-6" class="point-btn workshop-sticker" data-sticker-index="5"></button>
-                        <button id="workshop-top-sticker-7" class="point-btn workshop-sticker" data-sticker-index="6"></button>
-                        <button id="workshop-top-sticker-8" class="point-btn workshop-sticker" data-sticker-index="7"></button>
-                        <button id="workshop-top-sticker-9" class="point-btn workshop-sticker" data-sticker-index="8"></button>
-                        <button id="workshop-top-sticker-10" class="point-btn workshop-sticker" data-sticker-index="9"></button>
-                        <button id="workshop-top-sticker-11" class="point-btn workshop-sticker" data-sticker-index="10"></button>
-                        <button id="workshop-top-sticker-12" class="point-btn workshop-sticker" data-sticker-index="11"></button>
-                        <button id="workshop-top-sticker-13" class="point-btn workshop-sticker" data-sticker-index="12"></button>
-                        <button id="workshop-top-sticker-14" class="point-btn workshop-sticker" data-sticker-index="13"></button>
-                        <button id="workshop-top-sticker-15" class="point-btn workshop-sticker" data-sticker-index="14"></button>
-                        <button id="workshop-top-sticker-16" class="point-btn workshop-sticker" data-sticker-index="15"></button>
-                        <button id="workshop-top-sticker-17" class="point-btn workshop-sticker" data-sticker-index="16"></button>
-                        <button id="workshop-top-sticker-18" class="point-btn workshop-sticker" data-sticker-index="17"></button>
-                        <button id="workshop-top-sticker-19" class="point-btn workshop-sticker" data-sticker-index="18"></button>
-                        <button id="workshop-top-sticker-20" class="point-btn workshop-sticker" data-sticker-index="19"></button>
-                        <button id="workshop-top-sticker-21" class="point-btn workshop-sticker" data-sticker-index="20"></button>
-                        <button id="workshop-top-sticker-22" class="point-btn workshop-sticker" data-sticker-index="21"></button>
-                        <button id="workshop-top-sticker-23" class="point-btn workshop-sticker" data-sticker-index="22"></button>
-                        <button id="workshop-top-sticker-24" class="point-btn workshop-sticker" data-sticker-index="23"></button>
+                        {% for sticker_index in range(1, 25) %}
+                        <button id="workshop-top-sticker-{{ sticker_index }}" class="point-btn workshop-sticker" data-sticker-index="{{ sticker_index - 1 }}"></button>
+                        {% endfor %}
                     </div>
                 </div>
                 <div class="workshop-panel workshop-question-panel">
@@ -194,30 +173,9 @@
                 <div class="workshop-panel">
                     <button type="button" class="workshop-btn" data-draw-mode="draw_line_string">Line</button>
                     <div class="workshop-stickers">
-                        <button id="workshop-bottom-sticker-1" class="point-btn workshop-sticker" data-sticker-index="0"></button>
-                        <button id="workshop-bottom-sticker-2" class="point-btn workshop-sticker" data-sticker-index="1"></button>
-                        <button id="workshop-bottom-sticker-3" class="point-btn workshop-sticker" data-sticker-index="2"></button>
-                        <button id="workshop-bottom-sticker-4" class="point-btn workshop-sticker" data-sticker-index="3"></button>
-                        <button id="workshop-bottom-sticker-5" class="point-btn workshop-sticker" data-sticker-index="4"></button>
-                        <button id="workshop-bottom-sticker-6" class="point-btn workshop-sticker" data-sticker-index="5"></button>
-                        <button id="workshop-bottom-sticker-7" class="point-btn workshop-sticker" data-sticker-index="6"></button>
-                        <button id="workshop-bottom-sticker-8" class="point-btn workshop-sticker" data-sticker-index="7"></button>
-                        <button id="workshop-bottom-sticker-9" class="point-btn workshop-sticker" data-sticker-index="8"></button>
-                        <button id="workshop-bottom-sticker-10" class="point-btn workshop-sticker" data-sticker-index="9"></button>
-                        <button id="workshop-bottom-sticker-11" class="point-btn workshop-sticker" data-sticker-index="10"></button>
-                        <button id="workshop-bottom-sticker-12" class="point-btn workshop-sticker" data-sticker-index="11"></button>
-                        <button id="workshop-bottom-sticker-13" class="point-btn workshop-sticker" data-sticker-index="12"></button>
-                        <button id="workshop-bottom-sticker-14" class="point-btn workshop-sticker" data-sticker-index="13"></button>
-                        <button id="workshop-bottom-sticker-15" class="point-btn workshop-sticker" data-sticker-index="14"></button>
-                        <button id="workshop-bottom-sticker-16" class="point-btn workshop-sticker" data-sticker-index="15"></button>
-                        <button id="workshop-bottom-sticker-17" class="point-btn workshop-sticker" data-sticker-index="16"></button>
-                        <button id="workshop-bottom-sticker-18" class="point-btn workshop-sticker" data-sticker-index="17"></button>
-                        <button id="workshop-bottom-sticker-19" class="point-btn workshop-sticker" data-sticker-index="18"></button>
-                        <button id="workshop-bottom-sticker-20" class="point-btn workshop-sticker" data-sticker-index="19"></button>
-                        <button id="workshop-bottom-sticker-21" class="point-btn workshop-sticker" data-sticker-index="20"></button>
-                        <button id="workshop-bottom-sticker-22" class="point-btn workshop-sticker" data-sticker-index="21"></button>
-                        <button id="workshop-bottom-sticker-23" class="point-btn workshop-sticker" data-sticker-index="22"></button>
-                        <button id="workshop-bottom-sticker-24" class="point-btn workshop-sticker" data-sticker-index="23"></button>
+                        {% for sticker_index in range(1, 25) %}
+                        <button id="workshop-bottom-sticker-{{ sticker_index }}" class="point-btn workshop-sticker" data-sticker-index="{{ sticker_index - 1 }}"></button>
+                        {% endfor %}
                     </div>
                 </div>
                 <div class="workshop-panel workshop-question-panel">
@@ -232,30 +190,9 @@
                 <div class="workshop-panel">
                     <button type="button" class="workshop-btn" data-draw-mode="draw_line_string">Line</button>
                     <div class="workshop-stickers">
-                        <button id="workshop-left-sticker-1" class="point-btn workshop-sticker" data-sticker-index="0"></button>
-                        <button id="workshop-left-sticker-2" class="point-btn workshop-sticker" data-sticker-index="1"></button>
-                        <button id="workshop-left-sticker-3" class="point-btn workshop-sticker" data-sticker-index="2"></button>
-                        <button id="workshop-left-sticker-4" class="point-btn workshop-sticker" data-sticker-index="3"></button>
-                        <button id="workshop-left-sticker-5" class="point-btn workshop-sticker" data-sticker-index="4"></button>
-                        <button id="workshop-left-sticker-6" class="point-btn workshop-sticker" data-sticker-index="5"></button>
-                        <button id="workshop-left-sticker-7" class="point-btn workshop-sticker" data-sticker-index="6"></button>
-                        <button id="workshop-left-sticker-8" class="point-btn workshop-sticker" data-sticker-index="7"></button>
-                        <button id="workshop-left-sticker-9" class="point-btn workshop-sticker" data-sticker-index="8"></button>
-                        <button id="workshop-left-sticker-10" class="point-btn workshop-sticker" data-sticker-index="9"></button>
-                        <button id="workshop-left-sticker-11" class="point-btn workshop-sticker" data-sticker-index="10"></button>
-                        <button id="workshop-left-sticker-12" class="point-btn workshop-sticker" data-sticker-index="11"></button>
-                        <button id="workshop-left-sticker-13" class="point-btn workshop-sticker" data-sticker-index="12"></button>
-                        <button id="workshop-left-sticker-14" class="point-btn workshop-sticker" data-sticker-index="13"></button>
-                        <button id="workshop-left-sticker-15" class="point-btn workshop-sticker" data-sticker-index="14"></button>
-                        <button id="workshop-left-sticker-16" class="point-btn workshop-sticker" data-sticker-index="15"></button>
-                        <button id="workshop-left-sticker-17" class="point-btn workshop-sticker" data-sticker-index="16"></button>
-                        <button id="workshop-left-sticker-18" class="point-btn workshop-sticker" data-sticker-index="17"></button>
-                        <button id="workshop-left-sticker-19" class="point-btn workshop-sticker" data-sticker-index="18"></button>
-                        <button id="workshop-left-sticker-20" class="point-btn workshop-sticker" data-sticker-index="19"></button>
-                        <button id="workshop-left-sticker-21" class="point-btn workshop-sticker" data-sticker-index="20"></button>
-                        <button id="workshop-left-sticker-22" class="point-btn workshop-sticker" data-sticker-index="21"></button>
-                        <button id="workshop-left-sticker-23" class="point-btn workshop-sticker" data-sticker-index="22"></button>
-                        <button id="workshop-left-sticker-24" class="point-btn workshop-sticker" data-sticker-index="23"></button>
+                        {% for sticker_index in range(1, 25) %}
+                        <button id="workshop-left-sticker-{{ sticker_index }}" class="point-btn workshop-sticker" data-sticker-index="{{ sticker_index - 1 }}"></button>
+                        {% endfor %}
                     </div>
                 </div>
                 <div class="workshop-panel workshop-question-panel">
@@ -270,30 +207,9 @@
                 <div class="workshop-panel">
                     <button type="button" class="workshop-btn" data-draw-mode="draw_line_string">Line</button>
                     <div class="workshop-stickers">
-                        <button id="workshop-right-sticker-1" class="point-btn workshop-sticker" data-sticker-index="0"></button>
-                        <button id="workshop-right-sticker-2" class="point-btn workshop-sticker" data-sticker-index="1"></button>
-                        <button id="workshop-right-sticker-3" class="point-btn workshop-sticker" data-sticker-index="2"></button>
-                        <button id="workshop-right-sticker-4" class="point-btn workshop-sticker" data-sticker-index="3"></button>
-                        <button id="workshop-right-sticker-5" class="point-btn workshop-sticker" data-sticker-index="4"></button>
-                        <button id="workshop-right-sticker-6" class="point-btn workshop-sticker" data-sticker-index="5"></button>
-                        <button id="workshop-right-sticker-7" class="point-btn workshop-sticker" data-sticker-index="6"></button>
-                        <button id="workshop-right-sticker-8" class="point-btn workshop-sticker" data-sticker-index="7"></button>
-                        <button id="workshop-right-sticker-9" class="point-btn workshop-sticker" data-sticker-index="8"></button>
-                        <button id="workshop-right-sticker-10" class="point-btn workshop-sticker" data-sticker-index="9"></button>
-                        <button id="workshop-right-sticker-11" class="point-btn workshop-sticker" data-sticker-index="10"></button>
-                        <button id="workshop-right-sticker-12" class="point-btn workshop-sticker" data-sticker-index="11"></button>
-                        <button id="workshop-right-sticker-13" class="point-btn workshop-sticker" data-sticker-index="12"></button>
-                        <button id="workshop-right-sticker-14" class="point-btn workshop-sticker" data-sticker-index="13"></button>
-                        <button id="workshop-right-sticker-15" class="point-btn workshop-sticker" data-sticker-index="14"></button>
-                        <button id="workshop-right-sticker-16" class="point-btn workshop-sticker" data-sticker-index="15"></button>
-                        <button id="workshop-right-sticker-17" class="point-btn workshop-sticker" data-sticker-index="16"></button>
-                        <button id="workshop-right-sticker-18" class="point-btn workshop-sticker" data-sticker-index="17"></button>
-                        <button id="workshop-right-sticker-19" class="point-btn workshop-sticker" data-sticker-index="18"></button>
-                        <button id="workshop-right-sticker-20" class="point-btn workshop-sticker" data-sticker-index="19"></button>
-                        <button id="workshop-right-sticker-21" class="point-btn workshop-sticker" data-sticker-index="20"></button>
-                        <button id="workshop-right-sticker-22" class="point-btn workshop-sticker" data-sticker-index="21"></button>
-                        <button id="workshop-right-sticker-23" class="point-btn workshop-sticker" data-sticker-index="22"></button>
-                        <button id="workshop-right-sticker-24" class="point-btn workshop-sticker" data-sticker-index="23"></button>
+                        {% for sticker_index in range(1, 25) %}
+                        <button id="workshop-right-sticker-{{ sticker_index }}" class="point-btn workshop-sticker" data-sticker-index="{{ sticker_index - 1 }}"></button>
+                        {% endfor %}
                     </div>
                 </div>
                 <div class="workshop-panel workshop-question-panel">
@@ -369,78 +285,10 @@
                     Stickers</div>
                 <div
                     class="section-content points-grid grid grid-cols-3  gap-2 p-2.5 items-center justify-items-center">
-                    <button id="sticker-btn-1" data-sticker-index="0"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-2" data-sticker-index="1"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-3" data-sticker-index="2"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-4" data-sticker-index="3"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-5" data-sticker-index="4"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-6" data-sticker-index="5"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-7" data-sticker-index="6"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-8" data-sticker-index="7"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-9" data-sticker-index="8"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-10" data-sticker-index="9"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-11" data-sticker-index="10"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-12" data-sticker-index="11"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-13" data-sticker-index="12"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-14" data-sticker-index="13"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-15" data-sticker-index="14"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-16" data-sticker-index="15"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-17" data-sticker-index="16"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-18" data-sticker-index="17"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-19" data-sticker-index="18"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-20" data-sticker-index="19"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-21" data-sticker-index="20"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-22" data-sticker-index="21"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-23" data-sticker-index="22"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
-                    <button id="sticker-btn-24" data-sticker-index="23"
-                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"
-                       ></button>
+                    {% for sticker_index in range(1, 25) %}
+                    <button id="sticker-btn-{{ sticker_index }}" data-sticker-index="{{ sticker_index - 1 }}"
+                        class="point-btn flex-none w-6 h-6 border-2 border-black/30 rounded-full cursor-pointer transition-all duration-200 shadow-inner hover:scale-115 hover:shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),0_4px_8px_rgba(0,0,0,0.6)] hover:border-white/50 active:scale-120 active:border-[3px] active:border-white active:shadow-[0_0_20px_currentColor]"></button>
+                    {% endfor %}
                 </div>
 
             </div>
