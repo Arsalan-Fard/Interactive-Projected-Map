@@ -3,9 +3,9 @@
     "name": "Signage Workshop Pilot",
     "location": "",
     "id": "project-1767601197151",
-    "mapId": "palaiseau-outdoor",
+    "mapId": "map-1767602417372",
     "rearProjection": false,
-    "tuiMode": false,
+    "tuiMode": true,
     "workshopMode": true,
     "tagSettings": {
       "count": 1,
@@ -138,20 +138,20 @@
       "count": 16,
       "colors": [
         "#FF6B6B",
-        "#525dff",
-        "#80ff99",
-        "#f5ff6b",
+        "#ff6b6b",
+        "#ff6b6b",
         "#ff6b6b",
         "#525dff",
-        "#80ff99",
-        "#f5ff6b",
-        "#ff6b6b",
+        "#525dff",
+        "#525dff",
         "#525dff",
         "#80ff99",
-        "#f5ff6b",
-        "#ff6b6b",
-        "#525dff",
         "#80ff99",
+        "#80ff99",
+        "#80ff99",
+        "#f5ff6b",
+        "#f5ff6b",
+        "#f5ff6b",
         "#f5ff6b"
       ],
       "tags": [
@@ -204,21 +204,35 @@
       "pitch": 0,
       "style": "mapbox://styles/mapbox/light-v11",
       "zoom": 17
+    },
+    {
+      "id": "map-1767602417372",
+      "label": "Signage",
+      "style": "mapbox://styles/mapbox/dark-v11",
+      "center": [
+        2.2005,
+        48.7138
+      ],
+      "zoom": 15,
+      "pitch": 0,
+      "bearing": 10,
+      "overlays": [],
+      "description": "New custom map"
     }
   ],
   "map": {
-    "bearing": 40,
+    "id": "map-1767602417372",
+    "label": "Signage",
+    "style": "mapbox://styles/mapbox/dark-v11",
     "center": [
-      2.2,
-      48.714
+      2.2005,
+      48.7138
     ],
-    "description": "Base view for the campus and surroundings",
-    "id": "palaiseau-outdoor",
-    "label": "IP Paris Campus",
+    "zoom": 15,
+    "pitch": 0,
+    "bearing": 10,
     "overlays": [],
-    "pitch": 45,
-    "style": "mapbox://styles/mapbox/light-v11",
-    "zoom": 15
+    "description": "New custom map"
   },
   "overlays": [
     {
@@ -267,24 +281,23 @@
   "questionFlow": [
     {
       "id": "arrival-mode",
-      "text": "How do you typically travel to campus?",
-      "type": "single-choice",
+      "text": "Where do you visit the most? use 5 red sticker and show it on the map.",
+      "type": "sticker",
       "options": [
         "Walk",
         "Bike",
         "Bus",
-        "Car",
-        "Other"
+        "Car"
       ],
       "required": true,
       "responseShape": "scalar",
-      "mapId": "palaiseau-outdoor",
+      "mapId": "map-1767602417372",
       "order": 1
     },
     {
       "id": "bike-lanes",
-      "text": "Where should we add bike lanes?",
-      "type": "sticker",
+      "text": "If you walk/bike/drive, draw your entrance to campus, else (bus,...) just use the red sticker.",
+      "type": "drawing",
       "options": [],
       "required": false,
       "responseShape": "point-collection",
@@ -315,14 +328,14 @@
   "responseTemplate": {
     "arrival-mode": {
       "questionId": "arrival-mode",
-      "type": "single-choice",
+      "type": "sticker",
       "responseShape": "scalar",
       "required": true,
       "answers": []
     },
     "bike-lanes": {
       "questionId": "bike-lanes",
-      "type": "sticker",
+      "type": "drawing",
       "responseShape": "point-collection",
       "required": false,
       "answers": []

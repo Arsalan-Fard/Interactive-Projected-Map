@@ -3,20 +3,151 @@
     "name": "Pilot 2",
     "location": "Palaiseau",
     "id": "project-1766302937004",
-    "mapId": "map-1766302950109"
+    "mapId": "map-1766302950109",
+    "rearProjection": false,
+    "tuiMode": true,
+    "workshopMode": false,
+    "tagSettings": {
+      "count": 2,
+      "items": [
+        {
+          "label": "",
+          "tagId": null
+        },
+        {
+          "label": "",
+          "tagId": null
+        }
+      ]
+    },
+    "tagConfig": {
+      "layers": {
+        "items": [
+          {
+            "id": "palaiseau-roads",
+            "label": "Road network",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "walking-network",
+            "label": "Walking network",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "mobility-infrastructure",
+            "label": "Bike network",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "bus-lanes",
+            "label": "Bus lanes",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "amenities",
+            "label": "Amenities",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "telecom-floorplan",
+            "label": "Telecom floorplan",
+            "enabled": true,
+            "tagId": null
+          }
+        ]
+      },
+      "reach15": {
+        "items": [
+          {
+            "id": "walk",
+            "label": "Walk",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "bike",
+            "label": "Cycling",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "car",
+            "label": "Car",
+            "enabled": false,
+            "tagId": null
+          }
+        ]
+      },
+      "shortestPath": {
+        "items": [
+          {
+            "id": "A",
+            "label": "Point A",
+            "enabled": true,
+            "tagId": null
+          },
+          {
+            "id": "B",
+            "label": "Point B",
+            "enabled": true,
+            "tagId": null
+          }
+        ]
+      },
+      "tools": {
+        "items": [
+          {
+            "id": "eraser",
+            "label": "Eraser",
+            "enabled": true,
+            "tagId": null
+          }
+        ]
+      }
+    },
+    "drawingConfig": {
+      "items": [
+        {
+          "id": "drawing-1",
+          "label": "drawing line",
+          "color": "#ff00ff",
+          "tagId": 6
+        },
+        {
+          "id": "drawing-2",
+          "label": "drawing line",
+          "color": "#4dfec3",
+          "tagId": 7
+        }
+      ]
+    },
+    "stickerConfig": {
+      "count": 2,
+      "colors": [
+        "#FF6B6B",
+        "#4ECDC4"
+      ],
+      "tags": [
+        null,
+        null
+      ]
+    }
   },
   "maps": [
     {
-      "id": "palaiseau-outdoor",
-      "label": "IP Paris Campus",
-      "style": "mapbox://styles/mapbox/light-v11",
+      "bearing": 40,
       "center": [
         2.2,
         48.714
       ],
-      "zoom": 15,
-      "pitch": 45,
-      "bearing": 40,
+      "description": "Base view for the campus and surroundings",
+      "id": "palaiseau-outdoor",
+      "label": "IP Paris Campus",
       "overlays": [
         "palaiseau-roads",
         "walking-network",
@@ -24,99 +155,101 @@
         "bus-lanes",
         "amenities"
       ],
-      "description": "Base view for the campus and surroundings"
+      "pitch": 45,
+      "style": "mapbox://styles/mapbox/light-v11",
+      "zoom": 15
     },
     {
-      "id": "telecom-floorplan-view",
-      "label": "Telecom indoor",
-      "style": "mapbox://styles/mapbox/light-v11",
+      "bearing": 0,
       "center": [
         2.2005,
         48.7138
       ],
-      "zoom": 17,
-      "pitch": 0,
-      "bearing": 0,
+      "description": "Image overlay for indoor exercises",
+      "id": "telecom-floorplan-view",
+      "label": "Telecom indoor",
       "overlays": [
         "telecom-floorplan"
       ],
-      "description": "Image overlay for indoor exercises"
+      "pitch": 0,
+      "style": "mapbox://styles/mapbox/light-v11",
+      "zoom": 17
     },
     {
-      "id": "map-1766302950109",
-      "label": "new",
-      "style": "mapbox://styles/mapbox/light-v11",
+      "bearing": 0,
       "center": [
         2.2,
         48.714
       ],
-      "zoom": 15,
-      "pitch": 0,
-      "bearing": 0,
+      "description": "New custom map",
+      "id": "map-1766302950109",
+      "label": "new",
       "overlays": [
         "palaiseau-roads"
       ],
-      "description": "New custom map"
+      "pitch": 0,
+      "style": "mapbox://styles/mapbox/light-v11",
+      "zoom": 15
     }
   ],
   "map": {
-    "id": "map-1766302950109",
-    "label": "new",
-    "style": "mapbox://styles/mapbox/light-v11",
+    "bearing": 0,
     "center": [
       2.2,
       48.714
     ],
-    "zoom": 15,
-    "pitch": 0,
-    "bearing": 0,
+    "description": "New custom map",
+    "id": "map-1766302950109",
+    "label": "new",
     "overlays": [
       "palaiseau-roads"
     ],
-    "description": "New custom map"
+    "pitch": 0,
+    "style": "mapbox://styles/mapbox/light-v11",
+    "zoom": 15
   },
   "overlays": [
     {
+      "file": "/static/data/palaiseau_roads.geojson",
       "id": "palaiseau-roads",
       "label": "Road network",
-      "file": "/static/data/palaiseau_roads.geojson",
-      "type": "line",
-      "note": "OSM roads for the outdoor view"
+      "note": "OSM roads for the outdoor view",
+      "type": "line"
     },
     {
+      "file": "/static/data/walking_network.geojson",
       "id": "walking-network",
       "label": "Walking network",
-      "file": "/static/data/walking_network.geojson",
-      "type": "line",
-      "note": "Pedestrian paths used for routes"
+      "note": "Pedestrian paths used for routes",
+      "type": "line"
     },
     {
+      "file": "/static/data/mobility_infrastructure.geojson",
       "id": "mobility-infrastructure",
       "label": "Bike network",
-      "file": "/static/data/mobility_infrastructure.geojson",
-      "type": "line",
-      "note": "Cycleways and shared lanes"
+      "note": "Cycleways and shared lanes",
+      "type": "line"
     },
     {
+      "file": "/static/data/bus_lanes.geojson",
       "id": "bus-lanes",
       "label": "Bus lanes",
-      "file": "/static/data/bus_lanes.geojson",
-      "type": "line",
-      "note": "Transit priority lanes"
+      "note": "Transit priority lanes",
+      "type": "line"
     },
     {
+      "file": "/static/data/amenities.geojson",
       "id": "amenities",
       "label": "Amenities",
-      "file": "/static/data/amenities.geojson",
-      "type": "point",
-      "note": "Hospitals, schools, markets, libraries"
+      "note": "Hospitals, schools, markets, libraries",
+      "type": "point"
     },
     {
+      "file": "/static/data/images.jpg",
       "id": "telecom-floorplan",
       "label": "Telecom floorplan",
-      "file": "/static/data/images.jpg",
-      "type": "image",
-      "note": "Indoor overlay for the Telecom building"
+      "note": "Indoor overlay for the Telecom building",
+      "type": "image"
     }
   ],
   "questionFlow": [

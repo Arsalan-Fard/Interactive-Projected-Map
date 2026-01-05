@@ -17,6 +17,44 @@ function getReadableTextColor(hex) {
     return luminance > 0.6 ? '#111111' : '#ffffff';
 }
 
+function getDrawingItems(setupConfig) {
+    const drawingConfig = setupConfig?.project?.drawingConfig;
+    if (!drawingConfig) return [];
+    if (Array.isArray(drawingConfig)) return drawingConfig;
+    if (Array.isArray(drawingConfig.items)) return drawingConfig.items;
+    if (drawingConfig.label || drawingConfig.color || drawingConfig.tagId !== undefined) {
+        return [drawingConfig];
+    }
+    return [];
+}
+
+function getWorkshopBarIndex(bar) {
+    if (!bar) return null;
+    if (bar.classList.contains('workshop-bar--top')) return 0;
+    if (bar.classList.contains('workshop-bar--bottom')) return 1;
+    if (bar.classList.contains('workshop-bar--left')) return 2;
+    if (bar.classList.contains('workshop-bar--right')) return 3;
+    return null;
+}
+
+function applyWorkshopDrawingConfig(setupConfig, drawingItems) {
+    const items = Array.isArray(drawingItems) ? drawingItems : getDrawingItems(setupConfig);
+    const buttons = Array.from(document.querySelectorAll('.workshop-btn[data-draw-mode]'));
+    buttons.forEach(btn => {
+        const bar = btn.closest('.workshop-bar');
+        const index = getWorkshopBarIndex(bar);
+        if (index === null) return;
+        btn.dataset.drawToolIndex = String(index);
+        const item = items[index] || items[0];
+        if (item?.label) {
+            btn.textContent = item.label;
+        }
+        if (item?.color) {
+            btn.dataset.drawColor = item.color;
+        }
+    });
+}
+
 function applyStickerConfig(setupConfig) {
     const config = setupConfig?.project?.stickerConfig;
     if (!config) return;
@@ -101,7 +139,8 @@ function applyTagSettings(setupConfig) {
 
 async function initApp() {
     const setupConfig = await loadSetupConfig();
-    const drawLineColor = setupConfig?.project?.drawingConfig?.items?.[0]?.color
+    const drawingItems = getDrawingItems(setupConfig);
+    let drawLineColor = drawingItems[0]?.color
         || setupConfig?.project?.drawingConfig?.color
         || 'magenta';
 
@@ -147,6 +186,7 @@ async function initApp() {
     }
 
     applyTagConfigVisibility(setupConfig);
+    applyWorkshopDrawingConfig(setupConfig, drawingItems);
     applyStickerConfig(setupConfig);
     applyTagSettings(setupConfig);
 
@@ -180,6 +220,7 @@ async function initApp() {
         loadAndRenderLayer,
         onStyleLoad: () => {
             scheduleDrawLineGlow(map);
+            scheduleDrawLineStyle(map, drawLineColor);
             if (survey) {
                 survey.onStyleLoad();
             }
@@ -312,9 +353,32 @@ async function initApp() {
         mapInstance.on('sourcedata', onSourceData);
     }
 
+    function applyDrawLineStyle(mapInstance, fallbackColor) {
+        if (!mapInstance?.getLayer || !mapInstance?.setPaintProperty) return false;
+        const lineLayers = ['gl-draw-line-inactive', 'gl-draw-line-active', 'gl-draw-line-static', 'gl-draw-line'];
+        let applied = false;
+        lineLayers.forEach(id => {
+            if (!mapInstance.getLayer(id)) return;
+            mapInstance.setPaintProperty(id, 'line-color', ['coalesce', ['get', 'color'], fallbackColor]);
+            applied = true;
+        });
+        return applied;
+    }
+
+    function scheduleDrawLineStyle(mapInstance, fallbackColor) {
+        if (applyDrawLineStyle(mapInstance, fallbackColor)) return;
+        const onSourceData = () => {
+            if (applyDrawLineStyle(mapInstance, fallbackColor)) {
+                mapInstance.off('sourcedata', onSourceData);
+            }
+        };
+        mapInstance.on('sourcedata', onSourceData);
+    }
+
     const drawModes = buildDrawModes();
     const draw = new MapboxDraw({
         displayControlsDefault: false,
+        userProperties: true,
         ...(drawModes ? { modes: drawModes } : {})
     });
     map.addControl(draw);
@@ -333,28 +397,84 @@ async function initApp() {
     initTagTracking({ map, setupConfig, draw });
 
     const drawButtons = Array.from(document.querySelectorAll('[data-draw-mode]'));
+    const TM_SOURCE_KEY = 'tm_source';
+    const TM_SOURCE_TAG = 'tag';
+    let activeDrawingIndex = 0;
 
-    function setDrawMode(targetMode) {
+    function getActiveDrawingItem() {
+        return drawingItems[activeDrawingIndex] || drawingItems[0] || {};
+    }
+
+    function getDrawingColor(item) {
+        return typeof item?.color === 'string' ? item.color.trim() : '';
+    }
+
+    function updateDrawLineFallback(color) {
+        const nextColor = typeof color === 'string' ? color.trim() : '';
+        if (!nextColor) return;
+        drawLineColor = nextColor;
+        applyDrawLineStyle(map, drawLineColor);
+        if (map?.getLayer?.('gl-draw-line-glow') && map?.setPaintProperty) {
+            map.setPaintProperty('gl-draw-line-glow', 'line-color', ['coalesce', ['get', 'color'], drawLineColor]);
+        }
+    }
+
+    function setActiveDrawingIndex(nextIndex) {
+        if (!Number.isFinite(nextIndex)) return false;
+        const maxIndex = Math.max(0, drawingItems.length - 1);
+        const bounded = Math.max(0, Math.min(maxIndex, nextIndex));
+        if (bounded === activeDrawingIndex) return false;
+        activeDrawingIndex = bounded;
+        updateDrawLineFallback(getDrawingColor(getActiveDrawingItem()));
+        return true;
+    }
+
+    function setDrawMode(targetMode, requestedToolIndex) {
         const mode = draw.getMode();
+        const wantsTool = Number.isFinite(requestedToolIndex);
+        const sameTool = !wantsTool || requestedToolIndex === activeDrawingIndex;
+
+        if (wantsTool && requestedToolIndex !== activeDrawingIndex) {
+            setActiveDrawingIndex(requestedToolIndex);
+        }
+
         if (mode !== targetMode) {
             draw.changeMode(targetMode);
-        } else {
+        } else if (sameTool) {
             draw.changeMode('simple_select');
         }
     }
 
+    function isDrawButtonActive(btn, mode) {
+        const targetMode = btn.dataset.drawMode;
+        if (targetMode !== mode) return false;
+        const rawToolIndex = Number.parseInt(btn.dataset.drawToolIndex, 10);
+        if (!Number.isFinite(rawToolIndex)) return true;
+        return rawToolIndex === activeDrawingIndex;
+    }
+
     function syncDrawButtons(mode) {
         drawButtons.forEach(btn => {
-            const targetMode = btn.dataset.drawMode;
-            btn.classList.toggle('active', targetMode === mode);
+            btn.classList.toggle('active', isDrawButtonActive(btn, mode));
         });
     }
 
     drawButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetMode = btn.dataset.drawMode;
+            const requestedToolIndex = Number.parseInt(btn.dataset.drawToolIndex, 10);
+            const wantsTool = Number.isFinite(requestedToolIndex);
             if (targetMode) {
-                setDrawMode(targetMode);
+                const currentMode = draw.getMode();
+                const sameMode = currentMode === targetMode;
+                const sameTool = !wantsTool || requestedToolIndex === activeDrawingIndex;
+                if (sameMode && !sameTool) {
+                    if (setActiveDrawingIndex(requestedToolIndex)) {
+                        syncDrawButtons(currentMode);
+                    }
+                    return;
+                }
+                setDrawMode(targetMode, wantsTool ? requestedToolIndex : undefined);
             }
         });
     });
@@ -362,6 +482,24 @@ async function initApp() {
     map.on('draw.modechange', (e) => {
         console.log('Draw mode changed to:', e.mode);
         syncDrawButtons(e.mode);
+    });
+
+    map.on('draw.create', (e) => {
+        const features = Array.isArray(e?.features) ? e.features : [];
+        if (!features.length) return;
+        const activeItem = getActiveDrawingItem();
+        const color = typeof activeItem.color === 'string' ? activeItem.color.trim() : '';
+        const label = typeof activeItem.label === 'string' ? activeItem.label.trim() : '';
+        const toolId = typeof activeItem.id === 'string' ? activeItem.id.trim() : '';
+        features.forEach(feature => {
+            if (!feature?.id) return;
+            if (feature?.properties?.[TM_SOURCE_KEY] === TM_SOURCE_TAG) return;
+            if (typeof draw.setFeatureProperty !== 'function') return;
+            if (color) draw.setFeatureProperty(feature.id, 'color', color);
+            if (label) draw.setFeatureProperty(feature.id, 'label', label);
+            if (toolId) draw.setFeatureProperty(feature.id, 'drawingToolId', toolId);
+            draw.setFeatureProperty(feature.id, 'drawingToolIndex', activeDrawingIndex);
+        });
     });
 
     const btnWalk = document.getElementById('btn-isochrone');

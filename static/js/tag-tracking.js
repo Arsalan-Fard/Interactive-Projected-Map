@@ -604,10 +604,16 @@ export function initTagTracking({ map, setupConfig, draw }) {
             let leftBound = 0;
             let rightBound = window.innerWidth;
             if (leftSidebar) {
-                leftBound = leftSidebar.getBoundingClientRect().right;
+                const rect = leftSidebar.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0 && Number.isFinite(rect.right)) {
+                    leftBound = rect.right;
+                }
             }
             if (rightSidebar) {
-                rightBound = rightSidebar.getBoundingClientRect().left;
+                const rect = rightSidebar.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0 && Number.isFinite(rect.left)) {
+                    rightBound = rect.left;
+                }
             }
 
             let debugDotVisible = false;
