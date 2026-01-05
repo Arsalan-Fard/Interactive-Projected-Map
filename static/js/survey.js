@@ -39,7 +39,10 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
     const finishBtn = document.getElementById('finish-btn');
-    const questionText = document.querySelector('.question-text');
+    const questionTextNodes = Array.from(new Set([
+        ...document.querySelectorAll('.question-text'),
+        ...document.querySelectorAll('[data-question-text]')
+    ]));
     const questionOptions = document.getElementById('question-options');
     const dotsContainer = document.querySelector('.progress-dots');
     const previousAnswersBtn = document.getElementById('btn-previous-answers');
@@ -50,6 +53,37 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
     let previousResponses = [];
     let previousResponsesLoaded = false;
     let showPreviousAnswers = false;
+
+    const prevButtons = Array.from(new Set([
+        ...document.querySelectorAll('[data-question-nav="prev"]'),
+        prevBtn
+    ])).filter(Boolean);
+    const nextButtons = Array.from(new Set([
+        ...document.querySelectorAll('[data-question-nav="next"]'),
+        nextBtn
+    ])).filter(Boolean);
+    const finishButtons = Array.from(new Set([
+        ...document.querySelectorAll('[data-question-nav="finish"]'),
+        finishBtn
+    ])).filter(Boolean);
+
+    function setQuestionText(value) {
+        questionTextNodes.forEach(node => {
+            node.textContent = value;
+        });
+    }
+
+    function setButtonsDisabled(buttons, disabled) {
+        buttons.forEach(btn => {
+            btn.disabled = disabled;
+        });
+    }
+
+    function toggleButtonsHidden(buttons, hidden) {
+        buttons.forEach(btn => {
+            btn.classList.toggle('hidden', hidden);
+        });
+    }
 
     function renderDots() {
         if (!dotsContainer) return;
@@ -482,16 +516,16 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                 questionOptions.innerHTML = '';
                 questionOptions.classList.add('hidden');
             }
-            prevBtn.disabled = true;
-            nextBtn.disabled = true;
-            if (finishBtn) finishBtn.classList.add('hidden');
+            setButtonsDisabled(prevButtons, true);
+            setButtonsDisabled(nextButtons, true);
+            toggleButtonsHidden(finishButtons, true);
             renderPreviousAnswers({ id: null, type: null });
             clearPreviousAnswerLayers();
             return;
         }
 
         const q = questions[currentQuestionIndex];
-        questionText.textContent = q.text;
+        setQuestionText(q.text);
         renderQuestionOptions(q);
 
         // Map switching logic
@@ -523,39 +557,43 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
             dot.classList.toggle('active', index === currentQuestionIndex);
         });
 
-        prevBtn.disabled = currentQuestionIndex === 0;
-        nextBtn.disabled = currentQuestionIndex === questions.length - 1;
         const isLastQuestion = currentQuestionIndex === questions.length - 1;
-        if (nextBtn) nextBtn.classList.toggle('hidden', isLastQuestion);
-        if (finishBtn) finishBtn.classList.toggle('hidden', !isLastQuestion);
+        setButtonsDisabled(prevButtons, currentQuestionIndex === 0);
+        setButtonsDisabled(nextButtons, currentQuestionIndex === questions.length - 1);
+        toggleButtonsHidden(nextButtons, isLastQuestion);
+        toggleButtonsHidden(finishButtons, !isLastQuestion);
         renderPreviousAnswers(q);
         renderPreviousAnswersOnMap(q);
     }
 
-    prevBtn.addEventListener('click', () => {
-        if (!questions.length) return;
-        if (currentQuestionIndex > 0) {
-            currentQuestionIndex--;
-            updateQuestion();
-        }
+    prevButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!questions.length) return;
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                updateQuestion();
+            }
+        });
     });
 
-    nextBtn.addEventListener('click', async () => {
-        if (!questions.length) return;
-        if (currentQuestionIndex < questions.length - 1) {
-            currentQuestionIndex++;
-            updateQuestion();
-        }
+    nextButtons.forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!questions.length) return;
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                updateQuestion();
+            }
+        });
     });
 
     if (previousAnswersBtn) {
         previousAnswersBtn.addEventListener('click', togglePreviousAnswers);
     }
 
-    if (finishBtn) {
-        finishBtn.addEventListener('click', async () => {
+    finishButtons.forEach(btn => {
+        btn.addEventListener('click', async () => {
             if (!questions.length) return;
-            finishBtn.disabled = true;
+            setButtonsDisabled(finishButtons, true);
             try {
                 await saveResponses();
                 if (showPreviousAnswers) {
@@ -566,10 +604,10 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                 currentQuestionIndex = 0;
                 updateQuestion();
             } finally {
-                finishBtn.disabled = false;
+                setButtonsDisabled(finishButtons, false);
             }
         });
-    }
+    });
 
     return {
         onStyleLoad() {

@@ -37,6 +37,9 @@ body.workshop-mode #right-sidebar {
     position: absolute;
     pointer-events: auto;
     transform-origin: center;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .workshop-bar--top {
@@ -79,6 +82,29 @@ body.workshop-mode #right-sidebar {
 .workshop-stickers {
     display: flex;
     gap: 6px;
+}
+
+.workshop-question-panel {
+    max-width: 360px;
+}
+
+.workshop-question-text {
+    max-width: 220px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #e6edf3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.workshop-question-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.workshop-question-btn {
+    min-width: 48px;
 }
 
 .workshop-btn {
