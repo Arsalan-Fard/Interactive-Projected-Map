@@ -23,6 +23,9 @@ export const DEFAULT_TAG_GROUPS = {
         { id: 'bike', label: 'Cycling', enabled: true, tagId: null },
         { id: 'car', label: 'Car', enabled: false, tagId: null }
     ],
+    isovist: [
+        { id: 'isovist', label: 'Isovist', enabled: true, tagId: null }
+    ],
     shortestPath: [
         { id: 'A', label: 'Point A', enabled: true, tagId: null },
         { id: 'B', label: 'Point B', enabled: true, tagId: null }

@@ -4,6 +4,8 @@ import {
     resetShortestPathButton,
     setReachButtonPosition,
     resetReachButton,
+    setIsovistButtonPosition,
+    resetIsovistButton,
     setEraserButtonPosition,
     resetEraserButton,
     setStickerPosition,
@@ -443,6 +445,20 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 });
             }
 
+            const isovistItems = setupConfig?.project?.tagConfig?.isovist?.items;
+            let isovistTagId = null;
+            if (Array.isArray(isovistItems)) {
+                const match = isovistItems.find(item =>
+                    item
+                    && item.enabled !== false
+                    && item.id === 'isovist'
+                    && Number.isInteger(item.tagId)
+                );
+                if (match) {
+                    isovistTagId = match.tagId;
+                }
+            }
+
             const toolItems = setupConfig?.project?.tagConfig?.tools?.items;
             const toolTagIds = new Set();
             let eraserTagId = null;
@@ -491,6 +507,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 || layerTagIds.has(id)
                 || shortestTagIds.has(id)
                 || reachTagIds.has(id)
+                || (Number.isInteger(isovistTagId) && id === isovistTagId)
                 || toolTagIds.has(id)
                 || stickerTagIds.has(id)
                 || tagSettingsTagIds.has(id)
@@ -623,6 +640,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
             let tagAOutsideMap = false;
             let tagBOutsideMap = false;
             const reachOutsideMap = new Map();
+            let isovistOutsideMap = false;
             let eraserOutsideMap = false;
             const updatedStickerTags = new Set();
             let drawingLayerDirty = false;
@@ -750,6 +768,15 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     }
                 }
 
+                // --- Isovist Logic ---
+                if (Number.isInteger(isovistTagId) && tagId === isovistTagId) {
+                    if (isDetected && screenX > leftBound && screenX < rightBound) {
+                        setIsovistButtonPosition(map, screenX, screenY);
+                    } else if (isDetected) {
+                        isovistOutsideMap = true;
+                    }
+                }
+
                 // --- Eraser Logic ---
                 if (eraserTagId !== null && tagId === eraserTagId) {
                     if (isDetected && screenX > leftBound && screenX < rightBound) {
@@ -825,6 +852,39 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 } else {
                     console.log('No layer config found in setupConfig');
                 }
+
+                if (setupConfig?.project?.tagConfig?.isovist?.items) {
+                    setupConfig.project.tagConfig.isovist.items.forEach(isovistItem => {
+                        if (isovistItem.tagId === tagId && isDetected) {
+                            const btn = document.getElementById('btn-layer-isovist');
+                            const isovistSection = document.getElementById('toolbar-isovist');
+                            const target = isovistSection || btn;
+                            if (target && btn) {
+                                const rect = target.getBoundingClientRect();
+                                const isInside = (
+                                    screenX >= rect.left &&
+                                    screenX <= rect.right &&
+                                    screenY >= rect.top &&
+                                    screenY <= rect.bottom
+                                );
+
+                                const isActive = btn.classList.contains('active');
+
+                                if (isInside) {
+                                    if (!isActive) {
+                                        btn.click();
+                                    }
+                                } else {
+                                    if (isActive) {
+                                        btn.click();
+                                    }
+                                }
+                            } else {
+                                console.error('Layers section or button not found in DOM');
+                            }
+                        }
+                    });
+                }
             }
 
             if (tagAOutsideMap) {
@@ -839,6 +899,9 @@ export function initTagTracking({ map, setupConfig, draw }) {
                         resetReachButton(map, mode);
                     }
                 });
+            }
+            if (isovistOutsideMap) {
+                resetIsovistButton();
             }
             if (eraserOutsideMap) {
                 resetEraserButton();

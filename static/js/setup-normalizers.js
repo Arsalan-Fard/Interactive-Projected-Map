@@ -44,6 +44,7 @@ export function normalizeTagConfig(state) {
     state.project.tagConfig = {
         layers: { items: layerItems },
         reach15: { items: mergeTagItems(DEFAULT_TAG_GROUPS.reach15, existing.reach15?.items) },
+        isovist: { items: mergeTagItems(DEFAULT_TAG_GROUPS.isovist, existing.isovist?.items) },
         shortestPath: { items: mergeTagItems(DEFAULT_TAG_GROUPS.shortestPath, existing.shortestPath?.items) },
         tools: { items: mergeTagItems(DEFAULT_TAG_GROUPS.tools, existing.tools?.items) }
     };

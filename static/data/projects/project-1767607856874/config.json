@@ -1,19 +1,15 @@
 {
   "project": {
-    "name": "Pilot 2",
-    "location": "Palaiseau",
-    "id": "project-1766302937004",
-    "mapId": "map-1766302950109",
+    "name": "New Project",
+    "location": "",
+    "id": "project-1767607856874",
+    "mapId": "palaiseau-outdoor",
     "rearProjection": false,
-    "tuiMode": true,
+    "tuiMode": false,
     "workshopMode": false,
     "tagSettings": {
-      "count": 2,
+      "count": 1,
       "items": [
-        {
-          "label": "",
-          "tagId": null
-        },
         {
           "label": "",
           "tagId": null
@@ -66,7 +62,7 @@
           {
             "id": "walk",
             "label": "Walk",
-            "enabled": false,
+            "enabled": true,
             "tagId": null
           },
           {
@@ -127,12 +123,6 @@
           "label": "drawing line",
           "color": "#ff00ff",
           "tagId": 6
-        },
-        {
-          "id": "drawing-2",
-          "label": "drawing line",
-          "color": "#4dfec3",
-          "tagId": 7
         }
       ]
     },
@@ -184,37 +174,25 @@
       "pitch": 0,
       "style": "mapbox://styles/mapbox/light-v11",
       "zoom": 17
-    },
-    {
-      "bearing": 0,
-      "center": [
-        2.2,
-        48.714
-      ],
-      "description": "New custom map",
-      "id": "map-1766302950109",
-      "label": "new",
-      "overlays": [
-        "palaiseau-roads"
-      ],
-      "pitch": 0,
-      "style": "mapbox://styles/mapbox/light-v11",
-      "zoom": 15
     }
   ],
   "map": {
-    "bearing": 0,
+    "bearing": 40,
     "center": [
       2.2,
       48.714
     ],
-    "description": "New custom map",
-    "id": "map-1766302950109",
-    "label": "new",
+    "description": "Base view for the campus and surroundings",
+    "id": "palaiseau-outdoor",
+    "label": "IP Paris Campus",
     "overlays": [
-      "palaiseau-roads"
+      "palaiseau-roads",
+      "walking-network",
+      "mobility-infrastructure",
+      "bus-lanes",
+      "amenities"
     ],
-    "pitch": 0,
+    "pitch": 45,
     "style": "mapbox://styles/mapbox/light-v11",
     "zoom": 15
   },
@@ -271,11 +249,12 @@
         "Walk",
         "Bike",
         "Bus",
-        "Car"
+        "Car",
+        "Other"
       ],
       "required": true,
       "responseShape": "scalar",
-      "mapId": "map-1766302950109",
+      "mapId": "palaiseau-outdoor",
       "order": 1
     },
     {

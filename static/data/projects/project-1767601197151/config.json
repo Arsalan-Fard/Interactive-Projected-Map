@@ -46,13 +46,13 @@
           {
             "id": "amenities",
             "label": "Amenities",
-            "enabled": true,
+            "enabled": false,
             "tagId": null
           },
           {
             "id": "telecom-floorplan",
             "label": "Telecom floorplan",
-            "enabled": true,
+            "enabled": false,
             "tagId": null
           }
         ]
@@ -62,13 +62,13 @@
           {
             "id": "walk",
             "label": "Walk",
-            "enabled": true,
+            "enabled": false,
             "tagId": null
           },
           {
             "id": "bike",
             "label": "Cycling",
-            "enabled": true,
+            "enabled": false,
             "tagId": null
           },
           {
@@ -79,18 +79,28 @@
           }
         ]
       },
+      "isovist": {
+        "items": [
+          {
+            "id": "isovist",
+            "label": "Isovist",
+            "enabled": true,
+            "tagId": null
+          }
+        ]
+      },
       "shortestPath": {
         "items": [
           {
             "id": "A",
             "label": "Point A",
-            "enabled": true,
+            "enabled": false,
             "tagId": null
           },
           {
             "id": "B",
             "label": "Point B",
-            "enabled": true,
+            "enabled": false,
             "tagId": null
           }
         ]

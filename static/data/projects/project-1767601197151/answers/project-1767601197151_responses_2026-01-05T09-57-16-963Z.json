@@ -1,0 +1,203 @@
+{
+  "projectId": "project-1767601197151",
+  "projectName": "Signage Workshop Pilot",
+  "savedAt": "2026-01-05T09:57:16.962Z",
+  "answers": [
+    {
+      "questionId": "arrival-mode",
+      "questionText": "Where do you visit the most? use 5 red sticker and show it on the map.",
+      "type": "sticker",
+      "responseShape": "scalar",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                2.1981964766439717,
+                48.71251818473982
+              ]
+            },
+            "properties": {
+              "id": "workshop-bottom-sticker-2",
+              "color": "#ff6b6b",
+              "questionId": "arrival-mode",
+              "storageKey": "arrival-mode",
+              "questionIndex": 0,
+              "questionText": "Where do you visit the most? use 5 red sticker and show it on the map.",
+              "projectId": "project-1767601197151",
+              "timestamp": "2026-01-05T09:57:16.963Z"
+            }
+          },
+          {
+            "type": "Feature",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                2.20069322529676,
+                48.71468611472196
+              ]
+            },
+            "properties": {
+              "id": "workshop-top-sticker-9",
+              "color": "#80ff99",
+              "questionId": "arrival-mode",
+              "storageKey": "arrival-mode",
+              "questionIndex": 0,
+              "questionText": "Where do you visit the most? use 5 red sticker and show it on the map.",
+              "projectId": "project-1767601197151",
+              "timestamp": "2026-01-05T09:57:16.963Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "questionId": "bike-lanes",
+      "questionText": "If you walk/bike/drive, draw your entrance to campus, else (bus,...) just use the red sticker.",
+      "type": "drawing",
+      "responseShape": "point-collection",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "id": "79598dab5acfa58294fa09681246f98c",
+            "type": "Feature",
+            "properties": {
+              "color": "#4d52ff",
+              "label": "Pen 2",
+              "drawingToolId": "drawing-2",
+              "drawingToolIndex": 1
+            },
+            "geometry": {
+              "coordinates": [
+                [
+                  2.194421851077891,
+                  48.713249856155215
+                ],
+                [
+                  2.200626272920857,
+                  48.71262680029818
+                ]
+              ],
+              "type": "LineString"
+            }
+          },
+          {
+            "id": "df8544e8478a40287fc050e832818b2a",
+            "type": "Feature",
+            "properties": {
+              "color": "#ff5297",
+              "label": "Pen 1",
+              "drawingToolId": "drawing-1",
+              "drawingToolIndex": 0
+            },
+            "geometry": {
+              "coordinates": [
+                [
+                  2.204297296362853,
+                  48.715541000223396
+                ],
+                [
+                  2.202570849691341,
+                  48.71398365918776
+                ]
+              ],
+              "type": "LineString"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "questionId": "confusing-areas",
+      "questionText": "Where do you get confused?",
+      "type": "sticker",
+      "responseShape": "point-collection",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                2.1959980492465547,
+                48.71394345646934
+              ]
+            },
+            "properties": {
+              "id": "workshop-bottom-sticker-14",
+              "color": "#f5ff6b",
+              "questionId": "confusing-areas",
+              "storageKey": "confusing-areas",
+              "questionIndex": 2,
+              "questionText": "Where do you get confused?",
+              "projectId": "project-1767601197151",
+              "timestamp": "2026-01-05T09:57:16.963Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "questionId": "priority-corridors",
+      "questionText": "Draw corridors for pedestrians.",
+      "type": "drawing",
+      "responseShape": "line-string",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "id": "79598dab5acfa58294fa09681246f98c",
+            "type": "Feature",
+            "properties": {
+              "color": "#4d52ff",
+              "label": "Pen 2",
+              "drawingToolId": "drawing-2",
+              "drawingToolIndex": 1
+            },
+            "geometry": {
+              "coordinates": [
+                [
+                  2.194421851077891,
+                  48.713249856155215
+                ],
+                [
+                  2.200626272920857,
+                  48.71262680029818
+                ]
+              ],
+              "type": "LineString"
+            }
+          },
+          {
+            "id": "df8544e8478a40287fc050e832818b2a",
+            "type": "Feature",
+            "properties": {
+              "color": "#ff5297",
+              "label": "Pen 1",
+              "drawingToolId": "drawing-1",
+              "drawingToolIndex": 0
+            },
+            "geometry": {
+              "coordinates": [
+                [
+                  2.204297296362853,
+                  48.715541000223396
+                ],
+                [
+                  2.202570849691341,
+                  48.71398365918776
+                ]
+              ],
+              "type": "LineString"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -5,6 +5,7 @@ let pointB = null;
 const draggablePlaceholders = new WeakMap();
 const shortestPathButtons = { A: null, B: null };
 const reachButtons = { walk: null, bike: null, car: null };
+let isovistButton = null;
 const FLOATING_BUTTON_STYLE = {
     position: 'absolute',
     width: 'auto',
@@ -23,10 +24,12 @@ const FLOATING_BUTTON_STYLE = {
 };
 const ROUTE_UPDATE_INTERVAL = 250;
 const REACH_UPDATE_INTERVAL = 500;
+const ISOVIST_UPDATE_INTERVAL = 500;
 const ERASER_UPDATE_INTERVAL = 200;
 const TAG_BUTTON_COLOR = '#6b7280';
 let lastRouteUpdate = 0;
 const lastReachUpdate = new Map();
+let lastIsovistUpdate = 0;
 let lastEraserUpdate = 0;
 
 function getReadableTextColor(hex) {
@@ -408,6 +411,24 @@ function getReachButton(mode) {
     return btn;
 }
 
+function getIsovistButton() {
+    if (isovistButton && document.contains(isovistButton)) {
+        return isovistButton;
+    }
+    const btn = document.getElementById('btn-layer-isovist');
+    isovistButton = btn || null;
+    return isovistButton;
+}
+
+function maybeUpdateIsovist(coords) {
+    const now = Date.now();
+    if (now - lastIsovistUpdate < ISOVIST_UPDATE_INTERVAL) return;
+    lastIsovistUpdate = now;
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('isovist-drop', { detail: { coords } }));
+    }
+}
+
 function maybeUpdateReach(mode, coords) {
     const now = Date.now();
     const last = lastReachUpdate.get(mode) || 0;
@@ -429,12 +450,33 @@ export function setReachButtonPosition(map, mode, clientX, clientY) {
     return true;
 }
 
+export function setIsovistButtonPosition(map, clientX, clientY) {
+    const btn = getIsovistButton();
+    if (!btn) return false;
+    const coords = getMapCoordsFromScreen(map, clientX, clientY);
+    if (!coords) return false;
+
+    floatDraggableButton(btn, clientX, clientY);
+    maybeUpdateIsovist(coords);
+    return true;
+}
+
 export function resetReachButton(map, mode) {
     const btn = getReachButton(mode);
     if (!btn) return;
     resetDraggableButton(btn);
     if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('reach-reset', { detail: { mode } }));
+    }
+}
+
+export function resetIsovistButton() {
+    const btn = getIsovistButton();
+    if (!btn) return;
+    resetDraggableButton(btn);
+    lastIsovistUpdate = 0;
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('isovist-reset'));
     }
 }
 
@@ -702,7 +744,8 @@ export function initLayerToggles(map, activeOverlayIds) {
         'btn-layer-walk': ['walking-network-layer'],
         'btn-layer-roads': ['palaiseau-roads-layer'],
         'btn-layer-amenities': ['amenities-circle-layer', 'amenities-label-layer'],
-        'btn-layer-floorplan': ['telecom-floorplan-layer']
+        'btn-layer-floorplan': ['telecom-floorplan-layer'],
+        'btn-layer-isovist': []
     };
 
     Object.keys(layerMap).forEach(btnId => {
@@ -729,6 +772,7 @@ export function initLayerToggles(map, activeOverlayIds) {
             }
 
             btn.addEventListener('click', () => {
+                if (btn.dataset.dragged) return;
                 const isActive = btn.classList.toggle('active');
                 
                 layerIds.forEach(id => {
@@ -770,10 +814,13 @@ export function applyTagConfigVisibility(setupConfig) {
     };
 
     const layerItems = tagConfig.layers?.items;
+    const layersSection = document.getElementById('toolbar-layers');
+    let anyVisible = false;
+    let shouldManageLayers = false;
+
     if (Array.isArray(layerItems) && layerItems.length > 0) {
+        shouldManageLayers = true;
         const enabledById = buildEnabledMap(layerItems);
-        const layersSection = document.getElementById('toolbar-layers');
-        let anyVisible = false;
         Object.entries(layerButtonMap).forEach(([layerId, btnId]) => {
             const btn = document.getElementById(btnId);
             if (!btn) return;
@@ -782,9 +829,26 @@ export function applyTagConfigVisibility(setupConfig) {
             btn.disabled = !enabled;
             if (enabled) anyVisible = true;
         });
-        if (layersSection) {
-            layersSection.style.display = anyVisible ? '' : 'none';
-        }
+    }
+
+    if (shouldManageLayers && layersSection) {
+        layersSection.style.display = anyVisible ? '' : 'none';
+    }
+
+    const isovistItems = tagConfig.isovist?.items;
+    const isovistSection = document.getElementById('toolbar-isovist');
+    const isovistBtn = document.getElementById('btn-layer-isovist');
+    let showIsovist = false;
+    if (Array.isArray(isovistItems) && isovistItems.length > 0) {
+        const enabledById = buildEnabledMap(isovistItems);
+        showIsovist = isItemEnabled(enabledById, 'isovist');
+    }
+    if (isovistBtn) {
+        isovistBtn.style.display = showIsovist ? '' : 'none';
+        isovistBtn.disabled = !showIsovist;
+    }
+    if (isovistSection) {
+        isovistSection.style.display = showIsovist ? '' : 'none';
     }
 
     const reachItems = tagConfig.reach15?.items;
@@ -889,6 +953,67 @@ export function initDraggableItems(map) {
                 }
             }
         });
+    });
+}
+
+export function initIsovistDraggable(map, options = {}) {
+    const { onDrop, onReset } = options;
+    const btn = getIsovistButton();
+    if (!btn) return;
+
+    btn.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        floatDraggableButton(btn, e.clientX, e.clientY);
+
+        let isDragging = true;
+        let didMove = false;
+
+        const moveHandler = (ev) => {
+            if (!isDragging) return;
+            didMove = true;
+            btn.style.left = ev.clientX + 'px';
+            btn.style.top = ev.clientY + 'px';
+        };
+
+        const upHandler = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            document.removeEventListener('mousemove', moveHandler);
+            document.removeEventListener('mouseup', upHandler);
+
+            if (didMove) {
+                btn.dataset.dragged = '1';
+                setTimeout(() => {
+                    delete btn.dataset.dragged;
+                }, 0);
+            }
+
+            const rect = btn.getBoundingClientRect();
+            const center = [rect.left + rect.width / 2, rect.top + rect.height / 2];
+            const coords = getMapCoordsFromScreen(map, center[0], center[1]);
+            if (!coords) return;
+
+            if (typeof onDrop === 'function') {
+                onDrop(coords);
+            } else {
+                maybeUpdateIsovist(coords);
+            }
+        };
+
+        document.addEventListener('mousemove', moveHandler);
+        document.addEventListener('mouseup', upHandler);
+    });
+
+    btn.addEventListener('dblclick', (e) => {
+        const isFloating = isFloatingButton(btn);
+        if (!isFloating) return;
+        e.preventDefault();
+        e.stopPropagation();
+        resetIsovistButton();
+        if (typeof onReset === 'function') {
+            onReset();
+        }
     });
 }
 

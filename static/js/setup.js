@@ -304,6 +304,9 @@ function renderDrawingConfig() {
     (tagConfig.reach15?.items || []).forEach(item => {
         if (Number.isInteger(item.tagId)) usedTags.add(String(item.tagId));
     });
+    (tagConfig.isovist?.items || []).forEach(item => {
+        if (Number.isInteger(item.tagId)) usedTags.add(String(item.tagId));
+    });
     (tagConfig.shortestPath?.items || []).forEach(item => {
         if (Number.isInteger(item.tagId)) usedTags.add(String(item.tagId));
     });
@@ -508,6 +511,11 @@ function renderStickerConfig() {
 
         // Collect from reach15
         (tagConfig.reach15?.items || []).forEach(item => {
+            if (Number.isInteger(item.tagId)) {
+                usedTags.add(String(item.tagId));
+            }
+        });
+        (tagConfig.isovist?.items || []).forEach(item => {
             if (Number.isInteger(item.tagId)) {
                 usedTags.add(String(item.tagId));
             }
@@ -802,6 +810,11 @@ function renderTagConfig() {
             key: 'reach15',
             title: '15-Minute Reach',
             description: 'Assign tags for walk, bike, or car reach tools.'
+        },
+        {
+            key: 'isovist',
+            title: 'Isovist',
+            description: 'Assign a tag for the isovist tool.'
         },
         {
             key: 'shortestPath',

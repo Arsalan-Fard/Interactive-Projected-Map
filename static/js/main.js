@@ -1,5 +1,5 @@
 import { add3DBuildings, loadAndRenderLayer } from './layers.js';
-import { initDraggableItems, initLayerToggles, getMapCoordsFromScreen, applyTagConfigVisibility, initReachDraggables, initDrawEraser } from './ui.js';
+import { initDraggableItems, initLayerToggles, getMapCoordsFromScreen, applyTagConfigVisibility, initReachDraggables, initDrawEraser, initIsovistDraggable } from './ui.js';
 import { initSurvey } from './survey.js';
 import { initTagTracking } from './tag-tracking.js';
 import { fallbackConfig, loadSetupConfig } from './config-loader.js';
@@ -637,6 +637,8 @@ async function initApp() {
             resetIsochroneUI();
         }
     });
+
+    initIsovistDraggable(map);
 
     window.addEventListener('reach-drop', (event) => {
         const detail = event?.detail || {};
