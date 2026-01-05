@@ -137,6 +137,11 @@ body.workshop-mode #right-sidebar {
     border-color: rgba(255, 255, 255, 0.6);
 }
 
+.workshop-question-dot.selected {
+    border-color: rgba(100, 160, 255, 0.9);
+    background: rgba(70, 130, 255, 0.25);
+}
+
 .workshop-question-content {
     display: flex;
     align-items: center;

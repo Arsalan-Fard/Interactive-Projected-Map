@@ -55,6 +55,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
     let previousResponsesLoaded = false;
     let showPreviousAnswers = false;
     let workshopDots = [];
+    let workshopSelections = [];
 
     const prevButtons = Array.from(new Set([
         ...document.querySelectorAll('[data-question-nav="prev"]'),
@@ -88,6 +89,53 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         });
     }
 
+    function updateWorkshopSelectionStyles() {
+        if (!workshopDots.length || !workshopSelections.length) return;
+        workshopDots.forEach((group, groupIndex) => {
+            const selection = workshopSelections[groupIndex];
+            group.dots.forEach((dot, index) => {
+                dot.classList.toggle('selected', selection?.type === 'question' && selection.index === index);
+            });
+            if (group.finish) {
+                group.finish.classList.toggle('selected', selection?.type === 'finish');
+            }
+        });
+    }
+
+    function clearWorkshopSelections() {
+        if (!workshopSelections.length) return;
+        workshopSelections = workshopSelections.map(() => null);
+        updateWorkshopSelectionStyles();
+    }
+
+    function getWorkshopConsensus() {
+        if (!workshopSelections.length) return null;
+        const first = workshopSelections[0];
+        if (!first) return null;
+        for (let i = 1; i < workshopSelections.length; i += 1) {
+            const next = workshopSelections[i];
+            if (!next || next.type !== first.type || next.index !== first.index) {
+                return null;
+            }
+        }
+        return first;
+    }
+
+    function setWorkshopSelection(groupIndex, selection) {
+        if (!workshopSelections.length) return;
+        workshopSelections[groupIndex] = selection;
+        updateWorkshopSelectionStyles();
+        const consensus = getWorkshopConsensus();
+        if (!consensus) return;
+        clearWorkshopSelections();
+        if (consensus.type === 'question') {
+            currentQuestionIndex = consensus.index;
+            updateQuestion();
+        } else if (consensus.type === 'finish') {
+            handleFinish();
+        }
+    }
+
     function renderDots() {
         if (dotsContainer) {
             dotsContainer.innerHTML = '';
@@ -105,7 +153,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         }
 
         if (!workshopDotsContainers.length) return;
-        workshopDots = workshopDotsContainers.map(container => {
+        workshopDots = workshopDotsContainers.map((container, groupIndex) => {
             container.innerHTML = '';
             const dots = questions.map((q, index) => {
                 const dot = document.createElement('button');
@@ -114,8 +162,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                 dot.title = q.text;
                 dot.textContent = `Q${index + 1}`;
                 dot.addEventListener('click', () => {
-                    currentQuestionIndex = index;
-                    updateQuestion();
+                    setWorkshopSelection(groupIndex, { type: 'question', index });
                 });
                 container.appendChild(dot);
                 return dot;
@@ -126,11 +173,13 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
             finishDot.title = 'Finish';
             finishDot.textContent = 'F';
             finishDot.addEventListener('click', () => {
-                handleFinish();
+                setWorkshopSelection(groupIndex, { type: 'finish', index: null });
             });
             container.appendChild(finishDot);
             return { dots, finish: finishDot };
         });
+        workshopSelections = workshopDots.map(() => null);
+        updateWorkshopSelectionStyles();
     }
 
     function toggleChoiceAnswer(question, option) {

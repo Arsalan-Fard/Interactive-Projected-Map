@@ -291,7 +291,7 @@
   "questionFlow": [
     {
       "id": "arrival-mode",
-      "text": "Where do you visit the most? use 5 red sticker and show it on the map.",
+      "text": "Where do you visit the most? Mark them on the map with 5 red stickers.",
       "type": "sticker",
       "options": [
         "Walk",
