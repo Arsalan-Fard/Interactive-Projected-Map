@@ -96,6 +96,15 @@ function createSearchOverlay() {
 export function initTagTracking({ map, setupConfig, draw }) {
     if (!map) return null;
 
+    const workshopQuestionTagMap = new Map([
+        [46, 0],
+        [47, 1],
+        [48, 2],
+        [49, 3]
+    ]);
+    const workshopQuestionTagIds = new Set(workshopQuestionTagMap.keys());
+    const workshopQuestionSelections = new Map();
+
     const drawingConfig = setupConfig?.project?.drawingConfig || {};
     const rawDrawingItems = Array.isArray(drawingConfig)
         ? drawingConfig
@@ -203,6 +212,24 @@ export function initTagTracking({ map, setupConfig, draw }) {
         }
         return blackHoles[id];
     }
+
+    function isSameWorkshopSelection(a, b) {
+        if (!a && !b) return true;
+        if (!a || !b) return false;
+        return a.type === b.type && a.index === b.index;
+    }
+
+    function dispatchWorkshopSelection(tagId, groupIndex, selection) {
+        const current = workshopQuestionSelections.get(tagId) || null;
+        if (isSameWorkshopSelection(current, selection)) return;
+        workshopQuestionSelections.set(tagId, selection);
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('workshop-question-select', {
+                detail: { groupIndex, selection, tagId }
+            }));
+        }
+    }
+
 
     // Initialize special black holes
     Array.from(new Set([5, ...drawingTagIds, 11])).forEach(id => getBlackHole(id));
@@ -511,6 +538,7 @@ export function initTagTracking({ map, setupConfig, draw }) {
                 || toolTagIds.has(id)
                 || stickerTagIds.has(id)
                 || tagSettingsTagIds.has(id)
+                || workshopQuestionTagIds.has(id)
             );
 
             if (hasTag) {
@@ -632,6 +660,9 @@ export function initTagTracking({ map, setupConfig, draw }) {
                     rightBound = rect.left;
                 }
             }
+
+            const workshopDotGroups = Array.from(document.querySelectorAll('[data-workshop-question-dots]'));
+            const hasWorkshopDots = workshopDotGroups.length > 0;
 
             let debugDotVisible = false;
 
@@ -796,6 +827,38 @@ export function initTagTracking({ map, setupConfig, draw }) {
                             setStickerPosition(map, tagId, activeData.index, activeData.color, screenX, screenY);
                         }
                         updatedStickerTags.add(tagId);
+                    }
+                }
+
+                // --- Workshop Question Selection Logic ---
+                if (workshopQuestionTagIds.has(tagId) && hasWorkshopDots && isDetected) {
+                    const groupIndex = workshopQuestionTagMap.get(tagId);
+                    const container = workshopDotGroups[groupIndex];
+                    let selection = null;
+                    if (container) {
+                        const dots = Array.from(container.querySelectorAll('.workshop-question-dot'));
+                        for (const dot of dots) {
+                            const rect = dot.getBoundingClientRect();
+                            if (
+                                screenX >= rect.left
+                                && screenX <= rect.right
+                                && screenY >= rect.top
+                                && screenY <= rect.bottom
+                            ) {
+                                if (dot.dataset.questionFinish === '1') {
+                                    selection = { type: 'finish', index: null };
+                                } else if (dot.dataset.questionIndex != null) {
+                                    const index = Number(dot.dataset.questionIndex);
+                                    if (Number.isInteger(index)) {
+                                        selection = { type: 'question', index };
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    if (selection) {
+                        dispatchWorkshopSelection(tagId, groupIndex, selection);
                     }
                 }
 

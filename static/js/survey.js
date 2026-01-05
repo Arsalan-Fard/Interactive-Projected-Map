@@ -127,13 +127,35 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         updateWorkshopSelectionStyles();
         const consensus = getWorkshopConsensus();
         if (!consensus) return;
-        clearWorkshopSelections();
         if (consensus.type === 'question') {
             currentQuestionIndex = consensus.index;
             updateQuestion();
         } else if (consensus.type === 'finish') {
             handleFinish();
         }
+    }
+
+    function handleWorkshopSelectionEvent(event) {
+        const detail = event?.detail || {};
+        const groupIndex = Number(detail.groupIndex);
+        if (!Number.isInteger(groupIndex)) return;
+        if (!workshopSelections.length || groupIndex < 0 || groupIndex >= workshopSelections.length) return;
+
+        const selection = detail.selection || null;
+        if (!selection) {
+            workshopSelections[groupIndex] = null;
+            updateWorkshopSelectionStyles();
+            return;
+        }
+
+        if (selection.type === 'finish') {
+            setWorkshopSelection(groupIndex, { type: 'finish', index: null });
+            return;
+        }
+
+        const index = Number(selection.index);
+        if (!Number.isInteger(index) || index < 0 || index >= questions.length) return;
+        setWorkshopSelection(groupIndex, { type: 'question', index });
     }
 
     function renderDots() {
@@ -161,6 +183,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                 dot.className = 'workshop-question-dot';
                 dot.title = q.text;
                 dot.textContent = `Q${index + 1}`;
+                dot.dataset.questionIndex = String(index);
                 dot.addEventListener('click', () => {
                     setWorkshopSelection(groupIndex, { type: 'question', index });
                 });
@@ -172,6 +195,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
             finishDot.className = 'workshop-question-dot';
             finishDot.title = 'Finish';
             finishDot.textContent = 'F';
+            finishDot.dataset.questionFinish = '1';
             finishDot.addEventListener('click', () => {
                 setWorkshopSelection(groupIndex, { type: 'finish', index: null });
             });
@@ -696,6 +720,10 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
     finishButtonsAll.forEach(btn => {
         btn.addEventListener('click', handleFinish);
     });
+
+    if (typeof window !== 'undefined') {
+        window.addEventListener('workshop-question-select', handleWorkshopSelectionEvent);
+    }
 
     return {
         onStyleLoad() {

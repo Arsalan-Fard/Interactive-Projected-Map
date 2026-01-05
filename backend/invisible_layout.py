@@ -85,7 +85,7 @@ if __name__ == '__main__':
             w = window.width()
             h = window.height()
             
-            x, y =  (i * 150), 100  # Default position
+            x, y =  1500, (i*80) - 320  # Default position
             
             if tag_id == 1:   # Top Left
                 x, y = 0, 25
