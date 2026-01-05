@@ -3,6 +3,7 @@ import argparse
 import logging
 import sys
 import threading
+import time
 from typing import Union
 
 import cv2
@@ -64,6 +65,43 @@ def draw_detection(frame, det, min_margin: float):
     cv2.putText(frame, label, label_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
 
+class LatestFrame:
+    def __init__(self, cap: cv2.VideoCapture):
+        self.cap = cap
+        self.lock = threading.Lock()
+        self.frame = None
+        self.running = False
+        self.thread = None
+
+    def start(self):
+        self.running = True
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.thread.start()
+        return self
+
+    def _run(self):
+        while self.running:
+            ok, frame = self.cap.read()
+            if not ok:
+                with self.lock:
+                    self.frame = None
+                time.sleep(0.01)
+                continue
+            with self.lock:
+                self.frame = frame
+
+    def read(self):
+        with self.lock:
+            if self.frame is None:
+                return False, None
+            return True, self.frame.copy()
+
+    def stop(self):
+        self.running = False
+        if self.thread:
+            self.thread.join(timeout=1)
+
+
 def detect_and_display(cap: cv2.VideoCapture, detector: Detector, args):
     window_name = "AprilTag 36h11 Detector"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
@@ -71,12 +109,13 @@ def detect_and_display(cap: cv2.VideoCapture, detector: Detector, args):
 
     boundary_ids = [1, 2, 3, 4]
     min_margin = max(0.0, args.min_margin)
+    frame_source = LatestFrame(cap).start()
 
     while True:
-        ok, frame = cap.read()
+        ok, frame = frame_source.read()
         if not ok:
-            print("Failed to read from camera/stream. Exiting.")
-            break
+            time.sleep(0.01)
+            continue
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         detections = detector.detect(gray, estimate_tag_pose=False)
@@ -155,6 +194,7 @@ def detect_and_display(cap: cv2.VideoCapture, detector: Detector, args):
         if key == ord("]"):
             min_margin += 1.0
 
+    frame_source.stop()
     cap.release()
     cv2.destroyAllWindows()
 
@@ -181,6 +221,7 @@ def main() -> int:
     if not cap.isOpened():
         print(f"Could not open video source: {source}")
         return 1
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     try:
         detect_and_display(cap, detector, args)
