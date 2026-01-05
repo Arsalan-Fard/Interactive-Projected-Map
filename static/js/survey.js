@@ -45,6 +45,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
     ]));
     const questionOptions = document.getElementById('question-options');
     const dotsContainer = document.querySelector('.progress-dots');
+    const workshopDotsContainers = Array.from(document.querySelectorAll('[data-workshop-question-dots]'));
     const previousAnswersBtn = document.getElementById('btn-previous-answers');
     const previousAnswersPanel = document.getElementById('previous-answers-panel');
     const previousAnswersSummary = document.getElementById('previous-answers-summary');
@@ -53,6 +54,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
     let previousResponses = [];
     let previousResponsesLoaded = false;
     let showPreviousAnswers = false;
+    let workshopDots = [];
 
     const prevButtons = Array.from(new Set([
         ...document.querySelectorAll('[data-question-nav="prev"]'),
@@ -62,10 +64,11 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         ...document.querySelectorAll('[data-question-nav="next"]'),
         nextBtn
     ])).filter(Boolean);
-    const finishButtons = Array.from(new Set([
+    const finishButtonsAll = Array.from(new Set([
         ...document.querySelectorAll('[data-question-nav="finish"]'),
         finishBtn
     ])).filter(Boolean);
+    const finishButtonsVisible = finishButtonsAll.filter(btn => !btn.hasAttribute('data-workshop-finish'));
 
     function setQuestionText(value) {
         questionTextNodes.forEach(node => {
@@ -86,19 +89,48 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
     }
 
     function renderDots() {
-        if (!dotsContainer) return;
-        dotsContainer.innerHTML = '';
-        questions.forEach((q, index) => {
-            const dot = document.createElement('span');
-            dot.className = 'dot w-2.5 h-2.5 flex-none rounded-full bg-white/30 transition-all duration-300 cursor-pointer hover:bg-white/50 hover:scale-110 [&.active]:bg-gradient-to-br [&.active]:from-[#667eea] [&.active]:to-[#764ba2] [&.active]:scale-125 [&.active]:shadow-sm';
-            dot.title = q.text;
-            dot.addEventListener('click', () => {
-                currentQuestionIndex = index;
-                updateQuestion();
+        if (dotsContainer) {
+            dotsContainer.innerHTML = '';
+            questions.forEach((q, index) => {
+                const dot = document.createElement('span');
+                dot.className = 'dot w-2.5 h-2.5 flex-none rounded-full bg-white/30 transition-all duration-300 cursor-pointer hover:bg-white/50 hover:scale-110 [&.active]:bg-gradient-to-br [&.active]:from-[#667eea] [&.active]:to-[#764ba2] [&.active]:scale-125 [&.active]:shadow-sm';
+                dot.title = q.text;
+                dot.addEventListener('click', () => {
+                    currentQuestionIndex = index;
+                    updateQuestion();
+                });
+                dotsContainer.appendChild(dot);
             });
-            dotsContainer.appendChild(dot);
+            dots = dotsContainer.querySelectorAll('.dot');
+        }
+
+        if (!workshopDotsContainers.length) return;
+        workshopDots = workshopDotsContainers.map(container => {
+            container.innerHTML = '';
+            const dots = questions.map((q, index) => {
+                const dot = document.createElement('button');
+                dot.type = 'button';
+                dot.className = 'workshop-question-dot';
+                dot.title = q.text;
+                dot.textContent = `Q${index + 1}`;
+                dot.addEventListener('click', () => {
+                    currentQuestionIndex = index;
+                    updateQuestion();
+                });
+                container.appendChild(dot);
+                return dot;
+            });
+            const finishDot = document.createElement('button');
+            finishDot.type = 'button';
+            finishDot.className = 'workshop-question-dot';
+            finishDot.title = 'Finish';
+            finishDot.textContent = 'F';
+            finishDot.addEventListener('click', () => {
+                handleFinish();
+            });
+            container.appendChild(finishDot);
+            return { dots, finish: finishDot };
         });
-        dots = dotsContainer.querySelectorAll('.dot');
     }
 
     function toggleChoiceAnswer(question, option) {
@@ -518,7 +550,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
             }
             setButtonsDisabled(prevButtons, true);
             setButtonsDisabled(nextButtons, true);
-            toggleButtonsHidden(finishButtons, true);
+            toggleButtonsHidden(finishButtonsVisible, true);
             renderPreviousAnswers({ id: null, type: null });
             clearPreviousAnswerLayers();
             return;
@@ -556,12 +588,17 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         dots.forEach((dot, index) => {
             dot.classList.toggle('active', index === currentQuestionIndex);
         });
+        workshopDots.forEach(group => {
+            group.dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentQuestionIndex);
+            });
+        });
 
         const isLastQuestion = currentQuestionIndex === questions.length - 1;
         setButtonsDisabled(prevButtons, currentQuestionIndex === 0);
         setButtonsDisabled(nextButtons, currentQuestionIndex === questions.length - 1);
         toggleButtonsHidden(nextButtons, isLastQuestion);
-        toggleButtonsHidden(finishButtons, !isLastQuestion);
+        toggleButtonsHidden(finishButtonsVisible, !isLastQuestion);
         renderPreviousAnswers(q);
         renderPreviousAnswersOnMap(q);
     }
@@ -590,23 +627,25 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         previousAnswersBtn.addEventListener('click', togglePreviousAnswers);
     }
 
-    finishButtons.forEach(btn => {
-        btn.addEventListener('click', async () => {
-            if (!questions.length) return;
-            setButtonsDisabled(finishButtons, true);
-            try {
-                await saveResponses();
-                if (showPreviousAnswers) {
-                    previousResponses = await fetchPreviousResponses();
-                    previousResponsesLoaded = true;
-                }
-                window.alert('Thanks for completing the survey (Please return tokens to their places)');
-                currentQuestionIndex = 0;
-                updateQuestion();
-            } finally {
-                setButtonsDisabled(finishButtons, false);
+    async function handleFinish() {
+        if (!questions.length) return;
+        setButtonsDisabled(finishButtonsAll, true);
+        try {
+            await saveResponses();
+            if (showPreviousAnswers) {
+                previousResponses = await fetchPreviousResponses();
+                previousResponsesLoaded = true;
             }
-        });
+            window.alert('Thanks for completing the survey (Please return tokens to their places)');
+            currentQuestionIndex = 0;
+            updateQuestion();
+        } finally {
+            setButtonsDisabled(finishButtonsAll, false);
+        }
+    }
+
+    finishButtonsAll.forEach(btn => {
+        btn.addEventListener('click', handleFinish);
     });
 
     return {

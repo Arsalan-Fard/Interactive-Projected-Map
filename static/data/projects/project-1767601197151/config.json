@@ -110,25 +110,25 @@
       "items": [
         {
           "id": "drawing-1",
-          "label": "User 1",
+          "label": "Pen 1",
           "color": "#ff5297",
           "tagId": 6
         },
         {
           "id": "drawing-2",
-          "label": "User 2",
+          "label": "Pen 2",
           "color": "#4d52ff",
           "tagId": 7
         },
         {
           "id": "drawing-3",
-          "label": "User 3",
+          "label": "Pen 3",
           "color": "#4dff82",
           "tagId": 8
         },
         {
           "id": "drawing-4",
-          "label": "User 4",
+          "label": "Pen 4",
           "color": "#feea67",
           "tagId": 9
         }
@@ -206,33 +206,33 @@
       "zoom": 17
     },
     {
-      "id": "map-1767602417372",
-      "label": "Signage",
-      "style": "mapbox://styles/mapbox/dark-v11",
+      "bearing": 10,
       "center": [
         2.2005,
         48.7138
       ],
-      "zoom": 15,
-      "pitch": 0,
-      "bearing": 10,
+      "description": "New custom map",
+      "id": "map-1767602417372",
+      "label": "Signage",
       "overlays": [],
-      "description": "New custom map"
+      "pitch": 0,
+      "style": "mapbox://styles/mapbox/dark-v11",
+      "zoom": 15
     }
   ],
   "map": {
-    "id": "map-1767602417372",
-    "label": "Signage",
-    "style": "mapbox://styles/mapbox/dark-v11",
+    "bearing": 10,
     "center": [
       2.2005,
       48.7138
     ],
-    "zoom": 15,
-    "pitch": 0,
-    "bearing": 10,
+    "description": "New custom map",
+    "id": "map-1767602417372",
+    "label": "Signage",
     "overlays": [],
-    "description": "New custom map"
+    "pitch": 0,
+    "style": "mapbox://styles/mapbox/dark-v11",
+    "zoom": 15
   },
   "overlays": [
     {

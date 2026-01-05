@@ -1,0 +1,47 @@
+{
+  "projectId": "project-1767601197151",
+  "projectName": "Signage Workshop Pilot",
+  "savedAt": "2026-01-05T09:37:30.275Z",
+  "answers": [
+    {
+      "questionId": "arrival-mode",
+      "questionText": "Where do you visit the most? use 5 red sticker and show it on the map.",
+      "type": "sticker",
+      "responseShape": "scalar",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": []
+      }
+    },
+    {
+      "questionId": "bike-lanes",
+      "questionText": "If you walk/bike/drive, draw your entrance to campus, else (bus,...) just use the red sticker.",
+      "type": "drawing",
+      "responseShape": "point-collection",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": []
+      }
+    },
+    {
+      "questionId": "confusing-areas",
+      "questionText": "Where do you get confused?",
+      "type": "sticker",
+      "responseShape": "point-collection",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": []
+      }
+    },
+    {
+      "questionId": "priority-corridors",
+      "questionText": "Draw corridors for pedestrians.",
+      "type": "drawing",
+      "responseShape": "line-string",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": []
+      }
+    }
+  ]
+}

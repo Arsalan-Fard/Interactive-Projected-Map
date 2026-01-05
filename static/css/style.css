@@ -56,14 +56,14 @@ body.workshop-mode #right-sidebar {
 
 .workshop-bar--left {
     left: 35px;
-    top: 25%;
+    top: 15%;
     transform: translateY(-50%)  rotate(90deg);
     transform-origin: left center;
 }
 
 .workshop-bar--right {
     right: 35px;
-    top: 25%;
+    top: 15%;
     transform: translateY(-50%) rotate(-90deg);
     transform-origin: right center;
 }
@@ -85,22 +85,72 @@ body.workshop-mode #right-sidebar {
 }
 
 .workshop-question-panel {
+    position: relative;
     max-width: 360px;
+    min-width: 350px;
+}
+
+.workshop-question-dots {
+    position: absolute;
+    top: -52px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    max-width: 100%;
+    gap: 8px;
+    pointer-events: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.workshop-question-dot {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    flex: 0 0 40px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s, border-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #e6edf3;
+    letter-spacing: 0.02em;
+}
+
+.workshop-question-dot:hover {
+    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.workshop-question-dot.active {
+    background: rgba(255, 255, 255, 0.35);
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+.workshop-question-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .workshop-question-text {
-    max-width: 220px;
-    font-size: 12px;
+    max-width: 340px;
+    font-size: 10px;
     font-weight: 600;
     color: #e6edf3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-.workshop-question-actions {
-    display: flex;
-    gap: 6px;
 }
 
 .workshop-question-btn {
