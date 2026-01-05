@@ -1,5 +1,6 @@
 import { add3DBuildings, loadAndRenderLayer } from './layers.js';
 import { initDraggableItems, initLayerToggles, getMapCoordsFromScreen, applyTagConfigVisibility, initReachDraggables, initDrawEraser, initIsovistDraggable } from './ui.js';
+import { initIsovist } from './isovist.js';
 import { initSurvey } from './survey.js';
 import { initTagTracking } from './tag-tracking.js';
 import { fallbackConfig, loadSetupConfig } from './config-loader.js';
@@ -226,6 +227,7 @@ async function initApp() {
             }
         }
     });
+    initIsovist(map, { center: setupConfig.map?.center });
 
     try {
         const params = new URLSearchParams(window.location.search);
