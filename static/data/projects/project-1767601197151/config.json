@@ -1,25 +1,17 @@
 {
   "project": {
-    "name": "New Project",
+    "name": "Signage Workshop Pilot",
     "location": "",
-    "id": "project-1767557342673",
+    "id": "project-1767601197151",
     "mapId": "palaiseau-outdoor",
     "rearProjection": false,
     "tuiMode": false,
     "workshopMode": true,
     "tagSettings": {
-      "count": 3,
+      "count": 1,
       "items": [
         {
-          "label": "a",
-          "tagId": null
-        },
-        {
-          "label": "b",
-          "tagId": null
-        },
-        {
-          "label": "c",
+          "label": "",
           "tagId": null
         }
       ]
@@ -118,23 +110,67 @@
       "items": [
         {
           "id": "drawing-1",
-          "label": "drawing line",
-          "color": "#ff00ff",
+          "label": "User 1",
+          "color": "#ff5297",
           "tagId": 6
+        },
+        {
+          "id": "drawing-2",
+          "label": "User 2",
+          "color": "#4d52ff",
+          "tagId": 7
+        },
+        {
+          "id": "drawing-3",
+          "label": "User 3",
+          "color": "#4dff82",
+          "tagId": 8
+        },
+        {
+          "id": "drawing-4",
+          "label": "User 4",
+          "color": "#feea67",
+          "tagId": 9
         }
       ]
     },
     "stickerConfig": {
-      "count": 3,
+      "count": 16,
       "colors": [
         "#FF6B6B",
-        "#4ECDC4",
-        "#45B7D1"
+        "#525dff",
+        "#80ff99",
+        "#f5ff6b",
+        "#ff6b6b",
+        "#525dff",
+        "#80ff99",
+        "#f5ff6b",
+        "#ff6b6b",
+        "#525dff",
+        "#80ff99",
+        "#f5ff6b",
+        "#ff6b6b",
+        "#525dff",
+        "#80ff99",
+        "#f5ff6b"
       ],
       "tags": [
-        null,
-        null,
-        null
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25
       ]
     }
   },
@@ -148,13 +184,7 @@
       "description": "Base view for the campus and surroundings",
       "id": "palaiseau-outdoor",
       "label": "IP Paris Campus",
-      "overlays": [
-        "palaiseau-roads",
-        "walking-network",
-        "mobility-infrastructure",
-        "bus-lanes",
-        "amenities"
-      ],
+      "overlays": [],
       "pitch": 45,
       "style": "mapbox://styles/mapbox/light-v11",
       "zoom": 15
@@ -185,13 +215,7 @@
     "description": "Base view for the campus and surroundings",
     "id": "palaiseau-outdoor",
     "label": "IP Paris Campus",
-    "overlays": [
-      "palaiseau-roads",
-      "walking-network",
-      "mobility-infrastructure",
-      "bus-lanes",
-      "amenities"
-    ],
+    "overlays": [],
     "pitch": 45,
     "style": "mapbox://styles/mapbox/light-v11",
     "zoom": 15

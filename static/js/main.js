@@ -23,19 +23,42 @@ function applyStickerConfig(setupConfig) {
     const colors = Array.isArray(config.colors) ? config.colors : [];
     const rawCount = Number.isInteger(config.count) ? config.count : colors.length;
     const count = Math.max(0, rawCount);
+    const isWorkshopMode = !!setupConfig?.project?.workshopMode;
 
     const buttons = Array.from(document.querySelectorAll('.point-btn[data-sticker-index]'));
     buttons.forEach((btn, index) => {
         const rawIndex = Number.parseInt(btn.dataset.stickerIndex, 10);
         const stickerIndex = Number.isFinite(rawIndex) ? rawIndex : index;
-        if (stickerIndex < count) {
-            const color = colors[stickerIndex] || btn.dataset.color || '#ffffff';
-            btn.style.display = '';
-            btn.dataset.color = color;
-            btn.style.backgroundColor = color;
-        } else {
+        if (stickerIndex >= count) {
             btn.style.display = 'none';
+            return;
         }
+
+        const color = colors[stickerIndex] || btn.dataset.color || '#ffffff';
+        btn.dataset.color = color;
+        btn.style.backgroundColor = color;
+
+        let showSticker = true;
+        if (isWorkshopMode) {
+            const bar = btn.closest('.workshop-bar');
+            if (bar) {
+                let group = null;
+                if (bar.classList.contains('workshop-bar--top')) {
+                    group = 0;
+                } else if (bar.classList.contains('workshop-bar--bottom')) {
+                    group = 1;
+                } else if (bar.classList.contains('workshop-bar--left')) {
+                    group = 2;
+                } else if (bar.classList.contains('workshop-bar--right')) {
+                    group = 3;
+                }
+                if (group !== null) {
+                    showSticker = stickerIndex % 4 === group;
+                }
+            }
+        }
+
+        btn.style.display = showSticker ? '' : 'none';
     });
 }
 
