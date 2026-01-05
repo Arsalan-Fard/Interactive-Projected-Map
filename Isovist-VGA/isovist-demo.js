@@ -198,7 +198,6 @@ function collectObstacleData(originPoint, radiusPx) {
     const rawFeatures = map.queryRenderedFeatures(bbox, { layers: [buildingLayerId] });
     const polygons = [];
     const features = [];
-    const seen = new Set();
     let fallbackIndex = 0;
 
     rawFeatures.forEach(feature => {
@@ -208,12 +207,6 @@ function collectObstacleData(originPoint, radiusPx) {
         }
 
         const key = feature.id ?? feature.properties?.osm_id ?? feature.properties?.id;
-        if (key !== undefined) {
-            if (seen.has(key)) {
-                return;
-            }
-            seen.add(key);
-        }
 
         const projectedPolygons = geometryToPolygons(geometry, map);
         projectedPolygons.forEach(polygon => {
