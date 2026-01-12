@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Editor (Nodes)</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""/>
+
+    <link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+    <div id="controls">
+        <h3>Graph Editor</h3>
+        <div id="status" class="small muted">Loading graph...</div>
+
+        <hr>
+        <div class="row">
+            <label><input type="checkbox" id="show-graph-layer" checked> Show base graph</label>
+        </div>
+
+        <div class="row">
+            <button id="btn-add-node" class="active">Add Node (snap)</button>
+            <button id="btn-add-edge">Add Edge</button>
+            <div id="mode-status" class="small muted">Mode: Add Node</div>
+        </div>
+
+        <div class="row">
+            <label for="snap-tol">Snap tolerance (meters): <span id="snap-tol-val">10</span></label>
+            <input type="range" id="snap-tol" min="1" max="50" step="1" value="10" style="width: 100%;">
+        </div>
+
+        <div class="row">
+            <button id="btn-undo">Undo last</button>
+            <button id="btn-clear">Clear</button>
+        </div>
+
+        <hr>
+        <div class="row small">
+            <div>Patch nodes: <span id="patch-count">0</span></div>
+            <div>Patch edges: <span id="patch-edges-count">0</span></div>
+            <div id="snap-info" class="muted"></div>
+        </div>
+
+        <div class="row">
+            <button id="btn-save" style="width: 100%; background-color: #2196F3; color: white; border: none; margin-bottom: 10px;">Save Changes to Server</button>
+        </div>
+        <div class="row">
+            <button id="btn-export" style="width: 100%; background-color: #4CAF50; color: white; border: none;">Export graph_overrides_nodes.geojson</button>
+        </div>
+        <div class="row">
+            <button id="btn-export-edges" style="width: 100%;">Export graph_overrides_edges.geojson</button>
+        </div>
+
+        <div class="row small muted">
+            Tip: click close to an existing line to snap. If you click too far away, nothing will be added.
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+    <script src="graph_editor.js"></script>
+</body>
+</html>

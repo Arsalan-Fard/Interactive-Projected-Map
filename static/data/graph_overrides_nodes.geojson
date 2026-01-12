@@ -1,0 +1,27 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": -3,
+        "snapped_kind": "edge",
+        "snap_dist_m": 1.7544552768719894,
+        "edge_u": 2570787069,
+        "edge_v": 9892144924,
+        "edge_key": 0,
+        "edge_osmid": null,
+        "edge_feature_index": 17746,
+        "edge_segment_index": 0,
+        "edge_segment_t": 0.8626169740893397
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.201436436851841,
+          48.713357232436046
+        ]
+      }
+    }
+  ]
+}

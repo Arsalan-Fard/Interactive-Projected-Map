@@ -1,0 +1,30 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "u": 9892162679,
+        "v": -3,
+        "key": 0,
+        "osmid": "manual:987a71fe-ce62-481f-8394-bee2ad205d72",
+        "highway": "footway",
+        "oneway": false,
+        "length": 7.131185349533803
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            2.2013477,
+            48.7133834
+          ],
+          [
+            2.201436436851841,
+            48.713357232436046
+          ]
+        ]
+      }
+    }
+  ]
+}

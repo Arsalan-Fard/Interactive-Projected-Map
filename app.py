@@ -9,6 +9,8 @@ import shutil
 
 CONFIG_ROOT = os.path.join(os.path.dirname(__file__), 'static', 'data', 'projects')
 ISOVIST_ROOT = os.path.join(os.path.dirname(__file__), 'Isovist-VGA')
+SIMULATION_ROOT = os.path.join(os.path.dirname(__file__), 'Simulation')
+STATIC_DATA_ROOT = os.path.join(os.path.dirname(__file__), 'static', 'data')
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
@@ -367,6 +369,46 @@ def config_store():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/save-overrides', methods=['POST'])
+def save_overrides():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"status": "error", "message": "Invalid JSON body"}), 400
+
+    nodes = payload.get('nodes')
+    edges = payload.get('edges')
+
+    if not isinstance(nodes, dict) or nodes.get('type') != 'FeatureCollection':
+        return jsonify({"status": "error", "message": "nodes must be a GeoJSON FeatureCollection"}), 400
+    if not isinstance(edges, dict) or edges.get('type') != 'FeatureCollection':
+        return jsonify({"status": "error", "message": "edges must be a GeoJSON FeatureCollection"}), 400
+
+    nodes_features = nodes.get('features')
+    edges_features = edges.get('features')
+    if not isinstance(nodes_features, list) or not isinstance(edges_features, list):
+        return jsonify({"status": "error", "message": "FeatureCollection.features must be a list"}), 400
+
+    os.makedirs(STATIC_DATA_ROOT, exist_ok=True)
+
+    nodes_path = os.path.join(STATIC_DATA_ROOT, 'graph_overrides_nodes.geojson')
+    edges_path = os.path.join(STATIC_DATA_ROOT, 'graph_overrides_edges.geojson')
+
+    try:
+        with open(nodes_path, 'w', encoding='utf-8') as f:
+            json.dump(nodes, f, ensure_ascii=False, indent=2)
+        with open(edges_path, 'w', encoding='utf-8') as f:
+            json.dump(edges, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Failed to write overrides: {e}"}), 500
+
+    return jsonify({
+        "status": "success",
+        "nodesPath": "/static/data/graph_overrides_nodes.geojson",
+        "edgesPath": "/static/data/graph_overrides_edges.geojson",
+        "nodesCount": len(nodes_features),
+        "edgesCount": len(edges_features)
+    })
+
 @app.route('/static/js/config.js')
 def serve_config_js():
     # 1. Try to serve local file (Development)
@@ -404,6 +446,10 @@ def isovist_index():
 @app.route('/Isovist-VGA/<path:filename>')
 def isovist_assets(filename):
     return send_from_directory(ISOVIST_ROOT, filename)
+
+@app.route('/Simulation/<path:filename>')
+def simulation_assets(filename):
+    return send_from_directory(SIMULATION_ROOT, filename)
 
 # Static File Serving (Must come AFTER API routes)
 @app.route('/')
