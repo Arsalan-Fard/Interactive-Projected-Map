@@ -218,6 +218,7 @@ async function initResults() {
     const responseList = await fetchResponses(projectId);
     const selectedResponses = pickResponses(responseList, responseFilenames);
     const answersByQuestion = buildAnswersByQuestion(selectedResponses);
+    let pendingResponseRenderNonce = 0;
 
     if (setupConfig.project.rearProjection) {
         document.body.style.transform = 'scaleX(-1)';
@@ -264,6 +265,14 @@ async function initResults() {
             updateQuestion();
         }
     });
+
+    function clearResponseLayersSafe() {
+        try {
+            clearResponseLayers(map);
+        } catch {
+            // ignore - map may be mid-style update
+        }
+    }
 
     function renderDots() {
         if (!dotsContainer) return;
@@ -418,7 +427,10 @@ async function initResults() {
     }
 
     function renderResponseOnMap(question) {
-        if (!map.isStyleLoaded()) return;
+        if (!map.isStyleLoaded()) {
+            clearResponseLayersSafe();
+            return;
+        }
         const entries = getAnswerEntries(question.id);
         const collected = [];
 
@@ -443,13 +455,28 @@ async function initResults() {
         );
     }
 
+    function scheduleResponseRender(question) {
+        const nonce = ++pendingResponseRenderNonce;
+        const attempt = () => {
+            if (nonce !== pendingResponseRenderNonce) return;
+            renderResponseOnMap(question);
+        };
+
+        // Clear immediately so we don't show stale stickers when switching map presets.
+        clearResponseLayersSafe();
+
+        attempt();
+        map.once('idle', attempt);
+        map.once('style.load', attempt);
+    }
+
     function updateQuestion() {
         if (!questions.length) {
             if (questionText) questionText.textContent = 'No questions configured';
             if (questionOptions) questionOptions.classList.add('hidden');
             if (prevBtn) prevBtn.disabled = true;
             if (nextBtn) nextBtn.disabled = true;
-            clearResponseLayers(map);
+            clearResponseLayersSafe();
             return;
         }
 
@@ -488,9 +515,9 @@ async function initResults() {
         if (prevBtn) prevBtn.disabled = currentQuestionIndex === 0;
         if (nextBtn) nextBtn.disabled = currentQuestionIndex === questions.length - 1;
 
-        if (mapReady) {
-            renderResponseOnMap(q);
-        }
+        // Keep responses in sync even when map temporarily isn't "style loaded"
+        // (e.g., switching to a map preset that adds new overlay sources).
+        scheduleResponseRender(q);
 
         renderSummaryPanel(q);
     }

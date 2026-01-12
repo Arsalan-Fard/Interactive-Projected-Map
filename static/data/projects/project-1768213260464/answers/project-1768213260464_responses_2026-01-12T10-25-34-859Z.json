@@ -1,0 +1,242 @@
+{
+  "projectId": "project-1768213260464",
+  "projectName": "Pilot 3",
+  "savedAt": "2026-01-12T10:25:34.857Z",
+  "answers": [
+    {
+      "questionId": "arrival-mode",
+      "questionText": "How do you typically travel to campus?",
+      "type": "single-choice",
+      "responseShape": "scalar",
+      "answer": "Bike"
+    },
+    {
+      "questionId": "bike-lanes",
+      "questionText": "Where should we add bike lanes?",
+      "type": "sticker",
+      "responseShape": "point-collection",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                2.1931880324790427,
+                48.71603383736101
+              ]
+            },
+            "properties": {
+              "id": "sticker-btn-3",
+              "color": "#45B7D1",
+              "questionId": "bike-lanes",
+              "storageKey": "bike-lanes",
+              "questionIndex": 1,
+              "questionText": "Where should we add bike lanes?",
+              "projectId": "project-1768213260464",
+              "timestamp": "2026-01-12T10:25:34.858Z"
+            }
+          },
+          {
+            "type": "Feature",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                2.193229722462547,
+                48.71648227860712
+              ]
+            },
+            "properties": {
+              "id": "sticker-btn-3",
+              "color": "#45B7D1",
+              "questionId": "bike-lanes",
+              "storageKey": "bike-lanes",
+              "questionIndex": 1,
+              "questionText": "Where should we add bike lanes?",
+              "projectId": "project-1768213260464",
+              "timestamp": "2026-01-12T10:25:34.858Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "questionId": "confusing-areas",
+      "questionText": "Where do you get confused?",
+      "type": "sticker",
+      "responseShape": "point-collection",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                2.198582912406124,
+                48.71659211828958
+              ]
+            },
+            "properties": {
+              "id": "sticker-btn-3",
+              "color": "#45B7D1",
+              "questionId": "confusing-areas",
+              "storageKey": "confusing-areas",
+              "questionIndex": 2,
+              "questionText": "Where do you get confused?",
+              "projectId": "project-1768213260464",
+              "timestamp": "2026-01-12T10:25:34.858Z"
+            }
+          },
+          {
+            "type": "Feature",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                2.198402246729131,
+                48.71603314181232
+              ]
+            },
+            "properties": {
+              "id": "sticker-btn-3",
+              "color": "#45B7D1",
+              "questionId": "confusing-areas",
+              "storageKey": "confusing-areas",
+              "questionIndex": 2,
+              "questionText": "Where do you get confused?",
+              "projectId": "project-1768213260464",
+              "timestamp": "2026-01-12T10:25:34.858Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "questionId": "priority-corridors",
+      "questionText": "Draw corridors for pedestrians.",
+      "type": "drawing",
+      "responseShape": "line-string",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "id": "752e8874e7150198313f940a02393143",
+            "type": "Feature",
+            "properties": {
+              "color": "#ff00ff",
+              "label": "drawing line",
+              "drawingToolId": "drawing-1",
+              "drawingToolIndex": 0
+            },
+            "geometry": {
+              "coordinates": [
+                [
+                  2.1958698453760803,
+                  48.71452415160124
+                ],
+                [
+                  2.1979183541621694,
+                  48.71291732582216
+                ]
+              ],
+              "type": "LineString"
+            }
+          },
+          {
+            "id": "6-1768213491514",
+            "type": "Feature",
+            "properties": {
+              "tagId": 6,
+              "label": "drawing line",
+              "color": "#ff00ff",
+              "tm_source": "tag"
+            },
+            "geometry": {
+              "coordinates": [
+                [
+                  2.2046085268706577,
+                  48.715408245755896
+                ],
+                [
+                  2.2012170641282296,
+                  48.71513710284552
+                ]
+              ],
+              "type": "LineString"
+            }
+          },
+          {
+            "id": "7-1768213513029",
+            "type": "Feature",
+            "properties": {
+              "tagId": 7,
+              "label": "drawing line",
+              "color": "#00ffaa",
+              "tm_source": "tag"
+            },
+            "geometry": {
+              "coordinates": [
+                [
+                  2.2078617255359916,
+                  48.7151201951651
+                ],
+                [
+                  2.2065391437249957,
+                  48.71393833666397
+                ]
+              ],
+              "type": "LineString"
+            }
+          },
+          {
+            "id": "3484426a79369d7583f28bc6b2cdc59d",
+            "type": "Feature",
+            "properties": {
+              "color": "#ff00ff",
+              "label": "drawing line",
+              "drawingToolId": "drawing-1",
+              "drawingToolIndex": 0
+            },
+            "geometry": {
+              "coordinates": [
+                [
+                  2.2004083157287653,
+                  48.716778704001996
+                ],
+                [
+                  2.1988868699594377,
+                  48.71458763083126
+                ]
+              ],
+              "type": "LineString"
+            }
+          },
+          {
+            "id": "e75927934d4a6730e1949fc9cad58989",
+            "type": "Feature",
+            "properties": {
+              "color": "#ff00ff",
+              "label": "drawing line",
+              "drawingToolId": "drawing-1",
+              "drawingToolIndex": 0
+            },
+            "geometry": {
+              "coordinates": [
+                [
+                  2.2097918953072053,
+                  48.71287067635177
+                ],
+                [
+                  2.2035605898671236,
+                  48.71202022146494
+                ]
+              ],
+              "type": "LineString"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
