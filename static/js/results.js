@@ -145,7 +145,7 @@ function ensureResponseLayers(map, pointData, lineData, polygonData) {
             type: 'line',
             source: responseLayerIds.linesSource,
             paint: {
-                'line-color': 'magenta',
+                'line-color': ['coalesce', ['get', 'color'], '#f5d76e'],
                 'line-width': 14,
                 'line-opacity': 0.6,
                 'line-blur': 6
@@ -158,7 +158,7 @@ function ensureResponseLayers(map, pointData, lineData, polygonData) {
             type: 'line',
             source: responseLayerIds.linesSource,
             paint: {
-                'line-color': '#f5d76e',
+                'line-color': ['coalesce', ['get', 'color'], '#f5d76e'],
                 'line-width': 2.5,
                 'line-opacity': 0.7
             }
@@ -172,7 +172,7 @@ function ensureResponseLayers(map, pointData, lineData, polygonData) {
             type: 'fill',
             source: responseLayerIds.polygonsSource,
             paint: {
-                'fill-color': '#f5d76e',
+                'fill-color': ['coalesce', ['get', 'color'], '#f5d76e'],
                 'fill-opacity': 0.2
             }
         });
@@ -181,7 +181,7 @@ function ensureResponseLayers(map, pointData, lineData, polygonData) {
             type: 'line',
             source: responseLayerIds.polygonsSource,
             paint: {
-                'line-color': '#f5d76e',
+                'line-color': ['coalesce', ['get', 'color'], '#f5d76e'],
                 'line-width': 2,
                 'line-opacity': 0.7
             }
