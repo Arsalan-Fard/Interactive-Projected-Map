@@ -5,7 +5,7 @@
     "id": "project-1766302937004",
     "mapId": "map-1766302950109",
     "rearProjection": false,
-    "tuiMode": true,
+    "tuiMode": false,
     "workshopMode": false,
     "tagSettings": {
       "count": 2,
@@ -115,7 +115,7 @@
             "id": "eraser",
             "label": "Eraser",
             "enabled": true,
-            "tagId": null
+            "tagId": 8
           }
         ]
       }

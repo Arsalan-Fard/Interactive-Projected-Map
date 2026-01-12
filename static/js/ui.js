@@ -1109,16 +1109,19 @@ export function setStickerPosition(map, tagId, stickerIndex, color, screenX, scr
             .setLngLat(coords)
             .addTo(map);
 
+        sticker._marker = marker;
         tagStickerMarkers.set(key, marker);
     } else {
         // Update existing marker position
         marker.setLngLat(coords);
-        // Update color in case it changed
-        const element = marker.getElement();
-        if (element) {
-            element.style.backgroundColor = color;
-            element.dataset.color = color;
-        }
+    }
+
+    const element = marker.getElement();
+    if (element) {
+        element.style.backgroundColor = color;
+        element.dataset.color = color;
+        element.dataset.lng = String(coords.lng);
+        element.dataset.lat = String(coords.lat);
     }
 
     return true;

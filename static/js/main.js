@@ -2,6 +2,7 @@ import { add3DBuildings, loadAndRenderLayer } from './layers.js';
 import { initDraggableItems, initLayerToggles, getMapCoordsFromScreen, applyTagConfigVisibility, initReachDraggables, initDrawEraser, initIsovistDraggable } from './ui.js';
 import { initIsovist } from './isovist.js';
 import { initSurvey } from './survey.js';
+import { initReactions } from './reaction.js';
 import { initTagTracking } from './tag-tracking.js';
 import { fallbackConfig, loadSetupConfig } from './config-loader.js';
 import { initMap } from './map-setup.js';
@@ -666,6 +667,8 @@ async function initApp() {
         draw,
         overlayState
     });
+
+    initReactions({ map });
 
     if (map.isStyleLoaded()) {
         survey.onStyleLoad();

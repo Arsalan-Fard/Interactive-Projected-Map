@@ -589,6 +589,18 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         };
     }
 
+    function notifyQuestionChange(question) {
+        if (typeof window === 'undefined') return;
+        window.dispatchEvent(new CustomEvent('question-change', {
+            detail: {
+                index: currentQuestionIndex,
+                total: questions.length,
+                questionId: question?.id || null,
+                workshopMode: !!setupConfig?.project?.workshopMode
+            }
+        }));
+    }
+
     async function saveResponses() {
         const payload = buildResponsesPayload();
         const filename = `${setupConfig.project.id || 'project'}_responses_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
@@ -626,6 +638,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
             toggleButtonsHidden(finishButtonsVisible, true);
             renderPreviousAnswers({ id: null, type: null });
             clearPreviousAnswerLayers();
+            notifyQuestionChange(null);
             return;
         }
 
@@ -674,6 +687,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         toggleButtonsHidden(finishButtonsVisible, !isLastQuestion);
         renderPreviousAnswers(q);
         renderPreviousAnswersOnMap(q);
+        notifyQuestionChange(q);
     }
 
     prevButtons.forEach(btn => {

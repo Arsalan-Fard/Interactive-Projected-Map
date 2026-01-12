@@ -1,6 +1,6 @@
 import { compute, convertToSegments, breakIntersections } from '/Isovist-VGA/visibility-polygon.esm.js';
 
-const DEFAULT_MAX_DISTANCE_METERS = 150;
+const DEFAULT_MAX_DISTANCE_METERS = 300;
 const EMPTY_FEATURE_COLLECTION = { type: 'FeatureCollection', features: [] };
 
 export function initIsovist(map, options = {}) {

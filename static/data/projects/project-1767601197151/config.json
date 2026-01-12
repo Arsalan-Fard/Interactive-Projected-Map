@@ -85,7 +85,7 @@
             "id": "isovist",
             "label": "Isovist",
             "enabled": true,
-            "tagId": null
+            "tagId": 46
           }
         ]
       },
@@ -111,7 +111,7 @@
             "id": "eraser",
             "label": "Eraser",
             "enabled": true,
-            "tagId": null
+            "tagId": 47
           }
         ]
       }
