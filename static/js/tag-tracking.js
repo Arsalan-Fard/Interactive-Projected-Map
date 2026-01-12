@@ -382,6 +382,61 @@ export function initTagTracking({ map, setupConfig, draw }) {
         lastDrawCommitTime = now;
     }
 
+    function eraseTagDrawingFeature(featureId) {
+        if (!featureId) return false;
+        const targetId = String(featureId);
+        let removed = false;
+
+        for (let i = finalizedDrawingFeatures.length - 1; i >= 0; i -= 1) {
+            const feature = finalizedDrawingFeatures[i];
+            if (!feature) continue;
+            if (String(feature.id) !== targetId) continue;
+            finalizedDrawingFeatures.splice(i, 1);
+            removed = true;
+        }
+
+        for (let i = finishedDrawingQueue.length - 1; i >= 0; i -= 1) {
+            const feature = finishedDrawingQueue[i];
+            if (!feature) continue;
+            if (String(feature.id) !== targetId) continue;
+            finishedDrawingQueue.splice(i, 1);
+            removed = true;
+        }
+
+        let shouldDeleteFromDraw = removed;
+        if (!shouldDeleteFromDraw && draw && typeof draw.get === 'function') {
+            try {
+                const feature = draw.get(targetId);
+                shouldDeleteFromDraw = feature?.properties?.[TM_SOURCE_KEY] === TM_SOURCE_TAG;
+            } catch {
+                // ignore
+            }
+        }
+
+        if (shouldDeleteFromDraw && draw && typeof draw.delete === 'function') {
+            try {
+                draw.delete(targetId);
+            } catch (error) {
+                console.warn('Failed to delete tag drawing from Mapbox Draw', error);
+            }
+        }
+
+        if (removed) {
+            updateTagDrawingLayer();
+        }
+
+        return removed;
+    }
+
+    const handleTagDrawingErase = (event) => {
+        const featureId = event?.detail?.featureId;
+        eraseTagDrawingFeature(featureId);
+    };
+
+    if (typeof window !== 'undefined') {
+        window.addEventListener('tag-drawing-erase', handleTagDrawingErase);
+    }
+
     function excludeTagDrawingsFromDrawLineLayers() {
         if (!map?.getStyle || !map?.getLayer || !map?.setFilter) return;
         const style = map.getStyle();
@@ -1051,5 +1106,12 @@ export function initTagTracking({ map, setupConfig, draw }) {
     }
 
     const intervalId = setInterval(checkPosition, 30);
-    return { stop: () => clearInterval(intervalId) };
+    return {
+        stop: () => {
+            clearInterval(intervalId);
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('tag-drawing-erase', handleTagDrawingErase);
+            }
+        }
+    };
 }

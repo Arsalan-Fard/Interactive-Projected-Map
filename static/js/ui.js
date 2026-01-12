@@ -364,6 +364,8 @@ function getDrawLineFeatureIdAtPoint(map, draw, point, hitRadius = 10) {
     const y = Number(point.y);
     if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
     if (typeof map.isStyleLoaded === 'function' && !map.isStyleLoaded()) return null;
+    const TM_SOURCE_KEY = 'tm_source';
+    const TM_SOURCE_TAG = 'tag';
     const minX = x - hitRadius;
     const minY = y - hitRadius;
     const maxX = x + hitRadius;
@@ -372,7 +374,7 @@ function getDrawLineFeatureIdAtPoint(map, draw, point, hitRadius = 10) {
     const layers = style && Array.isArray(style.layers) ? style.layers : [];
     const lineLayerIds = layers
         .map(layer => layer && layer.id)
-        .filter(id => typeof id === 'string' && id.indexOf('gl-draw-line') !== -1);
+        .filter(id => typeof id === 'string' && (id.indexOf('gl-draw-line') !== -1 || id.indexOf('tag-drawing-lines') !== -1));
     const options = lineLayerIds.length ? { layers: lineLayerIds } : undefined;
     let features;
     try {
@@ -383,12 +385,14 @@ function getDrawLineFeatureIdAtPoint(map, draw, point, hitRadius = 10) {
     }
     if (!Array.isArray(features) || features.length === 0) return null;
 
-    const candidates = new Map();
+    const candidates = new Map(); // id -> { dist2, sourceType }
     features.forEach(feature => {
         if (!feature) return;
         const meta = feature && feature.properties && feature.properties.meta;
         const geomType = feature && feature.geometry && feature.geometry.type;
-        if (meta !== 'feature') return;
+        const isDrawLine = meta === 'feature';
+        const isTagLine = feature?.properties?.[TM_SOURCE_KEY] === TM_SOURCE_TAG;
+        if (!isDrawLine && !isTagLine) return;
         if (geomType !== 'LineString' && geomType !== 'MultiLineString') return;
 
         const id = (feature.properties && feature.properties.id) || feature.id;
@@ -409,8 +413,8 @@ function getDrawLineFeatureIdAtPoint(map, draw, point, hitRadius = 10) {
 
         if (!Number.isFinite(dist2)) return;
         const existing = candidates.get(id);
-        if (existing === undefined || dist2 < existing) {
-            candidates.set(id, dist2);
+        if (!existing || dist2 < existing.dist2) {
+            candidates.set(id, { dist2, sourceType: isDrawLine ? 'draw' : 'tag' });
         }
     });
 
@@ -418,18 +422,22 @@ function getDrawLineFeatureIdAtPoint(map, draw, point, hitRadius = 10) {
 
     let bestId = null;
     let bestDist = Infinity;
-    candidates.forEach((dist2, id) => {
-        if (dist2 < bestDist) {
-            bestDist = dist2;
+    let bestSourceType = null;
+    candidates.forEach((candidate, id) => {
+        if (candidate.dist2 < bestDist) {
+            bestDist = candidate.dist2;
             bestId = id;
+            bestSourceType = candidate.sourceType;
         }
     });
     if (!bestId) return null;
 
-    const allFeatures = typeof draw.getAll === 'function' ? draw.getAll() : null;
-    if (allFeatures && Array.isArray(allFeatures.features)) {
-        const exists = allFeatures.features.some(feature => feature.id === bestId);
-        if (!exists) return null;
+    if (bestSourceType !== 'tag') {
+        const allFeatures = typeof draw.getAll === 'function' ? draw.getAll() : null;
+        if (allFeatures && Array.isArray(allFeatures.features)) {
+            const exists = allFeatures.features.some(feature => feature.id === bestId);
+            if (!exists) return null;
+        }
     }
 
     return bestId;
@@ -545,10 +553,21 @@ export function setEraserButtonPosition(map, draw, clientX, clientY) {
     if (!featureId) return true;
 
     if (typeof draw.changeMode === 'function') {
-        draw.changeMode('simple_select', { featureIds: [featureId] });
+        try {
+            draw.changeMode('simple_select', { featureIds: [featureId] });
+        } catch {
+            // ignore
+        }
     }
     if (typeof draw.delete === 'function') {
-        draw.delete(featureId);
+        try {
+            draw.delete(featureId);
+        } catch {
+            // ignore
+        }
+    }
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('tag-drawing-erase', { detail: { featureId } }));
     }
     return true;
 }
@@ -1067,8 +1086,19 @@ export function initDrawEraser(map, draw) {
         onDrop: (point) => {
             const featureId = getDrawLineFeatureIdAtPoint(map, draw, point);
             if (!featureId) return;
-            draw.changeMode('simple_select', { featureIds: [featureId] });
-            draw.delete(featureId);
+            try {
+                draw.changeMode('simple_select', { featureIds: [featureId] });
+            } catch {
+                // ignore
+            }
+            try {
+                draw.delete(featureId);
+            } catch {
+                // ignore
+            }
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('tag-drawing-erase', { detail: { featureId } }));
+            }
         },
         onReset: () => {
             resetDraggableButton(btn);
