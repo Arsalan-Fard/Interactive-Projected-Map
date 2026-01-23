@@ -44,6 +44,7 @@ export const defaultState = {
         rearProjection: false,
         tuiMode: false,
         workshopMode: false,
+        stickerDetectionMode: 'tag',
         tagSettings: {
             count: DEFAULT_TAG_SETTINGS_COUNT,
             items: []

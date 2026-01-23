@@ -180,11 +180,33 @@
 
                 <div class="project-subtab-panel block" data-subpanel="inputs">
                     <div class="form-section bg-bg-secondary border border-border-subtle rounded-lg p-6 mb-6">
-                        <div class="section-header flex items-center justify-between mb-4">
-                            <div>
-                                <h3 class="text-base font-semibold m-0">Sticker Settings</h3>
-                                <p class="text-xs text-text-muted m-0 mt-1">Choose how many stickers are available and
-                                    set their colors.</p>
+                         <div class="section-header flex items-center justify-between mb-4">
+                             <div>
+                                 <h3 class="text-base font-semibold m-0">Sticker Settings</h3>
+                                 <p class="text-xs text-text-muted m-0 mt-1">Choose how many stickers are available and
+                                     set their colors.</p>
+                             </div>
+                         </div>
+                        <div
+                            class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                            <label
+                                class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Detection</label>
+                            <div id="sticker-detection-mode"
+                                class="flex w-full bg-bg-tertiary border border-border-subtle rounded-md p-1 gap-1">
+                                <label class="flex-1 cursor-pointer select-none">
+                                    <input type="radio" name="sticker-detection-mode" value="tag"
+                                        class="sr-only peer">
+                                    <span
+                                        class="block text-center h-8 leading-8 rounded-md text-xs font-medium text-text-secondary transition-all duration-200 peer-checked:bg-bg-secondary peer-checked:text-text-primary peer-checked:shadow peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent-primary">1- Tag
+                                        Detection</span>
+                                </label>
+                                <label class="flex-1 cursor-pointer select-none">
+                                    <input type="radio" name="sticker-detection-mode" value="circle"
+                                        class="sr-only peer">
+                                    <span
+                                        class="block text-center h-8 leading-8 rounded-md text-xs font-medium text-text-secondary transition-all duration-200 peer-checked:bg-bg-secondary peer-checked:text-text-primary peer-checked:shadow peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent-primary">2-
+                                        Circle Detection</span>
+                                </label>
                             </div>
                         </div>
                         <div

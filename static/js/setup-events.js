@@ -208,6 +208,15 @@ export function createEventHandlers({ store, els, handlers }) {
             markSaved('Unsaved changes');
         });
 
+        els.stickerDetectionMode?.querySelectorAll('input[name="sticker-detection-mode"]')?.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const next = e.target?.value === 'circle' ? 'circle' : 'tag';
+                store.state.project.stickerDetectionMode = next;
+                renderStickerConfig();
+                markSaved('Unsaved changes');
+            });
+        });
+
         // Map details
         els.mapStyle.addEventListener('input', e => updateSelectedMap({ style: e.target.value }));
         els.mapCenter.addEventListener('input', e => {
