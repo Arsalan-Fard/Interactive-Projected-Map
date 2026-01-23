@@ -5,11 +5,19 @@
     "id": "project-1767601197151",
     "mapId": "map-1767602417372",
     "rearProjection": false,
-    "tuiMode": true,
+    "tuiMode": false,
     "workshopMode": true,
     "tagSettings": {
-      "count": 1,
+      "count": 3,
       "items": [
+        {
+          "label": "",
+          "tagId": null
+        },
+        {
+          "label": "",
+          "tagId": null
+        },
         {
           "label": "",
           "tagId": null

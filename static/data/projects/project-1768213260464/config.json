@@ -5,7 +5,7 @@
     "id": "project-1768213260464",
     "mapId": "map-1768213410036",
     "rearProjection": false,
-    "tuiMode": true,
+    "tuiMode": false,
     "workshopMode": false,
     "tagSettings": {
       "count": 2,

@@ -15,21 +15,44 @@ STATIC_DATA_ROOT = os.path.join(os.path.dirname(__file__), 'static', 'data')
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
 
-# OSMnx Service Logic
-print("Loading walking network graph from OSMnx")
+WALK_GRAPH = None
+WALK_EDGES_PATCHED = None
+WALK_NODES_PATCHED = None
+G_bike = None
+
+
+def _reload_patched_walk_graph():
+    global WALK_GRAPH, WALK_EDGES_PATCHED, WALK_NODES_PATCHED
+    try:
+        from patched_network import build_patched_from_files
+
+        WALK_GRAPH, WALK_EDGES_PATCHED, WALK_NODES_PATCHED = build_patched_from_files(
+            base_edges_path=os.path.join(STATIC_DATA_ROOT, "walking_network.geojson"),
+            base_nodes_path=os.path.join(STATIC_DATA_ROOT, "walking_nodes.geojson"),
+            override_nodes_path=os.path.join(STATIC_DATA_ROOT, "graph_overrides_nodes.geojson"),
+            override_edges_path=os.path.join(STATIC_DATA_ROOT, "graph_overrides_edges.geojson"),
+        )
+        print(f"Walking graph loaded from static GeoJSON. {len(WALK_GRAPH.nodes)} nodes")
+    except Exception as e:
+        print(f"Error loading static walking graph: {e}")
+        WALK_GRAPH = None
+        WALK_EDGES_PATCHED = None
+        WALK_NODES_PATCHED = None
+
+
+print("Loading walking network graph (base + overrides)...")
+_reload_patched_walk_graph()
+
+print("Loading cycling network graph from OSMnx (optional)...")
 try:
-    G = ox.graph_from_place("Palaiseau, France", network_type="walk")
-    print(f"Walking graph loaded. {len(G.nodes)} nodes")
-    
     G_bike = ox.graph_from_place("Palaiseau, France", network_type="bike")
     print(f"Cycling graph loaded. {len(G_bike.nodes)} nodes")
 except Exception as e:
-    print(f"Error loading graphs: {e}")
-    G = None
+    print(f"Error loading cycling graph: {e}")
     G_bike = None
 
 def get_isochrone(lat, lon, distance_meters, mode='walk'):
-    graph = G if mode == 'walk' else G_bike
+    graph = WALK_GRAPH if mode == 'walk' else G_bike
     
     if graph is None:
         return None
@@ -116,7 +139,7 @@ def calculate_isochrone():
 
 @app.route('/api/route', methods=['POST'])
 def get_route():
-    if G is None:
+    if WALK_GRAPH is None:
         return jsonify({'error': 'Graph not loaded'}), 500
     try:
         data = request.json
@@ -128,12 +151,12 @@ def get_route():
         if not start or not end:
             return jsonify({'error': 'Missing start or end coordinates'}), 400
 
-        orig_node = ox.nearest_nodes(G, start[0], start[1])
-        dest_node = ox.nearest_nodes(G, end[0], end[1])
-        route_nodes = nx.shortest_path(G, orig_node, dest_node, weight='length')
+        orig_node = ox.nearest_nodes(WALK_GRAPH, start[0], start[1])
+        dest_node = ox.nearest_nodes(WALK_GRAPH, end[0], end[1])
+        route_nodes = nx.shortest_path(WALK_GRAPH, orig_node, dest_node, weight='length')
         route_coords = []
         for node in route_nodes:
-            point = G.nodes[node]
+            point = WALK_GRAPH.nodes[node]
             route_coords.append([point['x'], point['y']])
 
         return jsonify({
@@ -302,8 +325,8 @@ def list_responses():
 def health_check():
     return jsonify({
         "status": "ok",
-        "graph_nodes": len(G.nodes) if G else 0,
-        "graph_edges": len(G.edges) if G else 0
+        "graph_nodes": len(WALK_GRAPH.nodes) if WALK_GRAPH else 0,
+        "graph_edges": len(WALK_GRAPH.edges) if WALK_GRAPH else 0
     })
 
 @app.route('/api/projects', methods=['GET'])
@@ -401,6 +424,9 @@ def save_overrides():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Failed to write overrides: {e}"}), 500
 
+    # Refresh the in-memory patched graph so routing/network analysis sees the latest edits.
+    _reload_patched_walk_graph()
+
     return jsonify({
         "status": "success",
         "nodesPath": "/static/data/graph_overrides_nodes.geojson",
@@ -408,6 +434,17 @@ def save_overrides():
         "nodesCount": len(nodes_features),
         "edgesCount": len(edges_features)
     })
+
+
+@app.route('/api/walking_network_patched', methods=['GET'])
+def walking_network_patched():
+    if WALK_EDGES_PATCHED is None:
+        fallback = os.path.join(STATIC_DATA_ROOT, "walking_network.geojson")
+        if os.path.exists(fallback):
+            return send_from_directory(STATIC_DATA_ROOT, "walking_network.geojson")
+        return jsonify({"error": "Walking network not available"}), 404
+
+    return Response(json.dumps(WALK_EDGES_PATCHED), mimetype='application/json')
 
 @app.route('/static/js/config.js')
 def serve_config_js():
@@ -471,6 +508,6 @@ def results_page():
 # Catch-all removed in favor of standard static file serving by Flask
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8000))
+    port = int(os.environ.get('PORT', 8001))
     print(f"Server starting on http://localhost:{port}")
     app.run(host='0.0.0.0', port=port, debug=True)

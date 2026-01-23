@@ -22,6 +22,44 @@
           48.713357232436046
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": -4,
+        "snapped_kind": "node",
+        "snap_dist_m": 2.6632562773042014,
+        "snapped_node_id": 3808029126
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.2015989,
+          48.7145169
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": -5,
+        "snapped_kind": "edge",
+        "snap_dist_m": 0.9177115496762571,
+        "edge_u": 274096399,
+        "edge_v": 2570787101,
+        "edge_key": 0,
+        "edge_osmid": null,
+        "edge_feature_index": 5548,
+        "edge_segment_index": 1,
+        "edge_segment_t": 0.020580853928533153
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.202069750763632,
+          48.71445983375566
+        ]
+      }
     }
   ]
 }

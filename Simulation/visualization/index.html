@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedestrian Network Simulation</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+     
+    <link rel="stylesheet" href="style.css?v=2">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div id="controls">
+        <h3>Walking Network</h3>
+        <div id="status">Loading data...</div>
+        <div class="legend">
+            <div><span class="dot node"></span> Nodes</div>
+            <div><span class="line edge"></span> Edges</div>
+        </div>
+        
+        <hr>
+        <h4>Add Points</h4>
+        <div class="buttons">
+            <button id="btn-intersection" onclick="setMode('intersection')">Intersection</button>
+            
+            <div class="row" style="display: flex; align-items: center; gap: 5px; margin: 5px 0;">
+                <span style="font-weight: bold; width: 70px;">Entrance</span>
+                <button id="btn-entrance-1" onclick="setMode('entrance', 1)">1</button>
+                <button id="btn-entrance-2" onclick="setMode('entrance', 2)">2</button>
+                <button id="btn-entrance-3" onclick="setMode('entrance', 3)">3</button>
+                <button id="btn-entrance-4" onclick="setMode('entrance', 4)">4</button>
+                <button id="btn-entrance-5" onclick="setMode('entrance', 5)">5</button>
+            </div>
+
+            <div class="row" style="display: flex; align-items: center; gap: 5px; margin: 5px 0;">
+                <span style="font-weight: bold; width: 70px;">POI</span>
+                <button id="btn-poi-1" onclick="setMode('poi', 1)">1</button>
+                <button id="btn-poi-2" onclick="setMode('poi', 2)">2</button>
+                <button id="btn-poi-3" onclick="setMode('poi', 3)">3</button>
+                <button id="btn-poi-4" onclick="setMode('poi', 4)">4</button>
+                <button id="btn-poi-5" onclick="setMode('poi', 5)">5</button>
+            </div>
+        </div>
+        <div id="mode-status">Mode: None</div>
+        <hr>
+        <button id="btn-save" onclick="savePoints()" style="width: 100%; background-color: #4CAF50; color: white; border: none;">Save Points</button>
+
+        <hr>
+        <h4>Run Stage A</h4>
+        
+        <div class="row">
+            <label for="w-local-length">W_LOCAL_LENGTH: <span id="w-local-length-val">1.0</span></label>
+        </div>
+        <div class="row">
+            <input type="range" id="w-local-length" min="0.0" max="10.0" step="0.1" value="1.0" style="width: 100%;">
+        </div>
+
+        <div class="row">
+            <label for="w-local-nodes">W_LOCAL_NODES: <span id="w-local-nodes-val">1.0</span></label>
+        </div>
+        <div class="row">
+            <input type="range" id="w-local-nodes" min="0.0" max="10.0" step="0.1" value="1.0" style="width: 100%;">
+        </div>
+
+        <div class="row">
+            <label for="w-local-angle">W_LOCAL_ANGLE: <span id="w-local-angle-val">10.0</span></label>
+        </div>
+        <div class="row">
+            <input type="range" id="w-local-angle" min="0.0" max="20.0" step="0.5" value="10.0" style="width: 100%;">
+        </div>
+
+        <div class="row">
+            <label for="w-global-length">W_GLOBAL_LENGTH: <span id="w-global-length-val">5.0</span></label>
+        </div>
+        <div class="row">
+            <input type="range" id="w-global-length" min="0.0" max="20.0" step="0.5" value="5.0" style="width: 100%;">
+        </div>
+
+        <div class="row">
+            <label for="w-global-nodes">W_GLOBAL_NODES: <span id="w-global-nodes-val">5.0</span></label>
+        </div>
+        <div class="row">
+            <input type="range" id="w-global-nodes" min="0.0" max="20.0" step="0.5" value="5.0" style="width: 100%;">
+        </div>
+
+        <button id="btn-run-stage-a" onclick="runStageA()" style="width: 100%; background-color: #2196F3; color: white; border: none; margin-top: 5px;">Run Stage A</button>
+        <div id="run-status" class="small muted" style="margin-top: 5px;"></div>
+
+        <hr>
+        <h4>Stage A Results</h4>
+        <button id="btn-load-scheme" onclick="loadStageAScheme()" style="width: 100%;">Load stageA_scheme.json</button>
+        <div class="row">
+            <label for="pair-select">Pair</label>
+            <select id="pair-select" disabled></select>
+        </div>
+        <div class="row" style="display: flex; gap: 15px;">
+            <label><input type="checkbox" id="show-all-paths" disabled> Show all paths</label>
+            <label><input type="checkbox" id="show-graph-layer" checked> Show Graph</label>
+        </div>
+        <button id="btn-clear-scheme" onclick="clearStageAScheme()" style="width: 100%;" disabled>Clear paths</button>
+        <div id="scheme-meta" class="small muted">Run `python test.py` to generate `stageA_scheme.json`, then click “Load”.</div>
+
+        <hr>
+        <h4>Scheme Stats</h4>
+        <div id="scheme-stats" class="small">
+            <div>Total Length: <span id="stat-length">-</span></div>
+            <div>Total Turns: <span id="stat-turns">-</span></div>
+            <div>Decision Points (Sum): <span id="stat-dp">-</span></div>
+            <div style="margin-top: 15px;">
+                <strong>Deviation from Shortest Path</strong><br>
+                (Ordered by Importance &kappa;)
+                <canvas id="deviationChart" width="250" height="150"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -4,7 +4,7 @@ import logging
 import sys
 import threading
 import time
-from typing import Union
+from typing import Optional, Union
 
 import cv2
 import numpy as np
@@ -111,6 +111,11 @@ def detect_and_display(cap: cv2.VideoCapture, detector: Detector, args):
     min_margin = max(0.0, args.min_margin)
     frame_source = LatestFrame(cap).start()
 
+    boundary_centers_cache: dict[int, np.ndarray] = {}
+    boundary_corners_cache: dict[int, np.ndarray] = {}
+    boundary_best_corner_cache: dict[int, np.ndarray] = {}
+    perspective_M: Optional[np.ndarray] = None
+
     while True:
         ok, frame = frame_source.read()
         if not ok:
@@ -122,6 +127,7 @@ def detect_and_display(cap: cv2.VideoCapture, detector: Detector, args):
 
         centers = {}
         all_corners_dict = {}
+        margins = {}
         found_tags = {}
         detected_ids = []
 
@@ -130,35 +136,43 @@ def detect_and_display(cap: cv2.VideoCapture, detector: Detector, args):
             detected_ids.append(tag_id)
             all_corners_dict[tag_id] = det.corners
             centers[tag_id] = det.center
+            margins[tag_id] = float(det.decision_margin)
             draw_detection(frame, det, min_margin)
 
-        if all(cid in centers for cid in boundary_ids):
-            group_cx = sum(centers[cid][0] for cid in boundary_ids) / 4.0
-            group_cy = sum(centers[cid][1] for cid in boundary_ids) / 4.0
-            group_center = np.array([group_cx, group_cy])
+        for cid in boundary_ids:
+            margin = margins.get(cid)
+            if margin is None:
+                continue
 
-            map_src_pts = []
-            for cid in boundary_ids:
-                c_corners = all_corners_dict[cid]
+            should_update = (
+                (margin >= min_margin)
+                or (cid not in boundary_centers_cache)
+                or (cid not in boundary_corners_cache)
+            )
+            if should_update and cid in centers:
+                boundary_centers_cache[cid] = centers[cid]
+            if should_update and cid in all_corners_dict:
+                boundary_corners_cache[cid] = all_corners_dict[cid]
+
+        if len(boundary_centers_cache) >= 2 and boundary_corners_cache:
+            group_center = np.mean(np.stack(list(boundary_centers_cache.values())), axis=0)
+            for cid, c_corners in boundary_corners_cache.items():
                 best_corner = None
-                min_dist = float('inf')
+                min_dist = float("inf")
                 for pt in c_corners:
-                    dist = np.linalg.norm(pt - group_center)
+                    dist = float(np.linalg.norm(pt - group_center))
                     if dist < min_dist:
                         min_dist = dist
                         best_corner = pt
-                map_src_pts.append(best_corner)
+                if best_corner is not None:
+                    boundary_best_corner_cache[cid] = best_corner
 
-            src_pts = np.array(map_src_pts, dtype="float32")
-            dst_pts = np.array([
-                [0, 0],
-                [1, 0],
-                [1, 1],
-                [0, 1]
-            ], dtype="float32")
+        if all(cid in boundary_best_corner_cache for cid in boundary_ids):
+            src_pts = np.array([boundary_best_corner_cache[cid] for cid in boundary_ids], dtype="float32")
+            dst_pts = np.array([[0, 0], [1, 0], [1, 1], [0, 1]], dtype="float32")
+            perspective_M = cv2.getPerspectiveTransform(src_pts, dst_pts)
 
-            M = cv2.getPerspectiveTransform(src_pts, dst_pts)
-
+        if perspective_M is not None:
             for det in detections:
                 tag_id = int(det.tag_id)
                 if tag_id in boundary_ids:
@@ -167,21 +181,25 @@ def detect_and_display(cap: cv2.VideoCapture, detector: Detector, args):
                     continue
 
                 tracked_center = np.array([[det.center]], dtype="float32")
-                pts_transformed = cv2.perspectiveTransform(tracked_center, M)
+                pts_transformed = cv2.perspectiveTransform(tracked_center, perspective_M)
                 px = float(pts_transformed[0][0][0])
                 py = float(pts_transformed[0][0][1])
                 found_tags[str(tag_id)] = {
                     "x": px,
                     "y": py,
                     "id": tag_id,
-                    "margin": float(det.decision_margin)
+                    "margin": float(det.decision_margin),
                 }
 
         with position_lock:
             current_position["tags"] = found_tags
             current_position["detected_ids"] = detected_ids
 
-        overlay = f"min margin: {min_margin:.1f}  ([ / ] to adjust, q to quit)"
+        overlay = (
+            f"min margin: {min_margin:.1f}  "
+            f"boundary: {len(boundary_best_corner_cache)}/4  "
+            f"([ / ] to adjust, q to quit)"
+        )
         cv2.putText(frame, overlay, (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
         cv2.imshow(window_name, frame)

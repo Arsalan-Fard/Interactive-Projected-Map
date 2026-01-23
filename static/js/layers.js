@@ -49,7 +49,7 @@ export function addWalkingNetwork(map) {
 
     map.addSource('walking-network', {
         type: 'geojson',
-        data: '/static/data/walking_network.geojson'
+        data: '/api/walking_network_patched'
     });
 
     map.addLayer({

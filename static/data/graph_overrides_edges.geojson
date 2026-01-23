@@ -25,6 +25,31 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "u": 3808029126,
+        "v": -5,
+        "key": 0,
+        "osmid": "manual:30e75153-f648-4d2f-b360-8686ef9ea57e",
+        "highway": "footway",
+        "oneway": false,
+        "length": 35.123195560796546
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            2.2015989,
+            48.7145169
+          ],
+          [
+            2.202069750763632,
+            48.71445983375566
+          ]
+        ]
+      }
     }
   ]
 }
