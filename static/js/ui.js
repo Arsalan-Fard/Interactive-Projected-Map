@@ -277,6 +277,64 @@ function screenToQuadUV(x, y, corners) {
     return { u, v };
 }
 
+function quadUVToScreen(u, v, corners) {
+    const x0 = corners[0][0], y0 = corners[0][1];
+    const x1 = corners[1][0], y1 = corners[1][1];
+    const x2 = corners[2][0], y2 = corners[2][1];
+    const x3 = corners[3][0], y3 = corners[3][1];
+
+    let projX, projY;
+
+    const dx3 = x0 - x1 + x2 - x3;
+    const dy3 = y0 - y1 + y2 - y3;
+    const eps = 1e-6;
+
+    if (Math.abs(dx3) < eps && Math.abs(dy3) < eps) {
+        // Affine
+        projX = x0 + (x1 - x0) * u + (x3 - x0) * v;
+        projY = y0 + (y1 - y0) * u + (y3 - y0) * v;
+    } else {
+        // Projective
+        const dx1 = x1 - x2;
+        const dy1 = y1 - y2;
+        const dx2 = x3 - x2;
+        const dy2 = y3 - y2;
+
+        const det = dx1 * dy2 - dx2 * dy1;
+        if (Math.abs(det) < eps) {
+            return null;
+        }
+
+        const a13 = (dx3 * dy2 - dx2 * dy3) / det;
+        const a23 = (dx1 * dy3 - dx3 * dy1) / det;
+
+        const a11 = x1 - x0 + a13 * x1;
+        const a21 = x3 - x0 + a23 * x3;
+        const a12 = y1 - y0 + a13 * y1;
+        const a22 = y3 - y0 + a23 * y3;
+
+        const den = (a13 * u + a23 * v + 1);
+        projX = (a11 * u + a21 * v + x0) / den;
+        projY = (a12 * u + a22 * v + y0) / den;
+    }
+
+    return { x: projX, y: projY };
+}
+
+export function getScreenCoordsFromNormalized(nx, ny) {
+    const u = Number(nx);
+    const v = Number(ny);
+    if (!Number.isFinite(u) || !Number.isFinite(v)) return null;
+
+    const layer = getMaptasticLayer('main_container');
+    const corners = layer?.targetPoints;
+    if (Array.isArray(corners) && corners.length === 4) {
+        return quadUVToScreen(u, v, corners);
+    }
+
+    return { x: u * window.innerWidth, y: v * window.innerHeight };
+}
+
 function getMapPointFromScreen(map, clientX, clientY) {
     const mapContainer = map.getContainer();
     const mainContainer = document.getElementById('main_container');
@@ -667,6 +725,24 @@ function createStickerMarker(map, lngLat, color, typeId, questionId) {
 
     sticker._marker = marker;
     attachMarkerDragHandlers(map, marker, sticker);
+}
+
+export function addStickerMarker(map, lngLat, color, typeId, questionId) {
+    createStickerMarker(map, lngLat, color, typeId, questionId);
+}
+
+export function removeStickersForQuestion(questionId) {
+    const qid = typeof questionId === 'string' ? questionId : '';
+    if (!qid) return;
+    const stickers = Array.from(document.querySelectorAll('.draggable-sticker'));
+    stickers.forEach(sticker => {
+        if (sticker?.dataset?.questionId !== qid) return;
+        if (sticker._marker && typeof sticker._marker.remove === 'function') {
+            sticker._marker.remove();
+        } else {
+            sticker.remove();
+        }
+    });
 }
 
 function createTagButtonMarker(map, lngLat, label, typeId, color) {

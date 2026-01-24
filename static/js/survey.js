@@ -1,4 +1,4 @@
-import { initDraggableStickers, getMapCoordsFromScreen } from './ui.js';
+import { initDraggableStickers, getMapCoordsFromScreen, getScreenCoordsFromNormalized, addStickerMarker, removeStickersForQuestion } from './ui.js';
 
 function flattenQuestions(flow) {
     if (!flow || !Array.isArray(flow) || flow.length === 0) return [];
@@ -56,6 +56,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
     let showPreviousAnswers = false;
     let workshopDots = [];
     let workshopSelections = [];
+    let isTransitioning = false;
 
     const prevButtons = Array.from(new Set([
         ...document.querySelectorAll('[data-question-nav="prev"]'),
@@ -128,8 +129,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         const consensus = getWorkshopConsensus();
         if (!consensus) return;
         if (consensus.type === 'question') {
-            currentQuestionIndex = consensus.index;
-            updateQuestion();
+            transitionToQuestionIndex(consensus.index);
         } else if (consensus.type === 'finish') {
             handleFinish();
         }
@@ -166,8 +166,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                 dot.className = 'dot w-2.5 h-2.5 flex-none rounded-full bg-white/30 transition-all duration-300 cursor-pointer hover:bg-white/50 hover:scale-110 [&.active]:bg-gradient-to-br [&.active]:from-[#667eea] [&.active]:to-[#764ba2] [&.active]:scale-125 [&.active]:shadow-sm';
                 dot.title = q.text;
                 dot.addEventListener('click', () => {
-                    currentQuestionIndex = index;
-                    updateQuestion();
+                    transitionToQuestionIndex(index);
                 });
                 dotsContainer.appendChild(dot);
             });
@@ -601,6 +600,89 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         }));
     }
 
+    async function maybeCaptureCircleStickers(fromQuestion, toQuestion) {
+        const detectionMode = setupConfig?.project?.stickerDetectionMode;
+        if (detectionMode !== 'circle') return;
+        if (!fromQuestion || fromQuestion.type !== 'sticker') return;
+
+        const colors = Array.isArray(setupConfig?.project?.stickerConfig?.colors)
+            ? setupConfig.project.stickerConfig.colors
+            : [];
+        if (!colors.length) return;
+
+        try {
+            const res = await fetch('http://localhost:5000/api/capture-circles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    projectId: setupConfig?.project?.id || null,
+                    fromQuestionId: fromQuestion.id || null,
+                    fromQuestionIndex: currentQuestionIndex,
+                    toQuestionId: toQuestion?.id || null,
+                    toQuestionIndex: toQuestion ? (questions.findIndex(q => q.id === toQuestion.id)) : null,
+                    stickerColors: colors
+                })
+            });
+            if (!res.ok) {
+                return;
+            }
+            const data = await res.json();
+            if (!data?.ok) return;
+
+            const circles = Array.isArray(data.circles) ? data.circles : [];
+            if (!circles.length) {
+                removeStickersForQuestion(fromQuestion.id);
+                return;
+            }
+
+            removeStickersForQuestion(fromQuestion.id);
+
+            circles.forEach(c => {
+                const nx = c?.nx;
+                const ny = c?.ny;
+                const screen = getScreenCoordsFromNormalized(nx, ny);
+                if (!screen || !Number.isFinite(screen.x) || !Number.isFinite(screen.y)) return;
+
+                const lngLat = getMapCoordsFromScreen(map, screen.x, screen.y);
+                if (!lngLat) return;
+
+                const idx = Number.parseInt(c?.stickerIndex, 10);
+                if (!Number.isInteger(idx) || idx < 0 || idx >= colors.length) return;
+
+                const color = colors[idx] || c?.color || '#ffffff';
+                const typeId = `sticker-btn-${idx + 1}`;
+                addStickerMarker(map, lngLat, color, typeId, fromQuestion.id);
+            });
+        } catch (error) {
+            console.warn('Circle capture failed', error);
+        }
+    }
+
+    async function transitionToQuestionIndex(nextIndex) {
+        if (isTransitioning) return;
+        if (!questions.length) return;
+        if (!Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= questions.length) return;
+
+        const fromIndex = currentQuestionIndex;
+        const toIndex = nextIndex;
+        const fromQuestion = questions[fromIndex];
+        const toQuestion = questions[toIndex];
+
+        isTransitioning = true;
+        setButtonsDisabled(prevButtons, true);
+        setButtonsDisabled(nextButtons, true);
+
+        try {
+            if (toIndex > fromIndex) {
+                await maybeCaptureCircleStickers(fromQuestion, toQuestion);
+            }
+            currentQuestionIndex = nextIndex;
+            updateQuestion();
+        } finally {
+            isTransitioning = false;
+        }
+    }
+
     async function saveResponses() {
         const payload = buildResponsesPayload();
         const filename = `${setupConfig.project.id || 'project'}_responses_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
@@ -694,8 +776,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         btn.addEventListener('click', () => {
             if (!questions.length) return;
             if (currentQuestionIndex > 0) {
-                currentQuestionIndex--;
-                updateQuestion();
+                transitionToQuestionIndex(currentQuestionIndex - 1);
             }
         });
     });
@@ -704,8 +785,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         btn.addEventListener('click', async () => {
             if (!questions.length) return;
             if (currentQuestionIndex < questions.length - 1) {
-                currentQuestionIndex++;
-                updateQuestion();
+                await transitionToQuestionIndex(currentQuestionIndex + 1);
             }
         });
     });
@@ -718,6 +798,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         if (!questions.length) return;
         setButtonsDisabled(finishButtonsAll, true);
         try {
+            await maybeCaptureCircleStickers(questions[currentQuestionIndex], null);
             await saveResponses();
             if (showPreviousAnswers) {
                 previousResponses = await fetchPreviousResponses();

@@ -1,0 +1,44 @@
+{
+  "projectId": "project-1768213260464",
+  "projectName": "Pilot 3",
+  "savedAt": "2026-01-23T19:33:58.651Z",
+  "answers": [
+    {
+      "questionId": "arrival-mode",
+      "questionText": "How do you typically travel to campus?",
+      "type": "single-choice",
+      "responseShape": "scalar",
+      "answer": null
+    },
+    {
+      "questionId": "bike-lanes",
+      "questionText": "Where should we add bike lanes?",
+      "type": "sticker",
+      "responseShape": "point-collection",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": []
+      }
+    },
+    {
+      "questionId": "confusing-areas",
+      "questionText": "Where do you get confused?",
+      "type": "sticker",
+      "responseShape": "point-collection",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": []
+      }
+    },
+    {
+      "questionId": "priority-corridors",
+      "questionText": "Draw corridors for pedestrians.",
+      "type": "drawing",
+      "responseShape": "line-string",
+      "answer": {
+        "type": "FeatureCollection",
+        "features": []
+      }
+    }
+  ]
+}
