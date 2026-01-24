@@ -600,6 +600,29 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         }));
     }
 
+    let captureBlackoutOverlay = null;
+
+    function setCaptureBlackoutVisible(visible) {
+        if (typeof document === 'undefined') return;
+        if (!captureBlackoutOverlay) {
+            const el = document.createElement('div');
+            Object.assign(el.style, {
+                position: 'fixed',
+                top: '0',
+                left: '0',
+                width: '100vw',
+                height: '100vh',
+                backgroundColor: 'black',
+                zIndex: '20000',
+                display: 'none',
+                pointerEvents: 'none'
+            });
+            document.body.appendChild(el);
+            captureBlackoutOverlay = el;
+        }
+        captureBlackoutOverlay.style.display = visible ? 'block' : 'none';
+    }
+
     async function maybeCaptureCircleStickers(fromQuestion, toQuestion) {
         const detectionMode = setupConfig?.project?.stickerDetectionMode;
         if (detectionMode !== 'circle') return;
@@ -610,51 +633,65 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
             : [];
         if (!colors.length) return;
 
+        setCaptureBlackoutVisible(true);
         try {
-            const res = await fetch('http://localhost:5000/api/capture-circles', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    projectId: setupConfig?.project?.id || null,
-                    fromQuestionId: fromQuestion.id || null,
-                    fromQuestionIndex: currentQuestionIndex,
-                    toQuestionId: toQuestion?.id || null,
-                    toQuestionIndex: toQuestion ? (questions.findIndex(q => q.id === toQuestion.id)) : null,
-                    stickerColors: colors
-                })
-            });
-            if (!res.ok) {
-                return;
-            }
-            const data = await res.json();
-            if (!data?.ok) return;
+            // Ensure the blackout overlay has actually painted before triggering the camera capture.
+            await new Promise(requestAnimationFrame);
+            await new Promise(requestAnimationFrame);
+            await new Promise(resolve => setTimeout(resolve, 100));
 
-            const circles = Array.isArray(data.circles) ? data.circles : [];
-            if (!circles.length) {
+            try {
+                const res = await fetch('http://localhost:5000/api/capture-circles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        projectId: setupConfig?.project?.id || null,
+                        fromQuestionId: fromQuestion.id || null,
+                        fromQuestionIndex: currentQuestionIndex,
+                        toQuestionId: toQuestion?.id || null,
+                        toQuestionIndex: toQuestion ? (questions.findIndex(q => q.id === toQuestion.id)) : null,
+                        stickerColors: colors,
+                        delayMs: 250,
+                        minNewFrames: 3,
+                        waitTimeoutMs: 3000
+                    })
+                });
+                if (!res.ok) {
+                    return;
+                }
+                const data = await res.json();
+                if (!data?.ok) return;
+
+                const circles = Array.isArray(data.circles) ? data.circles : [];
+                if (!circles.length) {
+                    removeStickersForQuestion(fromQuestion.id);
+                    return;
+                }
+
                 removeStickersForQuestion(fromQuestion.id);
-                return;
+
+                circles.forEach(c => {
+                    const nx = c?.nx;
+                    const ny = c?.ny;
+                    const screen = getScreenCoordsFromNormalized(nx, ny);
+                    if (!screen || !Number.isFinite(screen.x) || !Number.isFinite(screen.y)) return;
+
+                    const lngLat = getMapCoordsFromScreen(map, screen.x, screen.y);
+                    if (!lngLat) return;
+
+                    const idx = Number.parseInt(c?.stickerIndex, 10);
+                    if (!Number.isInteger(idx) || idx < 0 || idx >= colors.length) return;
+
+                    const color = colors[idx] || c?.color || '#ffffff';
+                    const typeId = `sticker-btn-${idx + 1}`;
+                    addStickerMarker(map, lngLat, color, typeId, fromQuestion.id);
+                });
+            } catch (error) {
+                console.warn('Circle capture failed', error);
             }
-
-            removeStickersForQuestion(fromQuestion.id);
-
-            circles.forEach(c => {
-                const nx = c?.nx;
-                const ny = c?.ny;
-                const screen = getScreenCoordsFromNormalized(nx, ny);
-                if (!screen || !Number.isFinite(screen.x) || !Number.isFinite(screen.y)) return;
-
-                const lngLat = getMapCoordsFromScreen(map, screen.x, screen.y);
-                if (!lngLat) return;
-
-                const idx = Number.parseInt(c?.stickerIndex, 10);
-                if (!Number.isInteger(idx) || idx < 0 || idx >= colors.length) return;
-
-                const color = colors[idx] || c?.color || '#ffffff';
-                const typeId = `sticker-btn-${idx + 1}`;
-                addStickerMarker(map, lngLat, color, typeId, fromQuestion.id);
-            });
-        } catch (error) {
-            console.warn('Circle capture failed', error);
+        } finally {
+            await new Promise(resolve => setTimeout(resolve, 50));
+            setCaptureBlackoutVisible(false);
         }
     }
 

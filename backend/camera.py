@@ -22,6 +22,8 @@ current_position = {"tags": {}, "detected_ids": []}
 
 frame_lock = threading.Lock()
 latest_frame: Optional[np.ndarray] = None
+latest_frame_seq: int = 0
+latest_frame_updated_at: float = 0.0
 
 calibration_lock = threading.Lock()
 latest_boundary_src_pts: Optional[np.ndarray] = None  # float32 shape (4, 2) for ids [1,2,3,4]
@@ -55,6 +57,21 @@ def capture_circles():
     payload = request.get_json(silent=True) or {}
     sticker_colors = payload.get('stickerColors') or payload.get('colors') or []
     try:
+        delay_ms = int(payload.get('delayMs') or 0)
+    except (TypeError, ValueError):
+        delay_ms = 0
+    delay_ms = max(0, min(2000, delay_ms))
+    try:
+        min_new_frames = int(payload.get('minNewFrames') or 3)
+    except (TypeError, ValueError):
+        min_new_frames = 3
+    min_new_frames = max(0, min(60, min_new_frames))
+    try:
+        wait_timeout_ms = int(payload.get('waitTimeoutMs') or 3000)
+    except (TypeError, ValueError):
+        wait_timeout_ms = 3000
+    wait_timeout_ms = max(0, min(10_000, wait_timeout_ms))
+    try:
         warp_width = payload.get('warpWidth')
         warp_height = payload.get('warpHeight')
         warp_size = payload.get('warpSize')
@@ -79,16 +96,41 @@ def capture_circles():
     from_question_id = _safe_component(payload.get('fromQuestionId') or payload.get('questionId') or "")
 
     with frame_lock:
-        frame = None if latest_frame is None else latest_frame.copy()
+        start_seq = latest_frame_seq
 
     with calibration_lock:
         src_pts = None if latest_boundary_src_pts is None else latest_boundary_src_pts.copy()
         calib_updated_at = float(latest_calibration_updated_at or 0.0)
 
-    if frame is None:
-        return jsonify({"ok": False, "error": "no_frame"}), 503
     if src_pts is None or src_pts.shape != (4, 2):
         return jsonify({"ok": False, "error": "no_calibration"}), 503
+
+    if delay_ms:
+        time.sleep(delay_ms / 1000.0)
+
+    deadline = time.time() + (wait_timeout_ms / 1000.0 if wait_timeout_ms else 0.0)
+    target_seq = start_seq + min_new_frames
+    frame = None
+    frame_seq = None
+    frame_updated_at = None
+
+    while True:
+        with frame_lock:
+            seq = latest_frame_seq
+            src = latest_frame
+            updated_at = latest_frame_updated_at
+            if src is not None and (seq >= target_seq or time.time() >= deadline):
+                frame = src.copy()
+                frame_seq = seq
+                frame_updated_at = updated_at
+                break
+
+        if time.time() >= deadline:
+            break
+        time.sleep(0.01)
+
+    if frame is None:
+        return jsonify({"ok": False, "error": "no_frame"}), 503
 
     dst_pts = np.array([[0, 0], [warp_width - 1, 0], [warp_width - 1, warp_height - 1], [0, warp_height - 1]], dtype="float32")
     H = cv2.getPerspectiveTransform(src_pts.astype("float32"), dst_pts)
@@ -135,6 +177,12 @@ def capture_circles():
             "fromQuestionIndex": payload.get("fromQuestionIndex", None),
             "toQuestionId": payload.get("toQuestionId", None),
             "toQuestionIndex": payload.get("toQuestionIndex", None),
+            "delayMs": delay_ms,
+            "minNewFrames": min_new_frames,
+            "waitTimeoutMs": wait_timeout_ms,
+            "startFrameSeq": start_seq,
+            "capturedFrameSeq": frame_seq,
+            "capturedFrameUpdatedAt": frame_updated_at,
             "warpWidth": warp_width,
             "warpHeight": warp_height,
             "calibrationUpdatedAt": calib_updated_at,
@@ -149,6 +197,8 @@ def capture_circles():
         "warpWidth": warp_width,
         "warpHeight": warp_height,
         "calibrationUpdatedAt": calib_updated_at,
+        "capturedFrameSeq": frame_seq,
+        "capturedFrameUpdatedAt": frame_updated_at,
         "captureFile": image_path.name,
         "circles": normalized
     })
@@ -231,7 +281,7 @@ class LatestFrame:
 
 
 def detect_and_display(cap: cv2.VideoCapture, detector: Detector, args):
-    global latest_frame, latest_boundary_src_pts, latest_calibration_updated_at
+    global latest_frame, latest_frame_seq, latest_frame_updated_at, latest_boundary_src_pts, latest_calibration_updated_at
     window_name = "AprilTag 36h11 Detector"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(window_name, 1280, 720)
@@ -253,6 +303,8 @@ def detect_and_display(cap: cv2.VideoCapture, detector: Detector, args):
 
         with frame_lock:
             latest_frame = frame.copy()
+            latest_frame_seq += 1
+            latest_frame_updated_at = time.time()
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         detections = detector.detect(gray, estimate_tag_pose=False)

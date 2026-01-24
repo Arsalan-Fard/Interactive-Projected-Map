@@ -1,7 +1,8 @@
 import sys
 import os
+import signal
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QWidget, QVBoxLayout
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QPixmap
 
 class AprilTagOverlay(QMainWindow):
@@ -65,28 +66,40 @@ class AprilTagOverlay(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    
+
+    # Set up signal handler for Ctrl+C
+    def signal_handler(sig, frame):
+        print("\nCtrl+C pressed. Closing application...")
+        QApplication.instance().quit()
+
+    signal.signal(signal.SIGINT, signal_handler)
+
+    # Create a timer to allow Python to process signals
+    timer = QTimer()
+    timer.timeout.connect(lambda: None)  # Do nothing, just process events
+    timer.start(100)  # Check every 100ms
+
     ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 46, 47, 48, 49]
     windows = []
     base_dir = os.path.dirname(os.path.abspath(__file__))
     tags_dir = os.path.join(base_dir, '../generated_tags')
-    
+
     for i, tag_id in enumerate(ids):
         filename = f"tag36h11_id{tag_id:02d}.png"
         file_path = os.path.join(tags_dir, filename)
-        
+
         if os.path.exists(file_path):
             tag_size = 40 if tag_id in [5, 6, 7, 8, 9, 10, 11, 46, 47, 48, 49] else 60
             window = AprilTagOverlay(file_path, tag_id, tag_size)
-            
+
             screen_geom = app.primaryScreen().geometry()
             s_width = screen_geom.width()
             s_height = screen_geom.height()
             w = window.width()
             h = window.height()
-            
+
             x, y =  1500, (i*80) - 320  # Default position
-            
+
             if tag_id == 1:   # Top Left
                 x, y = 0, 25
             elif tag_id == 2: # Top Right
@@ -95,13 +108,13 @@ if __name__ == '__main__':
                 x, y = s_width - w + 125, s_height - h - 10
             elif tag_id == 4: # Bottom Left
                 x, y = 0, s_height - h - 10
-            
+
             window.move(x, y)
             window.show()
             windows.append(window)
         else:
             print(f"Warning: Tag file not found: {file_path}")
-            
+
     if not windows:
         print("No tags loaded.")
         sys.exit(1)
