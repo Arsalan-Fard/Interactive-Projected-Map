@@ -597,6 +597,60 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         };
     }
 
+    function getDrawingItems() {
+        const drawingConfig = setupConfig?.project?.drawingConfig;
+        if (!drawingConfig) return [];
+        if (Array.isArray(drawingConfig)) return drawingConfig;
+        if (Array.isArray(drawingConfig.items)) return drawingConfig.items;
+        if (drawingConfig.label || drawingConfig.color || drawingConfig.tagId !== undefined) {
+            return [drawingConfig];
+        }
+        return [];
+    }
+
+    function getDetectedDrawingColor(colorName) {
+        const items = getDrawingItems();
+        const order = ['red', 'black', 'green', 'blue'];
+        const idx = order.indexOf(String(colorName || '').toLowerCase());
+        if (idx >= 0 && items[idx]?.color) {
+            return items[idx].color;
+        }
+        const fallback = {
+            red: '#ff0000',
+            black: '#000000',
+            green: '#00ff00',
+            blue: '#0000ff'
+        };
+        return fallback[colorName] || items[0]?.color || '#ffffff';
+    }
+
+    function getDetectedDrawingMeta(colorName) {
+        const items = getDrawingItems();
+        const order = ['red', 'black', 'green', 'blue'];
+        const idx = order.indexOf(String(colorName || '').toLowerCase());
+        if (idx >= 0 && items[idx]) {
+            return { item: items[idx], index: idx };
+        }
+        return { item: items[0] || null, index: idx };
+    }
+
+    function removeDetectedDrawingsForQuestion(questionId) {
+        if (!draw || typeof draw.getAll !== 'function' || typeof draw.delete !== 'function') return;
+        const all = draw.getAll();
+        const ids = (all?.features || [])
+            .filter(feature => feature?.properties?.tm_source === 'detected'
+                && (!questionId || feature?.properties?.questionId === questionId))
+            .map(feature => feature.id)
+            .filter(Boolean);
+        if (ids.length) {
+            try {
+                draw.delete(ids);
+            } catch {
+                // ignore
+            }
+        }
+    }
+
     function notifyQuestionChange(question) {
         if (typeof window === 'undefined') return;
         window.dispatchEvent(new CustomEvent('question-change', {
@@ -795,11 +849,115 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
             const mapViewSnapshot = getMapViewSnapshot();
             lockMapTransitions();
             await maybeCaptureCircleStickers(fromQuestion, toQuestion, mapViewSnapshot);
+            await maybeCaptureDrawingPaths(fromQuestion, toQuestion, mapViewSnapshot);
             currentQuestionIndex = nextIndex;
             updateQuestion();
         } finally {
             unlockMapTransitions();
             isTransitioning = false;
+        }
+    }
+
+    async function maybeCaptureDrawingPaths(fromQuestion, toQuestion, mapViewSnapshot) {
+        const detectionMode = setupConfig?.project?.drawingDetectionMode;
+        if (detectionMode !== 'drawing') return;
+        if (!fromQuestion || fromQuestion.type !== 'drawing') return;
+        if (!draw || typeof draw.add !== 'function') return;
+
+        const stickerColors = Array.isArray(setupConfig?.project?.stickerConfig?.colors)
+            ? setupConfig.project.stickerConfig.colors
+            : [];
+
+        restoreMapViewSnapshot(mapViewSnapshot);
+        setCaptureBlackoutVisible(true);
+        try {
+            await new Promise(requestAnimationFrame);
+            await new Promise(requestAnimationFrame);
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            try {
+                const res = await fetch('http://localhost:5000/api/capture-circles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        projectId: setupConfig?.project?.id || null,
+                        fromQuestionId: fromQuestion.id || null,
+                        fromQuestionIndex: currentQuestionIndex,
+                        toQuestionId: toQuestion?.id || null,
+                        toQuestionIndex: toQuestion ? (questions.findIndex(q => q.id === toQuestion.id)) : null,
+                        stickerColors,
+                        detectPaths: true,
+                        delayMs: 250,
+                        minNewFrames: 3,
+                        waitTimeoutMs: 3000
+                    })
+                });
+                if (!res.ok) {
+                    return;
+                }
+                const data = await res.json();
+                if (!data?.ok) return;
+
+                const paths = Array.isArray(data.paths) ? data.paths : [];
+                removeDetectedDrawingsForQuestion(fromQuestion.id);
+                if (!paths.length) return;
+
+                restoreMapViewSnapshot(mapViewSnapshot);
+
+                const features = [];
+                paths.forEach(path => {
+                    const colorName = path?.color || '';
+                    const points = Array.isArray(path?.points) ? path.points : [];
+                    if (points.length < 2) return;
+
+                    const coords = [];
+                    points.forEach(p => {
+                        const nx = p?.nx;
+                        const ny = p?.ny;
+                        const screen = getScreenCoordsFromNormalized(nx, ny);
+                        if (!screen || !Number.isFinite(screen.x) || !Number.isFinite(screen.y)) return;
+                        const lngLat = getMapCoordsFromScreen(map, screen.x, screen.y);
+                        if (!lngLat) return;
+                        coords.push([lngLat.lng, lngLat.lat]);
+                    });
+                    if (coords.length < 2) return;
+
+                    const meta = getDetectedDrawingMeta(colorName);
+                    const color = getDetectedDrawingColor(colorName);
+                    const toolId = meta.item?.id || '';
+                    const label = meta.item?.label || '';
+
+                    features.push({
+                        type: 'Feature',
+                        geometry: { type: 'LineString', coordinates: coords },
+                        properties: {
+                            color,
+                            label,
+                            drawingToolId: toolId,
+                            drawingToolIndex: meta.index,
+                            tm_source: 'detected',
+                            questionId: fromQuestion.id,
+                            questionIndex: currentQuestionIndex,
+                            questionText: fromQuestion.text,
+                            storageKey: fromQuestion.storageKey || fromQuestion.id,
+                            projectId: setupConfig?.project?.id || null,
+                            timestamp: new Date().toISOString()
+                        }
+                    });
+                });
+
+                if (features.length) {
+                    draw.add({
+                        type: 'FeatureCollection',
+                        features
+                    });
+                }
+            } catch (error) {
+                console.warn('Drawing capture failed', error);
+            }
+        } finally {
+            await new Promise(resolve => setTimeout(resolve, 50));
+            setCaptureBlackoutVisible(false);
         }
     }
 
@@ -905,7 +1063,9 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         if (!questions.length) return;
         setButtonsDisabled(finishButtonsAll, true);
         try {
-            await maybeCaptureCircleStickers(questions[currentQuestionIndex], null);
+            const mapViewSnapshot = getMapViewSnapshot();
+            await maybeCaptureCircleStickers(questions[currentQuestionIndex], null, mapViewSnapshot);
+            await maybeCaptureDrawingPaths(questions[currentQuestionIndex], null, mapViewSnapshot);
             await saveResponses();
             if (showPreviousAnswers) {
                 previousResponses = await fetchPreviousResponses();

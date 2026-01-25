@@ -10,7 +10,7 @@ import os
 from skimage.filters import meijering
 from skimage.morphology import skeletonize, remove_small_objects, disk
 from skimage import img_as_float
-import matplotlib.pyplot as plt
+
 
 
 def load_and_preprocess(image_path):
@@ -230,6 +230,7 @@ def create_visualization(img_rgb, ridges_norm, color_masks, skeletons):
 
 def main(image_path):
     """Main processing pipeline"""
+    import matplotlib.pyplot as plt
     print("Loading and preprocessing image...")
     img_rgb, img_hsv, img_gray = load_and_preprocess(image_path)
     
@@ -284,6 +285,48 @@ def main(image_path):
     
     plt.close('all')
     return color_masks, skeletons, ridges_norm
+
+
+def extract_line_paths(image_path, min_skeleton_pixels=60):
+    """Return detected line paths as pixel coordinates grouped by color."""
+    img_rgb, img_hsv, img_gray = load_and_preprocess(image_path)
+
+    _, ridge_mask = apply_ridge_detection(img_gray)
+    color_masks = classify_by_hue_and_saturation(img_hsv, ridge_mask)
+    color_masks = clean_masks(color_masks)
+    skeletons = skeletonize_paths(color_masks)
+
+    skeletons = suppress_overlapping_paths(
+        skeletons,
+        primary_color='blue',
+        secondary_color='black',
+        radius=12,
+        min_overlap_ratio=0.2,
+        min_remaining_pixels=50
+    )
+
+    for color_name, skel in list(skeletons.items()):
+        skeletons[color_name] = prune_small_components(
+            skel,
+            min_pixels=min_skeleton_pixels
+        )
+
+    paths = {}
+    for color_name, skel in skeletons.items():
+        if skel is None or skel.max() == 0:
+            continue
+        contours, _ = cv2.findContours(skel, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        color_paths = []
+        for contour in contours:
+            if contour is None or len(contour) < 2:
+                continue
+            points = contour.reshape(-1, 2)
+            if points.shape[0] < 2:
+                continue
+            color_paths.append(points.astype(float).tolist())
+        if color_paths:
+            paths[color_name] = color_paths
+    return paths
 
 
 if __name__ == "__main__":

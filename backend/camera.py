@@ -196,6 +196,46 @@ def capture_circles():
             "bgr": c.get("bgr", None)
         })
 
+    # Store a cache image with detected circles masked to white.
+    masked = warped.copy()
+    for cx, cy, cr in circle_pixels:
+        if cr <= 0:
+            continue
+        cv2.circle(masked, (int(round(cx)), int(round(cy))), int(round(cr)), (255, 255, 255), -1, lineType=cv2.LINE_AA)
+    masked_path = CAPTURE_DIR / f"{base}__no_circles.png"
+    try:
+        cv2.imwrite(str(masked_path), masked)
+    except Exception:
+        pass
+
+    paths_payload = []
+    paths_error = None
+    try:
+        from extract_paths import extract_line_paths
+        paths = extract_line_paths(str(masked_path))
+        for color_name, lines in (paths or {}).items():
+            for line in lines or []:
+                points = []
+                for point in line or []:
+                    if not isinstance(point, (list, tuple)) or len(point) < 2:
+                        continue
+                    px = float(point[0])
+                    py = float(point[1])
+                    points.append({
+                        "nx": px / denom_x,
+                        "ny": py / denom_y
+                    })
+                if len(points) < 2:
+                    continue
+                paths_payload.append({
+                    "color": color_name,
+                    "points": points
+                })
+    except Exception as exc:
+        paths_payload = []
+        paths_error = str(exc)
+        logging.exception("Path extraction failed")
+
     json_path = CAPTURE_DIR / f"{base}.json"
     try:
         json_path.write_text(json.dumps({
@@ -214,23 +254,12 @@ def capture_circles():
             "warpWidth": warp_width,
             "warpHeight": warp_height,
             "calibrationUpdatedAt": calib_updated_at,
-            "circles": normalized
+            "circles": normalized,
+            "paths": paths_payload,
+            "pathsError": paths_error
         }, indent=2), encoding="utf-8")
     except Exception:
         pass
-
-    # Store a cache image with detected circles masked to white.
-    if circle_pixels:
-        masked = warped.copy()
-        for cx, cy, cr in circle_pixels:
-            if cr <= 0:
-                continue
-            cv2.circle(masked, (int(round(cx)), int(round(cy))), int(round(cr)), (255, 255, 255), -1, lineType=cv2.LINE_AA)
-        masked_path = CAPTURE_DIR / f"{base}__no_circles.png"
-        try:
-            cv2.imwrite(str(masked_path), masked)
-        except Exception:
-            pass
 
     return jsonify({
         "ok": True,
@@ -242,7 +271,9 @@ def capture_circles():
         "capturedFrameUpdatedAt": frame_updated_at,
         "captureFile": image_path.name,
         "maskedCaptureFile": f"{base}__no_circles.png",
-        "circles": normalized
+        "circles": normalized,
+        "paths": paths_payload,
+        "pathsError": paths_error
     })
 
 

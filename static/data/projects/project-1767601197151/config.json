@@ -131,25 +131,25 @@
         {
           "id": "drawing-1",
           "label": "Pen 1",
-          "color": "#ff5297",
+          "color": "#ff0000",
           "tagId": 6
         },
         {
           "id": "drawing-2",
           "label": "Pen 2",
-          "color": "#4d52ff",
+          "color": "#060000",
           "tagId": 7
         },
         {
           "id": "drawing-3",
           "label": "Pen 3",
-          "color": "#4dff82",
+          "color": "#0000ff",
           "tagId": 8
         },
         {
           "id": "drawing-4",
           "label": "Pen 4",
-          "color": "#feea67",
+          "color": "#00ff00",
           "tagId": 9
         }
       ],
@@ -279,7 +279,7 @@
     {
       "id": "arrival-mode",
       "text": "Where do you visit the most? Mark them on the map with 5 red stickers.",
-      "type": "sticker",
+      "type": "drawing",
       "options": [
         "Walk",
         "Bike",
@@ -294,7 +294,7 @@
     {
       "id": "bike-lanes",
       "text": "If you walk/bike/drive, draw your entrance to campus, else (bus,...) just use the red sticker.",
-      "type": "drawing",
+      "type": "sticker",
       "options": [],
       "required": false,
       "responseShape": "point-collection",
@@ -325,14 +325,14 @@
   "responseTemplate": {
     "arrival-mode": {
       "questionId": "arrival-mode",
-      "type": "sticker",
+      "type": "drawing",
       "responseShape": "scalar",
       "required": true,
       "answers": []
     },
     "bike-lanes": {
       "questionId": "bike-lanes",
-      "type": "drawing",
+      "type": "sticker",
       "responseShape": "point-collection",
       "required": false,
       "answers": []
