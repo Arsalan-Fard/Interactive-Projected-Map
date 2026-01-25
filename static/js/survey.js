@@ -695,7 +695,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
     async function maybeCaptureCircleStickers(fromQuestion, toQuestion, mapViewSnapshot) {
         const detectionMode = setupConfig?.project?.stickerDetectionMode;
         if (detectionMode !== 'circle') return;
-        if (!fromQuestion || fromQuestion.type !== 'sticker') return;
+        if (!fromQuestion) return;
 
         const colors = Array.isArray(setupConfig?.project?.stickerConfig?.colors)
             ? setupConfig.project.stickerConfig.colors
@@ -785,11 +785,9 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         setButtonsDisabled(nextButtons, true);
 
         try {
-            const mapViewSnapshot = toIndex > fromIndex ? getMapViewSnapshot() : null;
+            const mapViewSnapshot = getMapViewSnapshot();
             lockMapTransitions();
-            if (toIndex > fromIndex) {
-                await maybeCaptureCircleStickers(fromQuestion, toQuestion, mapViewSnapshot);
-            }
+            await maybeCaptureCircleStickers(fromQuestion, toQuestion, mapViewSnapshot);
             currentQuestionIndex = nextIndex;
             updateQuestion();
         } finally {
