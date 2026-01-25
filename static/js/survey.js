@@ -460,18 +460,23 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         const polygonFeatures = [];
 
         entries.forEach(({ answer }) => {
-            const features = answer.answer?.features;
-            if (!Array.isArray(features)) return;
-            features.forEach(feature => {
-                const geomType = feature?.geometry?.type;
-                if (!geomType) return;
-                if (geomType === 'Point' || geomType === 'MultiPoint') {
-                    pointFeatures.push(feature);
-                } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
-                    lineFeatures.push(feature);
-                } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
-                    polygonFeatures.push(feature);
-                }
+            const featureGroups = [
+                answer.answer?.features,
+                answer.stickerAnswer?.features
+            ];
+            featureGroups.forEach(features => {
+                if (!Array.isArray(features)) return;
+                features.forEach(feature => {
+                    const geomType = feature?.geometry?.type;
+                    if (!geomType) return;
+                    if (geomType === 'Point' || geomType === 'MultiPoint') {
+                        pointFeatures.push(feature);
+                    } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
+                        lineFeatures.push(feature);
+                    } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+                        polygonFeatures.push(feature);
+                    }
+                });
             });
         });
 
@@ -565,16 +570,17 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
             savedAt: new Date().toISOString(),
             answers: questions.map((question, index) => {
                 let answer = null;
+                const stickerFeatures = buildStickerFeatures(question, index);
+                const stickerAnswer = stickerFeatures.length
+                    ? { type: 'FeatureCollection', features: stickerFeatures }
+                    : null;
                 if (['single-choice', 'multi-choice'].includes(question.type)) {
                     const stored = responseState.get(question.id);
                     answer = question.type === 'multi-choice'
                         ? (Array.isArray(stored) ? stored : [])
                         : (stored ?? null);
                 } else if (question.type === 'sticker') {
-                    answer = {
-                        type: 'FeatureCollection',
-                        features: buildStickerFeatures(question, index)
-                    };
+                    answer = stickerAnswer;
                 } else if (question.type === 'drawing') {
                     answer = draw.getAll();
                 }
@@ -584,7 +590,8 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                     questionText: question.text,
                     type: question.type,
                     responseShape: question.responseShape,
-                    answer: answer
+                    answer: answer,
+                    stickerAnswer: question.type === 'sticker' ? null : stickerAnswer
                 };
             })
         };

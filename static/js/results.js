@@ -436,8 +436,12 @@ async function initResults() {
 
         entries.forEach(entry => {
             const features = entry.answer?.answer?.features;
+            const stickerFeatures = entry.answer?.stickerAnswer?.features;
             if (Array.isArray(features)) {
                 collected.push(...features);
+            }
+            if (Array.isArray(stickerFeatures)) {
+                collected.push(...stickerFeatures);
             }
         });
 
