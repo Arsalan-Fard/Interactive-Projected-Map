@@ -57,6 +57,8 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
     let workshopDots = [];
     let workshopSelections = [];
     let isTransitioning = false;
+    let mapTransitionLocks = 0;
+    let pendingMapConfig = null;
 
     const prevButtons = Array.from(new Set([
         ...document.querySelectorAll('[data-question-nav="prev"]'),
@@ -623,7 +625,74 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         captureBlackoutOverlay.style.display = visible ? 'block' : 'none';
     }
 
-    async function maybeCaptureCircleStickers(fromQuestion, toQuestion) {
+    function getMapViewSnapshot() {
+        if (!map) return null;
+        try {
+            const center = map.getCenter?.();
+            const lng = center?.lng;
+            const lat = center?.lat;
+            const zoom = map.getZoom?.();
+            const pitch = map.getPitch?.();
+            const bearing = map.getBearing?.();
+            if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+            if (!Number.isFinite(zoom) || !Number.isFinite(pitch) || !Number.isFinite(bearing)) return null;
+            return { center: [lng, lat], zoom, pitch, bearing };
+        } catch {
+            return null;
+        }
+    }
+
+    function restoreMapViewSnapshot(snapshot) {
+        if (!map || !snapshot) return;
+        try {
+            if (typeof map.stop === 'function') {
+                map.stop();
+            }
+            if (typeof map.jumpTo === 'function') {
+                map.jumpTo(snapshot);
+            }
+        } catch {
+            // ignore
+        }
+    }
+
+    function lockMapTransitions() {
+        mapTransitionLocks += 1;
+    }
+
+    function applyMapConfig(mapConfig) {
+        if (!mapConfig) return;
+
+        // Update active overlays
+        overlayStateRef.current = new Set(mapConfig.overlays || []);
+
+        // Update visibility of existing layers
+        if (setupConfig.overlays) {
+            setupConfig.overlays.forEach(layer => {
+                const isVisible = overlayStateRef.current.has(layer.id);
+                loadAndRenderLayer(map, layer, isVisible);
+            });
+        }
+
+        // Fly to new view
+        map.flyTo({
+            center: mapConfig.center,
+            zoom: mapConfig.zoom,
+            pitch: mapConfig.pitch,
+            bearing: mapConfig.bearing
+        });
+    }
+
+    function unlockMapTransitions() {
+        mapTransitionLocks = Math.max(0, mapTransitionLocks - 1);
+        if (mapTransitionLocks > 0) return;
+        if (!pendingMapConfig) return;
+        const cfg = pendingMapConfig;
+        pendingMapConfig = null;
+        applyMapConfig(cfg);
+    }
+
+    async function maybeCaptureCircleStickers(fromQuestion, toQuestion, mapViewSnapshot) {
         const detectionMode = setupConfig?.project?.stickerDetectionMode;
         if (detectionMode !== 'circle') return;
         if (!fromQuestion || fromQuestion.type !== 'sticker') return;
@@ -632,6 +701,9 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
             ? setupConfig.project.stickerConfig.colors
             : [];
         if (!colors.length) return;
+
+        // Stop any in-progress map animation so screen->lng/lat conversion uses the correct view.
+        restoreMapViewSnapshot(mapViewSnapshot);
 
         setCaptureBlackoutVisible(true);
         try {
@@ -669,6 +741,9 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                 }
 
                 removeStickersForQuestion(fromQuestion.id);
+
+                // Ensure conversion happens against the original (pre-next-click) map view.
+                restoreMapViewSnapshot(mapViewSnapshot);
 
                 circles.forEach(c => {
                     const nx = c?.nx;
@@ -710,12 +785,15 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         setButtonsDisabled(nextButtons, true);
 
         try {
+            const mapViewSnapshot = toIndex > fromIndex ? getMapViewSnapshot() : null;
+            lockMapTransitions();
             if (toIndex > fromIndex) {
-                await maybeCaptureCircleStickers(fromQuestion, toQuestion);
+                await maybeCaptureCircleStickers(fromQuestion, toQuestion, mapViewSnapshot);
             }
             currentQuestionIndex = nextIndex;
             updateQuestion();
         } finally {
+            unlockMapTransitions();
             isTransitioning = false;
         }
     }
@@ -769,24 +847,11 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         if (q.mapId && setupConfig.maps) {
             const mapConfig = setupConfig.maps.find(m => m.id === q.mapId);
             if (mapConfig) {
-                // Update active overlays
-                overlayStateRef.current = new Set(mapConfig.overlays || []);
-
-                // Update visibility of existing layers
-                if (setupConfig.overlays) {
-                    setupConfig.overlays.forEach(layer => {
-                        const isVisible = overlayStateRef.current.has(layer.id);
-                        loadAndRenderLayer(map, layer, isVisible);
-                    });
+                if (mapTransitionLocks > 0) {
+                    pendingMapConfig = mapConfig;
+                } else {
+                    applyMapConfig(mapConfig);
                 }
-
-                // Fly to new view
-                map.flyTo({
-                    center: mapConfig.center,
-                    zoom: mapConfig.zoom,
-                    pitch: mapConfig.pitch,
-                    bearing: mapConfig.bearing
-                });
             }
         }
 
