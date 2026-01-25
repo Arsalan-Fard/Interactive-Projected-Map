@@ -9,6 +9,7 @@ import {
 } from './setup-defaults.js';
 import { getTagImageSrc } from './setup-utils.js';
 import {
+    clampDrawingCount,
     clampStickerCount,
     clampTagSettingsCount,
     normalizeDrawingConfig,
@@ -88,6 +89,11 @@ const els = {
     projectRearProjection: document.getElementById('project-rear-projection'),
     projectTuiMode: document.getElementById('project-tui-mode'),
     projectWorkshopMode: document.getElementById('workshop-mode'),
+    drawingDetectionMode: document.getElementById('drawing-detection-mode'),
+    drawingCount: document.getElementById('drawing-count'),
+    drawingColors: document.getElementById('drawing-colors'),
+    drawingTagSettings: document.getElementById('drawing-tag-settings'),
+    drawingColorSettings: document.getElementById('drawing-color-settings'),
     drawingSettingsList: document.getElementById('drawing-settings-list'),
     addDrawingSetting: document.getElementById('add-drawing-setting'),
     stickerDetectionMode: document.getElementById('sticker-detection-mode'),
@@ -193,6 +199,7 @@ const eventHandlers = createEventHandlers({
         renderDrawingConfig,
         renderStickerConfig,
         renderTagConfig,
+        updateDrawingCount,
         updateStickerCount,
         updateSelectedMap,
         deleteMap,
@@ -274,6 +281,20 @@ function renderStickerDetectionMode() {
     });
 }
 
+function getDrawingDetectionMode() {
+    const mode = state?.project?.drawingDetectionMode;
+    return mode === 'drawing' ? 'drawing' : 'tag';
+}
+
+function renderDrawingDetectionMode() {
+    if (!els.drawingDetectionMode) return;
+    const mode = getDrawingDetectionMode();
+    const radios = els.drawingDetectionMode.querySelectorAll('input[name="drawing-detection-mode"]');
+    radios.forEach(radio => {
+        radio.checked = radio.value === mode;
+    });
+}
+
 function renderProject() {
     els.projectName.value = state.project.name || '';
     els.projectLocation.value = state.project.location || '';
@@ -289,6 +310,7 @@ function renderProject() {
         els.projectWorkshopMode.checked = !!state.project.workshopMode;
     }
     renderStickerDetectionMode();
+    renderDrawingDetectionMode();
     renderDrawingConfig();
     renderStickerConfig();
     renderTagSettings();
@@ -296,6 +318,7 @@ function renderProject() {
 }
 
 function getAllDrawingTagIds() {
+    if (getDrawingDetectionMode() !== 'tag') return [];
     const items = state.project?.drawingConfig?.items;
     if (!Array.isArray(items)) return [];
     return items
@@ -304,6 +327,21 @@ function getAllDrawingTagIds() {
 }
 
 function renderDrawingConfig() {
+    const mode = getDrawingDetectionMode();
+    if (els.drawingTagSettings) {
+        els.drawingTagSettings.style.display = mode === 'tag' ? '' : 'none';
+    }
+    if (els.drawingColorSettings) {
+        els.drawingColorSettings.style.display = mode === 'drawing' ? '' : 'none';
+    }
+    if (mode === 'tag') {
+        renderDrawingTagSettings();
+        return;
+    }
+    renderDrawingColorSettings();
+}
+
+function renderDrawingTagSettings() {
     if (!els.drawingSettingsList) return;
     normalizeDrawingConfig(state);
     const items = state.project.drawingConfig?.items || DEFAULT_DRAWING_CONFIG.items;
@@ -451,6 +489,59 @@ function renderDrawingConfig() {
     });
 }
 
+function renderDrawingColorSettings() {
+    if (!els.drawingCount || !els.drawingColors) return;
+    normalizeDrawingConfig(state);
+    const items = state.project.drawingConfig?.items || DEFAULT_DRAWING_CONFIG.items;
+    const rawCount = Number.isInteger(state.project.drawingConfig?.count)
+        ? state.project.drawingConfig.count
+        : items.length;
+    const count = clampDrawingCount(rawCount);
+    if (state.project.drawingConfig) {
+        state.project.drawingConfig.count = count;
+    }
+
+    els.drawingCount.value = count;
+    els.drawingColors.innerHTML = '';
+
+    items.slice(0, count).forEach((item, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex flex-col gap-2';
+
+        const swatchRow = document.createElement('div');
+        swatchRow.className = 'relative';
+
+        const swatch = document.createElement('button');
+        swatch.type = 'button';
+        swatch.className = 'w-9 h-9 rounded-full border border-border-subtle shadow-inner cursor-pointer transition-transform duration-200 hover:scale-105';
+        const fallbackColor = DEFAULT_DRAWING_CONFIG.items[index]?.color || DEFAULT_DRAWING_ITEM.color;
+        const currentColor = item?.color || fallbackColor;
+        swatch.style.backgroundColor = currentColor;
+        swatch.title = `Pen ${index + 1} color`;
+
+        const picker = document.createElement('input');
+        picker.type = 'color';
+        picker.value = currentColor;
+        picker.className = 'absolute opacity-0 pointer-events-none w-0 h-0';
+
+        swatch.addEventListener('click', () => {
+            picker.click();
+        });
+
+        picker.addEventListener('input', () => {
+            const nextColor = picker.value;
+            state.project.drawingConfig.items[index].color = nextColor;
+            swatch.style.backgroundColor = nextColor;
+            markSaved('Unsaved changes');
+        });
+
+        swatchRow.appendChild(swatch);
+        swatchRow.appendChild(picker);
+        wrapper.appendChild(swatchRow);
+        els.drawingColors.appendChild(wrapper);
+    });
+}
+
 function renderProjectDropdown() {
     if (!els.projectDropdown) return;
     const currentValue = els.projectDropdown.value;
@@ -470,6 +561,19 @@ function renderProjectDropdown() {
     } else if (currentValue) {
         els.projectDropdown.value = currentValue;
     }
+}
+
+function updateDrawingCount(nextCount) {
+    normalizeDrawingConfig(state);
+    const count = clampDrawingCount(nextCount);
+    const items = Array.isArray(state.project.drawingConfig?.items)
+        ? state.project.drawingConfig.items.slice()
+        : [];
+    while (items.length < count) {
+        const fallback = DEFAULT_DRAWING_CONFIG.items[items.length] || DEFAULT_DRAWING_ITEM;
+        items.push({ ...fallback });
+    }
+    state.project.drawingConfig = { items, count };
 }
 
 function updateStickerCount(nextCount) {

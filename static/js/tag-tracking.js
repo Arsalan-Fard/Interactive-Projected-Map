@@ -110,21 +110,25 @@ export function initTagTracking({ map, setupConfig, draw }) {
         ? drawingConfig
         : (Array.isArray(drawingConfig.items) ? drawingConfig.items : [drawingConfig]);
 
+    const drawingDetectionMode = setupConfig?.project?.drawingDetectionMode;
+    const useTagDrawing = drawingDetectionMode !== 'drawing';
     const drawingToolByTagId = new Map();
-    rawDrawingItems.forEach(item => {
-        if (!Number.isInteger(item?.tagId)) return;
-        if (drawingToolByTagId.has(item.tagId)) return;
-        drawingToolByTagId.set(item.tagId, {
-            tagId: item.tagId,
-            label: typeof item?.label === 'string' ? item.label : '',
-            color: typeof item?.color === 'string' ? item.color.trim() : '#ff00ff'
+    if (useTagDrawing) {
+        rawDrawingItems.forEach(item => {
+            if (!Number.isInteger(item?.tagId)) return;
+            if (drawingToolByTagId.has(item.tagId)) return;
+            drawingToolByTagId.set(item.tagId, {
+                tagId: item.tagId,
+                label: typeof item?.label === 'string' ? item.label : '',
+                color: typeof item?.color === 'string' ? item.color.trim() : '#ff00ff'
+            });
         });
-    });
-    if (drawingToolByTagId.size === 0) {
-        drawingToolByTagId.set(6, { tagId: 6, label: 'drawing line', color: '#ff00ff' });
+        if (drawingToolByTagId.size === 0) {
+            drawingToolByTagId.set(6, { tagId: 6, label: 'drawing line', color: '#ff00ff' });
+        }
     }
 
-    const drawingTagIds = new Set(drawingToolByTagId.keys());
+    const drawingTagIds = new Set(useTagDrawing ? drawingToolByTagId.keys() : []);
     const drawingStateByTagId = new Map(); // tagId -> { coordinates, lastScreenPoint, lastSampleTime, lostStart }
     const finalizedDrawingFeatures = []; // List of finished lines (still rendered with custom colors)
     const TM_SOURCE_KEY = 'tm_source';

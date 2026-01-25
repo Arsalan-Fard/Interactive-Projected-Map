@@ -1,5 +1,5 @@
-import { DEFAULT_DRAWING_ITEM } from './setup-defaults.js';
-import { clampStickerCount, clampTagSettingsCount, normalizeDrawingConfig } from './setup-normalizers.js';
+import { DEFAULT_DRAWING_CONFIG, DEFAULT_DRAWING_ITEM } from './setup-defaults.js';
+import { clampDrawingCount, clampStickerCount, clampTagSettingsCount, normalizeDrawingConfig } from './setup-normalizers.js';
 import { parseCenter, slugify } from './setup-utils.js';
 
 export function createEventHandlers({ store, els, handlers }) {
@@ -23,6 +23,7 @@ export function createEventHandlers({ store, els, handlers }) {
         renderDrawingConfig,
         renderStickerConfig,
         renderTagConfig,
+        updateDrawingCount,
         updateStickerCount,
         updateSelectedMap,
         deleteMap,
@@ -181,19 +182,47 @@ export function createEventHandlers({ store, els, handlers }) {
         });
 
         els.addDrawingSetting?.addEventListener('click', () => {
+            if (store.state.project?.drawingDetectionMode === 'drawing') return;
             normalizeDrawingConfig(store.state);
             const items = store.state.project.drawingConfig.items;
             const nextIndex = items.length + 1;
+            const fallback = DEFAULT_DRAWING_CONFIG.items[items.length] || DEFAULT_DRAWING_ITEM;
             items.push({
                 id: `drawing-${nextIndex}`,
-                label: DEFAULT_DRAWING_ITEM.label,
-                color: DEFAULT_DRAWING_ITEM.color,
-                tagId: DEFAULT_DRAWING_ITEM.tagId
+                label: fallback.label,
+                color: fallback.color,
+                tagId: fallback.tagId
             });
             renderDrawingConfig();
             renderStickerConfig();
             renderTagConfig();
             markSaved('Unsaved changes');
+        });
+
+        els.drawingCount?.addEventListener('input', e => {
+            if (store.state.project?.drawingDetectionMode !== 'drawing') return;
+            const raw = Number.parseInt(e.target.value, 10);
+            if (!Number.isFinite(raw)) return;
+            const nextCount = clampDrawingCount(raw);
+            if (nextCount !== raw) {
+                e.target.value = nextCount;
+            }
+            updateDrawingCount(nextCount);
+            renderDrawingConfig();
+            renderStickerConfig();
+            renderTagConfig();
+            markSaved('Unsaved changes');
+        });
+
+        els.drawingDetectionMode?.querySelectorAll('input[name="drawing-detection-mode"]')?.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const next = e.target?.value === 'drawing' ? 'drawing' : 'tag';
+                store.state.project.drawingDetectionMode = next;
+                renderDrawingConfig();
+                renderStickerConfig();
+                renderTagConfig();
+                markSaved('Unsaved changes');
+            });
         });
 
         els.stickerCount?.addEventListener('input', e => {

@@ -250,13 +250,60 @@
                         <div class="section-header flex items-center justify-between mb-4">
                             <div>
                                 <h3 class="text-base font-semibold m-0">Drawing Settings</h3>
-                                <p class="text-xs text-text-muted m-0 mt-1">Configure the AprilTag and color used for
-                                    the drawing tool.</p>
+                                <p class="text-xs text-text-muted m-0 mt-1">Choose how drawing is detected and set the pen
+                                    colors.</p>
                             </div>
-                            <button id="add-drawing-setting"
-                                class="btn-secondary h-[34px] px-4 text-[13px] bg-transparent text-text-primary border border-border-subtle rounded-md font-medium cursor-pointer transition-all duration-200 flex items-center justify-center hover:border-accent-primary hover:text-accent-primary">Add</button>
                         </div>
-                        <div id="drawing-settings-list" class="flex flex-col gap-3"></div>
+                        <div
+                            class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                            <label
+                                class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Detection</label>
+                            <div id="drawing-detection-mode"
+                                class="flex w-full bg-bg-tertiary border border-border-subtle rounded-md p-1 gap-1">
+                                <label class="flex-1 cursor-pointer select-none">
+                                    <input type="radio" name="drawing-detection-mode" value="tag"
+                                        class="sr-only peer">
+                                    <span
+                                        class="block text-center h-8 leading-8 rounded-md text-xs font-medium text-text-secondary transition-all duration-200 peer-checked:bg-bg-secondary peer-checked:text-text-primary peer-checked:shadow peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent-primary">1- Tag
+                                        Detection</span>
+                                </label>
+                                <label class="flex-1 cursor-pointer select-none">
+                                    <input type="radio" name="drawing-detection-mode" value="drawing"
+                                        class="sr-only peer">
+                                    <span
+                                        class="block text-center h-8 leading-8 rounded-md text-xs font-medium text-text-secondary transition-all duration-200 peer-checked:bg-bg-secondary peer-checked:text-text-primary peer-checked:shadow peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent-primary">2-
+                                        Drawing Detection</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="drawing-tag-settings" class="mt-4">
+                            <div class="section-header flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 class="text-base font-semibold m-0">Tag Settings</h3>
+                                    <p class="text-xs text-text-muted m-0 mt-1">Configure AprilTag IDs and colors for each pen.</p>
+                                </div>
+                                <button id="add-drawing-setting"
+                                    class="btn-secondary h-[34px] px-4 text-[13px] bg-transparent text-text-primary border border-border-subtle rounded-md font-medium cursor-pointer transition-all duration-200 flex items-center justify-center hover:border-accent-primary hover:text-accent-primary">Add</button>
+                            </div>
+                            <div id="drawing-settings-list" class="flex flex-col gap-3"></div>
+                        </div>
+                        <div id="drawing-color-settings" class="mt-4">
+                            <div
+                                class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center mb-4 last:mb-0">
+                                <label
+                                    class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Pen
+                                    Count</label>
+                                <input id="drawing-count" type="number" min="1" max="4" step="1"
+                                    class="w-full h-10 px-3 bg-bg-tertiary border border-border-subtle rounded-md text-text-primary text-sm transition-colors duration-200 font-inherit hover:border-border-focus focus:outline-none focus:border-accent-primary">
+                            </div>
+                            <div
+                                class="form-row grid grid-cols-[140px_1fr] lg:grid-cols-[140px_1fr] md:grid-cols-1 gap-3 items-center">
+                                <label
+                                    class="form-label text-[13px] text-text-secondary font-medium text-right md:text-left">Pen
+                                    Colors</label>
+                                <div id="drawing-colors" class="flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

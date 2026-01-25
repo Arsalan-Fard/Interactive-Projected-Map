@@ -4,15 +4,19 @@ export const DEFAULT_STICKER_CONFIG = getDefaultStickerConfig();
 export const MAX_STICKER_COUNT = DEFAULT_STICKER_CONFIG.count;
 export const DEFAULT_TAG_SETTINGS_COUNT = 10;
 export const MAX_TAG_SETTINGS_COUNT = 50;
-export const DEFAULT_DRAWING_ITEM = {
-    id: 'drawing-1',
-    label: 'drawing line',
-    color: '#ff00ff',
-    tagId: 6
-};
+export const DEFAULT_DRAWING_COLORS = ['#FF0000', '#000000', '#00FF00', '#0000FF'];
+export const DEFAULT_DRAWING_TAG_IDS = [6, 7, 8, 9];
+export const DEFAULT_DRAWING_ITEMS = DEFAULT_DRAWING_COLORS.map((color, index) => ({
+    id: `drawing-${index + 1}`,
+    label: `Pen ${index + 1}`,
+    color,
+    tagId: DEFAULT_DRAWING_TAG_IDS[index] ?? DEFAULT_DRAWING_TAG_IDS[0]
+}));
+export const DEFAULT_DRAWING_ITEM = { ...DEFAULT_DRAWING_ITEMS[0] };
 export const DEFAULT_DRAWING_CONFIG = {
-    items: [{ ...DEFAULT_DRAWING_ITEM }]
+    items: DEFAULT_DRAWING_ITEMS.map(item => ({ ...item }))
 };
+export const MAX_DRAWING_COUNT = DEFAULT_DRAWING_ITEMS.length;
 export const TAG_ID_OPTIONS = Array.from({ length: 43 }, (_, i) => i + 7);
 export const TAG_SETTINGS_ID_OPTIONS = Array.from({ length: 50 }, (_, i) => i);
 export const TAG_IMAGE_PREFIX = '/generated_tags/tag36h11_id';
@@ -45,6 +49,7 @@ export const defaultState = {
         tuiMode: false,
         workshopMode: false,
         stickerDetectionMode: 'tag',
+        drawingDetectionMode: 'tag',
         tagSettings: {
             count: DEFAULT_TAG_SETTINGS_COUNT,
             items: []

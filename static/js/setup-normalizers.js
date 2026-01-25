@@ -3,6 +3,7 @@ import {
     DEFAULT_DRAWING_ITEM,
     DEFAULT_TAG_GROUPS,
     DEFAULT_TAG_SETTINGS_COUNT,
+    MAX_DRAWING_COUNT,
     MAX_STICKER_COUNT,
     MAX_TAG_SETTINGS_COUNT
 } from './setup-defaults.js';
@@ -65,29 +66,50 @@ export function normalizeDrawingConfig(state) {
         items = DEFAULT_DRAWING_CONFIG.items;
     }
 
-    const normalized = (Array.isArray(items) ? items : []).map((raw, index) => {
+    const detectionMode = state.project?.drawingDetectionMode === 'drawing' ? 'drawing' : 'tag';
+    const defaultCount = Array.isArray(items) && items.length > 0
+        ? items.length
+        : DEFAULT_DRAWING_CONFIG.items.length;
+    let count = Number.isInteger(existing?.count) ? existing.count : defaultCount;
+    if (detectionMode === 'drawing') {
+        count = clampDrawingCount(count);
+    } else {
+        count = Math.max(1, defaultCount);
+    }
+
+    const rawItems = Array.isArray(items) ? items : [];
+    const normalized = rawItems.map((raw, index) => {
+        const fallback = DEFAULT_DRAWING_CONFIG.items[index] || DEFAULT_DRAWING_ITEM;
         const fallbackId = `drawing-${index + 1}`;
-        const id = typeof raw?.id === 'string' && raw.id.trim().length > 0 ? raw.id : fallbackId;
+        const id = typeof raw?.id === 'string' && raw.id.trim().length > 0 ? raw.id : (fallback.id || fallbackId);
         const label = typeof raw?.label === 'string' && raw.label.trim().length > 0
             ? raw.label
-            : DEFAULT_DRAWING_ITEM.label;
+            : (fallback.label || DEFAULT_DRAWING_ITEM.label);
         let color = typeof raw?.color === 'string' ? raw.color.trim() : '';
         if (!/^#[0-9a-f]{6}$/i.test(color)) {
-            if (color.toLowerCase() === 'magenta' || color.toLowerCase() === 'fuchsia') {
-                color = DEFAULT_DRAWING_ITEM.color;
-            } else {
-                color = DEFAULT_DRAWING_ITEM.color;
-            }
+            color = fallback.color || DEFAULT_DRAWING_ITEM.color;
         }
-        const tagId = Number.isInteger(raw?.tagId) ? raw.tagId : DEFAULT_DRAWING_ITEM.tagId;
+        const tagId = Number.isInteger(raw?.tagId)
+            ? raw.tagId
+            : (Number.isInteger(fallback.tagId) ? fallback.tagId : DEFAULT_DRAWING_ITEM.tagId);
         return { id, label, color, tagId };
     });
+
+    while (normalized.length < count) {
+        const fallback = DEFAULT_DRAWING_CONFIG.items[normalized.length] || DEFAULT_DRAWING_ITEM;
+        normalized.push({ ...fallback });
+    }
 
     if (normalized.length === 0) {
         normalized.push({ ...DEFAULT_DRAWING_ITEM });
     }
 
-    state.project.drawingConfig = { items: normalized };
+    state.project.drawingConfig = { items: normalized, count };
+}
+
+export function clampDrawingCount(value) {
+    if (!Number.isFinite(value)) return 1;
+    return Math.max(1, Math.min(MAX_DRAWING_COUNT, value));
 }
 
 export function clampStickerCount(value) {
