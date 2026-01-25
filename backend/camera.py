@@ -149,19 +149,47 @@ def capture_circles():
         pass
 
     from detect_colored_circles import detect_circles_in_bgr_image
+    from preprocess_image import preprocess_image, get_default_preprocess_config
 
-    circles = detect_circles_in_bgr_image(warped, sticker_colors_hex=sticker_colors)
+    processed = warped
+    scale_x = 1.0
+    scale_y = 1.0
+    try:
+        cfg = get_default_preprocess_config()
+        processed = preprocess_image(warped, cfg)
+        if isinstance(processed, np.ndarray) and processed.shape[:2] != warped.shape[:2]:
+            scale_x = float(processed.shape[1]) / float(warp_width or 1)
+            scale_y = float(processed.shape[0]) / float(warp_height or 1)
+    except Exception:
+        processed = warped
+        scale_x = 1.0
+        scale_y = 1.0
+
+    circles = detect_circles_in_bgr_image(processed, sticker_colors_hex=sticker_colors)
     denom_x = float(max(1, warp_width - 1))
     denom_y = float(max(1, warp_height - 1))
     denom_r = float(max(1, max(warp_width, warp_height) - 1))
     normalized = []
+    circle_pixels = []
     for c in circles:
-        x = int(c.get("x", 0))
-        y = int(c.get("y", 0))
+        x = float(c.get("x", 0))
+        y = float(c.get("y", 0))
+        radius = float(c.get("radius", 0))
+        if scale_x != 1.0 or scale_y != 1.0:
+            if scale_x > 0:
+                x = x / scale_x
+            if scale_y > 0:
+                y = y / scale_y
+            scale_r = (scale_x + scale_y) / 2.0 if (scale_x > 0 and scale_y > 0) else 1.0
+            if scale_r != 0:
+                radius = radius / scale_r
+        x = int(round(x))
+        y = int(round(y))
+        circle_pixels.append((x, y, radius))
         normalized.append({
             "nx": float(x) / denom_x,
             "ny": float(y) / denom_y,
-            "radius": float(c.get("radius", 0)) / denom_r,
+            "radius": radius / denom_r,
             "stickerIndex": c.get("stickerIndex", None),
             "color": c.get("color", None),
             "distance": c.get("distance", None),
@@ -191,6 +219,19 @@ def capture_circles():
     except Exception:
         pass
 
+    # Store a cache image with detected circles masked to white.
+    if circle_pixels:
+        masked = warped.copy()
+        for cx, cy, cr in circle_pixels:
+            if cr <= 0:
+                continue
+            cv2.circle(masked, (int(round(cx)), int(round(cy))), int(round(cr)), (255, 255, 255), -1, lineType=cv2.LINE_AA)
+        masked_path = CAPTURE_DIR / f"{base}__no_circles.png"
+        try:
+            cv2.imwrite(str(masked_path), masked)
+        except Exception:
+            pass
+
     return jsonify({
         "ok": True,
         "capturedAt": timestamp,
@@ -200,6 +241,7 @@ def capture_circles():
         "capturedFrameSeq": frame_seq,
         "capturedFrameUpdatedAt": frame_updated_at,
         "captureFile": image_path.name,
+        "maskedCaptureFile": f"{base}__no_circles.png",
         "circles": normalized
     })
 

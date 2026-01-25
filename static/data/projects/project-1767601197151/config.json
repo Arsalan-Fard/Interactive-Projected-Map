@@ -8,6 +8,7 @@
     "tuiMode": false,
     "workshopMode": true,
     "stickerDetectionMode": "circle",
+    "drawingDetectionMode": "drawing",
     "tagSettings": {
       "count": 3,
       "items": [
@@ -151,7 +152,8 @@
           "color": "#feea67",
           "tagId": 9
         }
-      ]
+      ],
+      "count": 4
     },
     "stickerConfig": {
       "count": 4,

@@ -2,6 +2,34 @@ import argparse
 import cv2
 import numpy as np
 
+DEFAULT_PREPROCESS_CONFIG = {
+    "scale": 2.0,
+    "nlm_h": 6.0,
+    "nlm_h_color": 6.0,
+    "bilateral_d": 7,
+    "bilateral_sigma_color": 35.0,
+    "bilateral_sigma_space": 35.0,
+    "white_sat_max": 60.0,
+    "white_val_min": 180.0,
+    "white_val_target": 205.0,
+    "white_sat_scale": 0.2,
+    "line_sat_min": 30.0,
+    "line_val_max_for_black": 130.0,
+    "bg_whiten_strength": 0.5,
+    "bg_val_target": 245.0,
+    "sat_mask_min": 20.0,
+    "sat_val_min": 90.0,
+    "sat_mult": 3.0,
+    "clahe_clip": 0.0,
+    "clahe_tile": 8,
+    "sharpen_amount": 0.4,
+    "sharpen_sigma": 1.0,
+}
+
+
+def get_default_preprocess_config():
+    return dict(DEFAULT_PREPROCESS_CONFIG)
+
 
 def preprocess_image(img, cfg):
     if cfg["scale"] != 1.0:
