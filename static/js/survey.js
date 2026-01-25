@@ -753,22 +753,21 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         applyMapConfig(cfg);
     }
 
-    async function maybeCaptureCircleStickers(fromQuestion, toQuestion, mapViewSnapshot) {
-        const detectionMode = setupConfig?.project?.stickerDetectionMode;
-        if (detectionMode !== 'circle') return;
+    async function maybeCaptureDetections(fromQuestion, toQuestion, mapViewSnapshot) {
         if (!fromQuestion) return;
+        const stickerMode = setupConfig?.project?.stickerDetectionMode;
+        const drawingMode = setupConfig?.project?.drawingDetectionMode;
+        const shouldCaptureCircles = stickerMode === 'circle';
+        const shouldCapturePaths = drawingMode === 'drawing' && fromQuestion.type === 'drawing';
+        if (!shouldCaptureCircles && !shouldCapturePaths) return;
 
         const colors = Array.isArray(setupConfig?.project?.stickerConfig?.colors)
             ? setupConfig.project.stickerConfig.colors
             : [];
-        if (!colors.length) return;
 
-        // Stop any in-progress map animation so screen->lng/lat conversion uses the correct view.
         restoreMapViewSnapshot(mapViewSnapshot);
-
         setCaptureBlackoutVisible(true);
         try {
-            // Ensure the blackout overlay has actually painted before triggering the camera capture.
             await new Promise(requestAnimationFrame);
             await new Promise(requestAnimationFrame);
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -795,35 +794,91 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                 const data = await res.json();
                 if (!data?.ok) return;
 
-                const circles = Array.isArray(data.circles) ? data.circles : [];
-                if (!circles.length) {
-                    removeStickersForQuestion(fromQuestion.id);
-                    return;
+                if (shouldCaptureCircles) {
+                    const circles = Array.isArray(data.circles) ? data.circles : [];
+                    if (!circles.length) {
+                        removeStickersForQuestion(fromQuestion.id);
+                    } else {
+                        removeStickersForQuestion(fromQuestion.id);
+                        restoreMapViewSnapshot(mapViewSnapshot);
+                        circles.forEach(c => {
+                            const nx = c?.nx;
+                            const ny = c?.ny;
+                            const screen = getScreenCoordsFromNormalized(nx, ny);
+                            if (!screen || !Number.isFinite(screen.x) || !Number.isFinite(screen.y)) return;
+
+                            const lngLat = getMapCoordsFromScreen(map, screen.x, screen.y);
+                            if (!lngLat) return;
+
+                            const idx = Number.parseInt(c?.stickerIndex, 10);
+                            if (!Number.isInteger(idx) || idx < 0 || idx >= colors.length) return;
+
+                            const color = colors[idx] || c?.color || '#ffffff';
+                            const typeId = `sticker-btn-${idx + 1}`;
+                            addStickerMarker(map, lngLat, color, typeId, fromQuestion.id);
+                        });
+                    }
                 }
 
-                removeStickersForQuestion(fromQuestion.id);
+                if (shouldCapturePaths && draw && typeof draw.add === 'function') {
+                    const paths = Array.isArray(data.paths) ? data.paths : [];
+                    removeDetectedDrawingsForQuestion(fromQuestion.id);
+                    if (paths.length) {
+                        restoreMapViewSnapshot(mapViewSnapshot);
+                        const features = [];
+                        paths.forEach(path => {
+                            const colorName = path?.color || '';
+                            const points = Array.isArray(path?.points) ? path.points : [];
+                            if (points.length < 2) return;
 
-                // Ensure conversion happens against the original (pre-next-click) map view.
-                restoreMapViewSnapshot(mapViewSnapshot);
+                            const coords = [];
+                            points.forEach(p => {
+                                const nx = p?.nx;
+                                const ny = p?.ny;
+                                const screen = getScreenCoordsFromNormalized(nx, ny);
+                                if (!screen || !Number.isFinite(screen.x) || !Number.isFinite(screen.y)) return;
+                                const lngLat = getMapCoordsFromScreen(map, screen.x, screen.y);
+                                if (!lngLat) return;
+                                coords.push([lngLat.lng, lngLat.lat]);
+                            });
+                            if (coords.length < 2) return;
 
-                circles.forEach(c => {
-                    const nx = c?.nx;
-                    const ny = c?.ny;
-                    const screen = getScreenCoordsFromNormalized(nx, ny);
-                    if (!screen || !Number.isFinite(screen.x) || !Number.isFinite(screen.y)) return;
+                            const meta = getDetectedDrawingMeta(colorName);
+                            const color = getDetectedDrawingColor(colorName);
+                            const toolId = meta.item?.id || '';
+                            const label = meta.item?.label || '';
 
-                    const lngLat = getMapCoordsFromScreen(map, screen.x, screen.y);
-                    if (!lngLat) return;
+                            features.push({
+                                type: 'Feature',
+                                geometry: { type: 'LineString', coordinates: coords },
+                                properties: {
+                                    color,
+                                    user_color: color,
+                                    label,
+                                    user_label: label,
+                                    drawingToolId: toolId,
+                                    drawingToolIndex: meta.index,
+                                    tm_source: 'detected',
+                                    questionId: fromQuestion.id,
+                                    questionIndex: currentQuestionIndex,
+                                    questionText: fromQuestion.text,
+                                    storageKey: fromQuestion.storageKey || fromQuestion.id,
+                                    projectId: setupConfig?.project?.id || null,
+                                    timestamp: new Date().toISOString()
+                                }
+                            });
+                        });
 
-                    const idx = Number.parseInt(c?.stickerIndex, 10);
-                    if (!Number.isInteger(idx) || idx < 0 || idx >= colors.length) return;
-
-                    const color = colors[idx] || c?.color || '#ffffff';
-                    const typeId = `sticker-btn-${idx + 1}`;
-                    addStickerMarker(map, lngLat, color, typeId, fromQuestion.id);
-                });
+                        if (features.length) {
+                            draw.add({
+                                type: 'FeatureCollection',
+                                features
+                            });
+                        }
+                    }
+                }
             } catch (error) {
-                console.warn('Circle capture failed', error);
+                console.warn('Capture failed', error);
             }
         } finally {
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -848,118 +903,12 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         try {
             const mapViewSnapshot = getMapViewSnapshot();
             lockMapTransitions();
-            await maybeCaptureCircleStickers(fromQuestion, toQuestion, mapViewSnapshot);
-            await maybeCaptureDrawingPaths(fromQuestion, toQuestion, mapViewSnapshot);
+            await maybeCaptureDetections(fromQuestion, toQuestion, mapViewSnapshot);
             currentQuestionIndex = nextIndex;
             updateQuestion();
         } finally {
             unlockMapTransitions();
             isTransitioning = false;
-        }
-    }
-
-    async function maybeCaptureDrawingPaths(fromQuestion, toQuestion, mapViewSnapshot) {
-        const detectionMode = setupConfig?.project?.drawingDetectionMode;
-        if (detectionMode !== 'drawing') return;
-        if (!fromQuestion || fromQuestion.type !== 'drawing') return;
-        if (!draw || typeof draw.add !== 'function') return;
-
-        const stickerColors = Array.isArray(setupConfig?.project?.stickerConfig?.colors)
-            ? setupConfig.project.stickerConfig.colors
-            : [];
-
-        restoreMapViewSnapshot(mapViewSnapshot);
-        setCaptureBlackoutVisible(true);
-        try {
-            await new Promise(requestAnimationFrame);
-            await new Promise(requestAnimationFrame);
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            try {
-                const res = await fetch('http://localhost:5000/api/capture-circles', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        projectId: setupConfig?.project?.id || null,
-                        fromQuestionId: fromQuestion.id || null,
-                        fromQuestionIndex: currentQuestionIndex,
-                        toQuestionId: toQuestion?.id || null,
-                        toQuestionIndex: toQuestion ? (questions.findIndex(q => q.id === toQuestion.id)) : null,
-                        stickerColors,
-                        detectPaths: true,
-                        delayMs: 250,
-                        minNewFrames: 3,
-                        waitTimeoutMs: 3000
-                    })
-                });
-                if (!res.ok) {
-                    return;
-                }
-                const data = await res.json();
-                if (!data?.ok) return;
-
-                const paths = Array.isArray(data.paths) ? data.paths : [];
-                removeDetectedDrawingsForQuestion(fromQuestion.id);
-                if (!paths.length) return;
-
-                restoreMapViewSnapshot(mapViewSnapshot);
-
-                const features = [];
-                paths.forEach(path => {
-                    const colorName = path?.color || '';
-                    const points = Array.isArray(path?.points) ? path.points : [];
-                    if (points.length < 2) return;
-
-                    const coords = [];
-                    points.forEach(p => {
-                        const nx = p?.nx;
-                        const ny = p?.ny;
-                        const screen = getScreenCoordsFromNormalized(nx, ny);
-                        if (!screen || !Number.isFinite(screen.x) || !Number.isFinite(screen.y)) return;
-                        const lngLat = getMapCoordsFromScreen(map, screen.x, screen.y);
-                        if (!lngLat) return;
-                        coords.push([lngLat.lng, lngLat.lat]);
-                    });
-                    if (coords.length < 2) return;
-
-                    const meta = getDetectedDrawingMeta(colorName);
-                    const color = getDetectedDrawingColor(colorName);
-                    const toolId = meta.item?.id || '';
-                    const label = meta.item?.label || '';
-
-                    features.push({
-                        type: 'Feature',
-                        geometry: { type: 'LineString', coordinates: coords },
-                        properties: {
-                            color,
-                            user_color: color,
-                            label,
-                            user_label: label,
-                            drawingToolId: toolId,
-                            drawingToolIndex: meta.index,
-                            tm_source: 'detected',
-                            questionId: fromQuestion.id,
-                            questionIndex: currentQuestionIndex,
-                            questionText: fromQuestion.text,
-                            storageKey: fromQuestion.storageKey || fromQuestion.id,
-                            projectId: setupConfig?.project?.id || null,
-                            timestamp: new Date().toISOString()
-                        }
-                    });
-                });
-
-                if (features.length) {
-                    draw.add({
-                        type: 'FeatureCollection',
-                        features
-                    });
-                }
-            } catch (error) {
-                console.warn('Drawing capture failed', error);
-            }
-        } finally {
-            await new Promise(resolve => setTimeout(resolve, 50));
-            setCaptureBlackoutVisible(false);
         }
     }
 
@@ -1066,8 +1015,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
         setButtonsDisabled(finishButtonsAll, true);
         try {
             const mapViewSnapshot = getMapViewSnapshot();
-            await maybeCaptureCircleStickers(questions[currentQuestionIndex], null, mapViewSnapshot);
-            await maybeCaptureDrawingPaths(questions[currentQuestionIndex], null, mapViewSnapshot);
+            await maybeCaptureDetections(questions[currentQuestionIndex], null, mapViewSnapshot);
             await saveResponses();
             if (showPreviousAnswers) {
                 previousResponses = await fetchPreviousResponses();

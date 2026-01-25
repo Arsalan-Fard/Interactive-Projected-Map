@@ -54,6 +54,8 @@ def _safe_component(value: str) -> str:
 
 @app.route('/api/capture-circles', methods=['POST'])
 def capture_circles():
+    t0 = time.perf_counter()
+    timings = {}
     payload = request.get_json(silent=True) or {}
     sticker_colors = payload.get('stickerColors') or payload.get('colors') or []
     try:
@@ -95,6 +97,7 @@ def capture_circles():
     project_id = _safe_component(payload.get('projectId') or "")
     from_question_id = _safe_component(payload.get('fromQuestionId') or payload.get('questionId') or "")
 
+    t_wait_start = time.perf_counter()
     with frame_lock:
         start_seq = latest_frame_seq
 
@@ -131,15 +134,20 @@ def capture_circles():
 
     if frame is None:
         return jsonify({"ok": False, "error": "no_frame"}), 503
+    timings["wait_frame_ms"] = (time.perf_counter() - t_wait_start) * 1000.0
 
     dst_pts = np.array([[0, 0], [warp_width - 1, 0], [warp_width - 1, warp_height - 1], [0, warp_height - 1]], dtype="float32")
     H = cv2.getPerspectiveTransform(src_pts.astype("float32"), dst_pts)
+    t_warp = time.perf_counter()
     warped = cv2.warpPerspective(frame, H, (warp_width, warp_height))
+    timings["warp_ms"] = (time.perf_counter() - t_warp) * 1000.0
 
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S-%fZ")
     base = f"{timestamp}__{project_id}__{from_question_id}".strip("_")
     image_path = CAPTURE_DIR / f"{base}.png"
+    t_write_capture = time.perf_counter()
     cv2.imwrite(str(image_path), warped)
+    timings["write_capture_ms"] = (time.perf_counter() - t_write_capture) * 1000.0
 
     # Debug convenience: keep a stable filename for quick manual inspection / scripts.
     input_path = CAPTURE_DIR / "input.png"
@@ -156,7 +164,9 @@ def capture_circles():
     scale_y = 1.0
     try:
         cfg = get_default_preprocess_config()
+        t_pre = time.perf_counter()
         processed = preprocess_image(warped, cfg)
+        timings["preprocess_ms"] = (time.perf_counter() - t_pre) * 1000.0
         if isinstance(processed, np.ndarray) and processed.shape[:2] != warped.shape[:2]:
             scale_x = float(processed.shape[1]) / float(warp_width or 1)
             scale_y = float(processed.shape[0]) / float(warp_height or 1)
@@ -165,7 +175,9 @@ def capture_circles():
         scale_x = 1.0
         scale_y = 1.0
 
+    t_detect = time.perf_counter()
     circles = detect_circles_in_bgr_image(processed, sticker_colors_hex=sticker_colors)
+    timings["detect_circles_ms"] = (time.perf_counter() - t_detect) * 1000.0
     denom_x = float(max(1, warp_width - 1))
     denom_y = float(max(1, warp_height - 1))
     denom_r = float(max(1, max(warp_width, warp_height) - 1))
@@ -197,6 +209,7 @@ def capture_circles():
         })
 
     # Store a cache image with detected circles masked to white.
+    t_mask = time.perf_counter()
     masked = warped.copy()
     for cx, cy, cr in circle_pixels:
         if cr <= 0:
@@ -207,12 +220,15 @@ def capture_circles():
         cv2.imwrite(str(masked_path), masked)
     except Exception:
         pass
+    timings["mask_write_ms"] = (time.perf_counter() - t_mask) * 1000.0
 
     paths_payload = []
     paths_error = None
     try:
         from extract_paths import extract_line_paths
+        t_paths = time.perf_counter()
         paths = extract_line_paths(str(masked_path))
+        timings["extract_paths_ms"] = (time.perf_counter() - t_paths) * 1000.0
         for color_name, lines in (paths or {}).items():
             for line in lines or []:
                 points = []
@@ -238,6 +254,7 @@ def capture_circles():
 
     json_path = CAPTURE_DIR / f"{base}.json"
     try:
+        t_json = time.perf_counter()
         json_path.write_text(json.dumps({
             "capturedAt": timestamp,
             "projectId": payload.get("projectId", None),
@@ -256,8 +273,18 @@ def capture_circles():
             "calibrationUpdatedAt": calib_updated_at,
             "circles": normalized,
             "paths": paths_payload,
-            "pathsError": paths_error
+            "pathsError": paths_error,
+            "timingsMs": timings
         }, indent=2), encoding="utf-8")
+        timings["write_json_ms"] = (time.perf_counter() - t_json) * 1000.0
+    except Exception:
+        pass
+
+    timings["total_ms"] = (time.perf_counter() - t0) * 1000.0
+    timing_path = CAPTURE_DIR / f"{base}__timing.txt"
+    try:
+        lines = [f"{key}: {value:.2f} ms" for key, value in timings.items()]
+        timing_path.write_text("\n".join(lines), encoding="utf-8")
     except Exception:
         pass
 
@@ -273,7 +300,8 @@ def capture_circles():
         "maskedCaptureFile": f"{base}__no_circles.png",
         "circles": normalized,
         "paths": paths_payload,
-        "pathsError": paths_error
+        "pathsError": paths_error,
+        "timingsMs": timings
     })
 
 
