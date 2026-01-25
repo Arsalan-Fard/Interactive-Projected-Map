@@ -312,6 +312,15 @@ def extract_line_paths(image_path, min_skeleton_pixels=60):
         )
 
     paths = {}
+    def simplify_path(points, epsilon=2.0):
+        if points is None or len(points) < 2:
+            return points
+        arr = np.array(points, dtype=np.float32).reshape(-1, 1, 2)
+        approx = cv2.approxPolyDP(arr, epsilon=epsilon, closed=False)
+        if approx is None or len(approx) < 2:
+            return points
+        return approx.reshape(-1, 2).tolist()
+
     for color_name, skel in skeletons.items():
         if skel is None or skel.max() == 0:
             continue
@@ -323,7 +332,9 @@ def extract_line_paths(image_path, min_skeleton_pixels=60):
             points = contour.reshape(-1, 2)
             if points.shape[0] < 2:
                 continue
-            color_paths.append(points.astype(float).tolist())
+            simplified = simplify_path(points, epsilon=2.0)
+            if simplified and len(simplified) >= 2:
+                color_paths.append(simplified)
         if color_paths:
             paths[color_name] = color_paths
     return paths

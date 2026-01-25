@@ -318,7 +318,7 @@ async function initApp() {
                 'line-join': 'round'
             },
             paint: {
-                'line-color': ['coalesce', ['get', 'color'], drawLineColor],
+                'line-color': ['coalesce', ['get', 'color'], ['get', 'user_color'], drawLineColor],
                 'line-width': 14,
                 'line-opacity': 0.6,
                 'line-blur': 6
@@ -351,7 +351,7 @@ async function initApp() {
         let applied = false;
         lineLayers.forEach(id => {
             if (!mapInstance.getLayer(id)) return;
-            mapInstance.setPaintProperty(id, 'line-color', ['coalesce', ['get', 'color'], fallbackColor]);
+            mapInstance.setPaintProperty(id, 'line-color', ['coalesce', ['get', 'color'], ['get', 'user_color'], fallbackColor]);
             applied = true;
         });
         return applied;
@@ -407,7 +407,7 @@ async function initApp() {
         drawLineColor = nextColor;
         applyDrawLineStyle(map, drawLineColor);
         if (map?.getLayer?.('gl-draw-line-glow') && map?.setPaintProperty) {
-            map.setPaintProperty('gl-draw-line-glow', 'line-color', ['coalesce', ['get', 'color'], drawLineColor]);
+            map.setPaintProperty('gl-draw-line-glow', 'line-color', ['coalesce', ['get', 'color'], ['get', 'user_color'], drawLineColor]);
         }
     }
 

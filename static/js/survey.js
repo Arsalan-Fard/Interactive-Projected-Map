@@ -932,7 +932,9 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                         geometry: { type: 'LineString', coordinates: coords },
                         properties: {
                             color,
+                            user_color: color,
                             label,
+                            user_label: label,
                             drawingToolId: toolId,
                             drawingToolIndex: meta.index,
                             tm_source: 'detected',
