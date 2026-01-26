@@ -86,7 +86,7 @@ body.workshop-mode #right-sidebar {
 
 .workshop-question-panel {
     position: relative;
-    max-width: 360px;
+    max-width: 560px;
     min-width: 350px;
 }
 
@@ -149,8 +149,8 @@ body.workshop-mode #right-sidebar {
 }
 
 .workshop-question-text {
-    max-width: 340px;
-    font-size: 10px;
+    max-width: 540px;
+    font-size: 16px;
     font-weight: 600;
     color: #e6edf3;
     white-space: nowrap;

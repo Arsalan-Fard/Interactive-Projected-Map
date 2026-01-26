@@ -157,16 +157,16 @@ def capture_circles():
         pass
 
     from detect_colored_circles import detect_circles_in_bgr_image
-    from preprocess_image import preprocess_image, get_default_preprocess_config
+    from preprocess_image import preprocess_image, preprocess_image_with_timings, get_default_preprocess_config
 
     processed = warped
     scale_x = 1.0
     scale_y = 1.0
     try:
         cfg = get_default_preprocess_config()
-        t_pre = time.perf_counter()
-        processed = preprocess_image(warped, cfg)
-        timings["preprocess_ms"] = (time.perf_counter() - t_pre) * 1000.0
+        processed, pre_timings = preprocess_image_with_timings(warped, cfg)
+        timings["preprocess_ms"] = pre_timings.get("total_ms")
+        timings["preprocess_detail_ms"] = pre_timings
         if isinstance(processed, np.ndarray) and processed.shape[:2] != warped.shape[:2]:
             scale_x = float(processed.shape[1]) / float(warp_width or 1)
             scale_y = float(processed.shape[0]) / float(warp_height or 1)

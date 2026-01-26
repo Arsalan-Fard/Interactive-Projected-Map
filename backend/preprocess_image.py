@@ -1,4 +1,5 @@
 import argparse
+import time
 import cv2
 import numpy as np
 
@@ -119,6 +120,113 @@ def preprocess_image(img, cfg):
         img = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
     return img
+
+
+def preprocess_image_with_timings(img, cfg):
+    timings = {}
+    t0 = time.perf_counter()
+    if cfg["scale"] != 1.0:
+        t = time.perf_counter()
+        h, w = img.shape[:2]
+        img = cv2.resize(
+            img,
+            (int(w * cfg["scale"]), int(h * cfg["scale"])),
+            interpolation=cv2.INTER_LANCZOS4,
+        )
+        timings["scale_ms"] = (time.perf_counter() - t) * 1000.0
+
+    if cfg["nlm_h"] > 0:
+        t = time.perf_counter()
+        img = cv2.fastNlMeansDenoisingColored(
+            img,
+            None,
+            h=cfg["nlm_h"],
+            hColor=cfg["nlm_h_color"],
+            templateWindowSize=7,
+            searchWindowSize=21,
+        )
+        timings["nlm_ms"] = (time.perf_counter() - t) * 1000.0
+
+    if cfg["bilateral_d"] > 0:
+        t = time.perf_counter()
+        img = cv2.bilateralFilter(
+            img,
+            d=cfg["bilateral_d"],
+            sigmaColor=cfg["bilateral_sigma_color"],
+            sigmaSpace=cfg["bilateral_sigma_space"],
+        )
+        timings["bilateral_ms"] = (time.perf_counter() - t) * 1000.0
+
+    t = time.perf_counter()
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV).astype(np.float32)
+    h, s, v = cv2.split(hsv)
+
+    line_mask = (s >= cfg["line_sat_min"]) | (v <= cfg["line_val_max_for_black"])
+    bg_mask = ~line_mask
+
+    if cfg["bg_whiten_strength"] > 0:
+        s[bg_mask] = s[bg_mask] * (1.0 - cfg["bg_whiten_strength"])
+        v[bg_mask] = np.clip(
+            v[bg_mask] * (1.0 - cfg["bg_whiten_strength"])
+            + cfg["bg_val_target"] * cfg["bg_whiten_strength"],
+            0,
+            255,
+        )
+
+    white_mask = (s < cfg["white_sat_max"]) & (v > cfg["white_val_min"])
+    s[white_mask] = s[white_mask] * cfg["white_sat_scale"]
+    v[white_mask] = np.maximum(v[white_mask], cfg["white_val_target"])
+
+    color_mask = line_mask & (s > cfg["sat_mask_min"]) & (v > cfg["sat_val_min"])
+    s[color_mask] = np.clip(s[color_mask] * cfg["sat_mult"], 0, 255)
+
+    hsv = cv2.merge([h, s, v]).astype(np.uint8)
+    img = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    timings["hsv_adjust_ms"] = (time.perf_counter() - t) * 1000.0
+
+    if cfg["clahe_clip"] > 0:
+        t = time.perf_counter()
+        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(
+            clipLimit=cfg["clahe_clip"],
+            tileGridSize=(cfg["clahe_tile"], cfg["clahe_tile"]),
+        )
+        l = clahe.apply(l)
+        img = cv2.cvtColor(cv2.merge([l, a, b]), cv2.COLOR_LAB2BGR)
+        timings["clahe_ms"] = (time.perf_counter() - t) * 1000.0
+
+    if cfg["sharpen_amount"] > 0:
+        t = time.perf_counter()
+        blur = cv2.GaussianBlur(img, (0, 0), cfg["sharpen_sigma"])
+        img = cv2.addWeighted(
+            img,
+            1.0 + cfg["sharpen_amount"],
+            blur,
+            -cfg["sharpen_amount"],
+            0,
+        )
+        timings["sharpen_ms"] = (time.perf_counter() - t) * 1000.0
+
+    if cfg["bg_whiten_strength"] > 0:
+        t = time.perf_counter()
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV).astype(np.float32)
+        h, s, v = cv2.split(hsv)
+        line_mask = (s >= cfg["line_sat_min"]) | (v <= cfg["line_val_max_for_black"])
+        bg_mask = ~line_mask
+        s[bg_mask] = s[bg_mask] * (1.0 - cfg["bg_whiten_strength"])
+        v[bg_mask] = np.clip(
+            v[bg_mask] * (1.0 - cfg["bg_whiten_strength"])
+            + cfg["bg_val_target"] * cfg["bg_whiten_strength"],
+            0,
+            255,
+        )
+        hsv = cv2.merge([h, s, v]).astype(np.uint8)
+        img = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+        timings["bg_whiten2_ms"] = (time.perf_counter() - t) * 1000.0
+
+    timings["total_ms"] = (time.perf_counter() - t0) * 1000.0
+    return img, timings
 
 
 def parse_args():
