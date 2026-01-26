@@ -773,7 +773,7 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
             await new Promise(resolve => setTimeout(resolve, 100));
 
             try {
-                const res = await fetch('http://localhost:5000/api/capture-circles', {
+                const capturePromise = fetch('http://localhost:5000/api/capture-circles', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -788,6 +788,10 @@ export function initSurvey({ map, setupConfig, fallbackConfig, loadAndRenderLaye
                         waitTimeoutMs: 3000
                     })
                 });
+                // Only keep the screen black long enough for the capture to start.
+                setCaptureBlackoutVisible(false);
+
+                const res = await capturePromise;
                 if (!res.ok) {
                     return;
                 }

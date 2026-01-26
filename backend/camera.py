@@ -144,26 +144,25 @@ def capture_circles():
 
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S-%fZ")
     base = f"{timestamp}__{project_id}__{from_question_id}".strip("_")
-    image_path = CAPTURE_DIR / f"{base}.png"
-    t_write_capture = time.perf_counter()
-    cv2.imwrite(str(image_path), warped)
-    timings["write_capture_ms"] = (time.perf_counter() - t_write_capture) * 1000.0
-
-    # Debug convenience: keep a stable filename for quick manual inspection / scripts.
-    input_path = CAPTURE_DIR / "input.png"
-    try:
-        cv2.imwrite(str(input_path), warped)
-    except Exception:
-        pass
-
     from detect_colored_circles import detect_circles_in_bgr_image
     from preprocess_image import preprocess_image, preprocess_image_with_timings, get_default_preprocess_config
+
+    raw_path = CAPTURE_DIR / f"{base}__raw.png"
+    t_write_raw = time.perf_counter()
+    try:
+        cv2.imwrite(str(raw_path), warped)
+    except Exception:
+        pass
+    timings["write_raw_ms"] = (time.perf_counter() - t_write_raw) * 1000.0
 
     processed = warped
     scale_x = 1.0
     scale_y = 1.0
     try:
         cfg = get_default_preprocess_config()
+        # Force-disable NLM in capture pipeline (too slow for realtime use).
+        cfg["nlm_h"] = 0.0
+        cfg["nlm_h_color"] = 0.0
         processed, pre_timings = preprocess_image_with_timings(warped, cfg)
         timings["preprocess_ms"] = pre_timings.get("total_ms")
         timings["preprocess_detail_ms"] = pre_timings
@@ -176,6 +175,21 @@ def capture_circles():
         scale_y = 1.0
 
     t_detect = time.perf_counter()
+    image_path = CAPTURE_DIR / f"{base}.png"
+    t_write_capture = time.perf_counter()
+    try:
+        cv2.imwrite(str(image_path), processed)
+    except Exception:
+        pass
+    timings["write_capture_ms"] = (time.perf_counter() - t_write_capture) * 1000.0
+
+    # Debug convenience: keep a stable filename for quick manual inspection / scripts.
+    input_path = CAPTURE_DIR / "input.png"
+    try:
+        cv2.imwrite(str(input_path), processed)
+    except Exception:
+        pass
+
     circles = detect_circles_in_bgr_image(processed, sticker_colors_hex=sticker_colors)
     timings["detect_circles_ms"] = (time.perf_counter() - t_detect) * 1000.0
     denom_x = float(max(1, warp_width - 1))
@@ -183,10 +197,12 @@ def capture_circles():
     denom_r = float(max(1, max(warp_width, warp_height) - 1))
     normalized = []
     circle_pixels = []
+    processed_circle_pixels = []
     for c in circles:
         x = float(c.get("x", 0))
         y = float(c.get("y", 0))
         radius = float(c.get("radius", 0))
+        processed_circle_pixels.append((x, y, radius))
         if scale_x != 1.0 or scale_y != 1.0:
             if scale_x > 0:
                 x = x / scale_x
@@ -208,10 +224,10 @@ def capture_circles():
             "bgr": c.get("bgr", None)
         })
 
-    # Store a cache image with detected circles masked to white.
+    # Store a cache image with detected circles masked to white (preprocessed image).
     t_mask = time.perf_counter()
-    masked = warped.copy()
-    for cx, cy, cr in circle_pixels:
+    masked = processed.copy()
+    for cx, cy, cr in processed_circle_pixels:
         if cr <= 0:
             continue
         cv2.circle(masked, (int(round(cx)), int(round(cy))), int(round(cr)), (255, 255, 255), -1, lineType=cv2.LINE_AA)
@@ -237,6 +253,10 @@ def capture_circles():
                         continue
                     px = float(point[0])
                     py = float(point[1])
+                    if scale_x != 1.0 and scale_x > 0:
+                        px = px / scale_x
+                    if scale_y != 1.0 and scale_y > 0:
+                        py = py / scale_y
                     points.append({
                         "nx": px / denom_x,
                         "ny": py / denom_y
@@ -271,6 +291,7 @@ def capture_circles():
             "warpWidth": warp_width,
             "warpHeight": warp_height,
             "calibrationUpdatedAt": calib_updated_at,
+            "rawCaptureFile": raw_path.name,
             "circles": normalized,
             "paths": paths_payload,
             "pathsError": paths_error,
@@ -297,6 +318,7 @@ def capture_circles():
         "capturedFrameSeq": frame_seq,
         "capturedFrameUpdatedAt": frame_updated_at,
         "captureFile": image_path.name,
+        "rawCaptureFile": raw_path.name,
         "maskedCaptureFile": f"{base}__no_circles.png",
         "circles": normalized,
         "paths": paths_payload,

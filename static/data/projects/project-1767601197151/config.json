@@ -3,7 +3,7 @@
     "name": "Signage Workshop Pilot",
     "location": "",
     "id": "project-1767601197151",
-    "mapId": "palaiseau-outdoor",
+    "mapId": "map-1767602417372",
     "rearProjection": false,
     "tuiMode": false,
     "workshopMode": true,
@@ -184,7 +184,7 @@
       "overlays": [],
       "pitch": 45,
       "style": "mapbox://styles/mapbox/light-v11",
-      "zoom": 15
+      "zoom": 15.7
     },
     {
       "bearing": 0,
@@ -213,23 +213,23 @@
       "label": "Signage",
       "overlays": [],
       "pitch": 0,
-      "style": "mapbox://styles/mapbox/dark-v11",
-      "zoom": 15
+      "style": "mapbox://styles/mapbox/light-v11",
+      "zoom": 15.8
     }
   ],
   "map": {
-    "bearing": 40,
+    "bearing": 10,
     "center": [
-      2.2,
-      48.714
+      2.2005,
+      48.7138
     ],
-    "description": "Base view for the campus and surroundings",
-    "id": "palaiseau-outdoor",
-    "label": "IP Paris Campus",
+    "description": "New custom map",
+    "id": "map-1767602417372",
+    "label": "Signage",
     "overlays": [],
-    "pitch": 45,
+    "pitch": 0,
     "style": "mapbox://styles/mapbox/light-v11",
-    "zoom": 15
+    "zoom": 15.8
   },
   "overlays": [
     {
@@ -298,7 +298,7 @@
       "options": [],
       "required": false,
       "responseShape": "point-collection",
-      "mapId": "palaiseau-outdoor",
+      "mapId": "map-1767602417372",
       "order": 2
     },
     {
